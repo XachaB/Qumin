@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+*.pyc
+
+# Sphinx documentation
+doc/
+
+# Non versionned
+commit_msg
+.~lock.
+.owncloudsync*
+.svn
+*~
+~$*
+.~lock.*
+~*.tmp
+*.~*
+Icon\r*
+.DS_Store
+.ds_store
+._*
+Thumbs.db
+desktop.ini
+.Trashes
+.Trash-*
+.fseventd
+.apdisk
+.htaccess
+.directory
+*.part
+*.filepart
+*.crdownload
+*.kate-swp
+*.gnucash.tmp-*
+.synkron.*
+.sync.ffs_db
+.symform
+.symform-store
+.fuse_hidden*
+*.unison
+.nfs*
+*.csync*
+dev_*.ipynb
