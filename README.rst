@@ -13,7 +13,7 @@ Patterns
 ---------
 
 Alternation patterns serve as a basis for all the other scripts. The algorithm to find the patterns was presented in: Sacha Beniamine. `Un algorithme universel pour l'abstraction automatique d'alternances morphophonologiques
-24e Conférence sur le Traitement Automatique des Langues Naturelles <https://halshs.archives-ouvertes.fr/hal-01615899>`_ (TALN), Jun 2017, Orléans, France. 2 (2017), 2017, 24e Conférence sur le Traitement Automatique des Langues Naturelles.
+24e Conférence sur le Traitement Automatique des Langues Naturelles <https://halshs.archives-ouvertes.fr/hal-01615899>`_ (TALN), Jun 2017, Orléans, France. 2 (2017), 24e Conférence sur le Traitement Automatique des Langues Naturelles.
 
 **Computing automatically aligned patterns** for paradigm entropy or macroclass::
 
@@ -50,6 +50,6 @@ Lattices
 
 Our work on inflection class lattices has been presented at the Annual Meeting of the Linguistics Association of Great Britain 2016 (Beniamine & Bonami 2016).
 
-**Inferring a lattice of inflection classes** ::
+**Inferring a lattice of inflection classes, with html output** ::
 
-    bin/$ python3 make_lattice.py  <patterns.csv> <segments.csv>
+    bin/$ python3 make_lattice.py --html <patterns.csv> <segments.csv>
