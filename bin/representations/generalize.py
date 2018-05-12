@@ -10,6 +10,7 @@ from collections import Counter
 from representations.segments import Segment
 from representations.contexts import Context
 
+
 def generalize_patterns(patterns, debug=False):
     """Generalize these patterns' context.
 
@@ -19,19 +20,39 @@ def generalize_patterns(patterns, debug=False):
     Return:
         a new :class:`Patterns.Pattern`.
     """
+    p0 = patterns[0]
     if len(patterns) == 1:
-        return patterns[0]
+        return p0
 
     if debug:
         print("generalizing:",patterns)
-    new = deepcopy(patterns[0])
-    alternations = set(x.to_alt(exhaustive_blanks=False) for x in patterns)
+    new = deepcopy(p0)
+    cells = new.cells
     contexts = [p.context for p in patterns]
-    if len(alternations) > 1:
-        # Generalize the alternation if there is a generalized formulation
-        # And there are different surface alternations
-        if patterns[0]._gen_alt != None:
+
+    # Generalize the alternation if there is a generalized formulation
+    # And there are different surface alternations
+    if p0._gen_alt != None:
+
+        alternations = set(x.to_alt(exhaustive_blanks=False) for x in patterns)
+
+        if len(alternations) > 1:
+            gen_alt = [list(x) for x in p0._gen_alt]
+            partial = False
+            alts = list(zip(*(p.alternation[new.cells[0]] for p in patterns)))
+            for i,segs in enumerate(alts):
+                if len(set(segs)) == 1:
+                    gen_alt[0][i] = p0.alternation[new.cells[0]][i]
+                    gen_alt[1][i] = p0.alternation[new.cells[1]][i]
+                    partial = True
+
+            prev_gen_alt = new._gen_alt
+            new._gen_alt = tuple(tuple(x) for x in gen_alt)
             new._generalize_alt()
+
+            # If we only did a partial generalization of the alternation
+            if partial:
+                new._gen_alt = prev_gen_alt
 
     if not new._is_max_gen():
         new.context = Context.merge(contexts, debug=debug)
