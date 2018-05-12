@@ -7,7 +7,7 @@ This module implements patterns' contexts, which are series of phonological rest
 from itertools import zip_longest
 from representations.segments import Segment, _CharClass, restore, restore_string
 from representations.quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
-from representations.alignment import align_right, align_left, align_phono
+from representations.alignment import align_right, align_left, align_levenshtein_multi
 
 def restore_segment_shortest(segment):
     """Restore segment to the shortest of either the original character or its feature list."""
@@ -214,7 +214,7 @@ class Context(object):
         leftblank = False
         align_funcs = {(False,True):align_right,
                        (True,False):align_left,
-                        (False,False):align_right, # This is an identity pattern, alignment is arbitrary.
+                        (False,False):align_levenshtein_multi, # This is an identity pattern, alignment is arbitrary.
                        (True,True):_align_edges}
 
         for i in range(l):

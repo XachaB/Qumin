@@ -58,6 +58,28 @@ def _all_min(iterable):
             minimums.append(x)
     return minimums
 
+def align_levenshtein_multi(*args,**kwargs):
+    """ Levenshtein alignment over arguments, two by two.
+    """
+    fillvalue = kwargs.get("fillvalue","")
+    def flatten_alignment(alignment,multi_fillvalue):
+        for a,b in alignment:
+            if a == fillvalue:
+                a = multi_fillvalue
+            yield a+(b,)
+
+    def multi_sub_cost(a,b):
+        return int(b not in a)
+
+    aligned = align_auto(args[0],args[1], **kwargs)[0]
+
+    for i in range(2,len(args)):
+        multi_fillvalue = tuple(kwargs["fillvalue"] for _ in range(i))
+        aligned = list(flatten_alignment(align_auto(aligned, args[i],
+                            sub_cost=multi_sub_cost,
+                             **kwargs)[0],multi_fillvalue))
+    return aligned
+
 def align_phono(s1, s2,**kwargs):
     """Return all the best alignments of two words according to phonologically weighted edit distance.
 
