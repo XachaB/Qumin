@@ -96,7 +96,7 @@ class Node(object):
         for child in self.children:
             child._erase_xy()
 
-    def compute_xy(self, tree_placement=False, pos=False):
+    def compute_xy(self, tree_placement=False, pos=None):
         if "_y" in self.attributes and self.attributes["_y"] is not None :
             self._erase_xy()
 
@@ -109,7 +109,7 @@ class Node(object):
                 x += step
             self._recursive_xy()
         else:
-            if not pos:
+            if pos is None:
                 pos = nx.drawing.nx_agraph.graphviz_layout(self.to_networkx(), prog='dot')
             for node in self:
                 node.attributes["_x"], node.attributes["_y"] = pos[tuple(node.labels)]
@@ -257,19 +257,20 @@ class Node(object):
 
         Example::
 
-                                  square=True        square=False
+                                      square=True        square=False
 
-                                 │  ┌──┴──┐         │    ╱╲
-        horizontal=False         │  │   ┌─┴─┐       │   ╱  ╲
-                                 │  │   │   │       │  ╱   ╱╲
-                                 │  │   │   │       │ ╱   ╱  ╲
-                                 │__│___│___│       │╱___╱____╲
+                                     │  ┌──┴──┐         │    ╱╲
+            horizontal=False         │  │   ┌─┴─┐       │   ╱  ╲
+                                     │  │   │   │       │  ╱   ╱╲
+                                     │  │   │   │       │ ╱   ╱  ╲
+                                     │__│___│___│       │╱___╱____╲
 
-                                │─────┐             │⟍
-                                │───┐ ├             │  ⟍
-        horizontal=True         │   ├─┘             │⟍ ⟋
-                                │───┘               │⟋
-                                │____________       │____________
+                                    │─────┐             │⟍
+                                    │───┐ ├             │  ⟍
+            horizontal=True         │   ├─┘             │⟍ ⟋
+                                    │───┘               │⟋
+                                    │____________       │____________
+
 
         Arguments:
             horizontal (bool):
@@ -285,9 +286,10 @@ class Node(object):
                 A function that will be applied to nodes
                 to annotate them. Takes a Node, returns a str.
             keep_above_macroclass (bool):
-                Should the edges above macroclasses be drawn ?
+                For macroclass history trees: Should the edges above macroclasses be drawn ?
                 (Defaults to True).
-            annotateOnlyMacroclasses : If `True` and nodelabel isn't `None`,
+            annotateOnlyMacroclasses : For macroclass history trees:
+                If `True` and nodelabel isn't `None`,
                 only the macroclasses nodes are annotated.
             point (fun):
                 A function that maps a node to point attributes.
@@ -299,6 +301,10 @@ class Node(object):
                 Whether this is destined to create an interactive plot.
             lattice (bool):
                 Whether this node is a lattice rather than a tree.
+            pos (dict):
+                A dictionnary of node label to x,y positions.
+                Compatible with networkx layout functions.
+                If absent, use networkx's graphviz layout.
         """
         tree_placement= not lattice
 
