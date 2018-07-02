@@ -5,7 +5,7 @@
 This module is used to align sequences.
 """
 
-from itertools import combinations_with_replacement
+from itertools import combinations
 from itertools import zip_longest
 import numpy as np
 from numpy import mean
@@ -13,6 +13,39 @@ from representations import segments
 
 PHON_INS_COST = None
 
+def prettyPrint(alignments,pad="\t",**kwargs):
+    ins_cost = kwargs.get("ins_cost", 1) # By default use levenshtein insertion
+    sub_cost_func = kwargs.get("sub_cost", lambda a,b:int(a!=b)) # By default use levenshtein substitution
+
+    tables = []
+    print("{} optimal alignments:".format(len(alignments)))
+    for table in alignments:
+        scores = ["distance"]
+        ops = ["\t"]
+        left = ["\t"]
+        right = ["\t"]
+        for a,b in table:
+            if a == '' or b == '':
+                scores.append(ins_cost)
+                ops.append("I")
+            else:
+                scores.append(sub_cost_func(a,b))
+                ops.append("S")
+            left.append(a or ' ')
+            right.append(b or ' ')
+        length = len(table)
+        bars = ["\t"]+(["│"]*length)
+        scores.append(sum(scores[1:]))
+        scores[1:] = [round(x,2) for x in scores[1:]]
+        scores[-1] = "= "+str(scores[-1])
+
+        print()
+        print(*left,sep=pad)
+        print(*bars,sep=pad)
+        print(*right,sep=pad)
+        print(*ops,sep=pad)
+        print(*scores,sep=pad)
+        print()
 
 def commonprefix(*args):
     """Given a list of strings, returns the longest common prefix"""
@@ -33,7 +66,7 @@ def commonsuffix(*args):
 def get_mean_cost():
     """Get the mean cost of substituting two segments in the segment inventory."""
     values = []
-    for a, b in combinations_with_replacement(segments.Segment._simple_segments, 2):
+    for a, b in combinations(segments.Segment._simple_segments, 2):
         seg_a = segments.Segment._pool[a]
         seg_b = segments.Segment._pool[b]
         values.append(1-seg_a.similarity(seg_b))
@@ -93,7 +126,12 @@ def align_phono(s1, s2,**kwargs):
     """
     if "ins_cost" not in kwargs:
         kwargs["ins_cost"] = PHON_INS_COST
-    return align_auto(s1,s2,sub_cost=_phon_sub_cost,**kwargs)
+    aligned = align_auto(s1,s2,sub_cost=_phon_sub_cost,**kwargs)
+
+    if kwargs.get("prettyPrint",False):
+        prettyPrint(aligned,sub_cost=_phon_sub_cost,ins_cost=kwargs["ins_cost"])
+
+    return aligned
 
 def align_levenshtein(s1, s2, **kwargs):
     """Return all the best alignments of two words according to levenshtein edit distance.
@@ -106,7 +144,12 @@ def align_levenshtein(s1, s2, **kwargs):
     Returns:
         a `list` of `list` of zipped tuples.
     """
-    return align_auto(s1,s2, **kwargs)
+    aligned = align_auto(s1,s2, **kwargs)
+
+    if kwargs.get("prettyPrint",False):
+        prettyPrint(aligned)
+
+    return aligned
 
 def align_auto(s1, s2, **kwargs):
     """Return all the best alignments of two words according to some edit distance.
