@@ -80,9 +80,14 @@ class _ContextMember(object):
         ## str (0):      ([Ei]...) - with parenthesis, regex
         ## restored (1):  [ei]...
         ## display (2): shortest(restored,[+syll, -open])
+        ## features (3): [+syll, -open]
+        def to_features(segment):
+            if segment:
+                return Segment.get(segment).shorthand
+            return segment
 
-        format_modes = [str,restore,restore_segment_shortest]
-        format_blanks = ["{}","_","_"]
+        format_modes = [str,restore,restore_segment_shortest,to_features]
+        format_blanks = ["{}","_","_","_"]
         format_segment = format_modes[mode]
         blankchar = format_blanks[mode]
         formatted = ""
