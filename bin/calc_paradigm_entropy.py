@@ -9,10 +9,9 @@ import argparse
 from os import path, makedirs
 
 # Our libraries
-from representations import segments, patterns, create_paradigms
+from representations import segments, patterns, create_paradigms, create_features
 from entropy.distribution import PatternDistribution, SplitPatternDistribution
 from utils import get_repository_version
-
 
 def main(args):
     r"""Compute entropies of flexional paradigms' distributions.
@@ -73,6 +72,11 @@ def main(args):
 
         sanity_check = verbose and len(pat_table.columns) < 10
 
+        if args.features is not None:
+            features = create_features(args.features)
+        else:
+            features = None
+
         if args.bipartite:
 
             result_prefix = "{}/{}_{}_{}_{}_bipartite".format(result_dir, data_file_name, version, day, now)
@@ -85,7 +89,8 @@ def main(args):
                                           args.names,
                                           logfile=logfile
                                           if verbose or args.probabilities
-                                          else None)
+                                          else None,
+                                          features=features)
             if args.comp:
                 ent_file1 = "{}onepredEntropies-{}.csv".format(result_prefix,args.names[0])
                 ent_file2 = "{}onepredEntropies-{}.csv".format(result_prefix,args.names[1])
@@ -119,7 +124,8 @@ def main(args):
                                           pat_dic,
                                           logfile=logfile
                                           if verbose or args.probabilities
-                                          else None)
+                                          else None,
+                                          features=features)
 
 
         if args.onePred:
@@ -228,6 +234,13 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--bipartite',
                         help="Add a second paradigm dataset, for bipartite systems.",
                         nargs=2,
+                        type=str,
+                        default=None)
+
+    parser.add_argument('--features',
+                        help="Feature file. Features will "
+                        "be considered known in conditional probabilities:"
+                        " P(X~Y|X,f1,f2...)",
                         type=str,
                         default=None)
 

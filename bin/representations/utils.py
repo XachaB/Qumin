@@ -11,6 +11,34 @@ from representations.segments import Segment, restore, restore_string
 from utils import merge_duplicate_columns
 
 
+def unique_lexemes(series):
+    """Rename duplicates in a serie of strings.
+
+    Take a pandas series of strings and output another serie
+    where all originally duplicate strings are given numbers,
+    so each cell contains a unique string.
+    """
+    ids = {}
+
+    def unique_id(string, ids):
+        if string in ids:
+            ids[string] += 1
+            return string + "_" + str(ids[string])
+        ids[string] = 1
+        return string
+
+    return series.apply(unique_id, args=(ids, ))
+
+def create_features(data_file_name):
+    """Read feature and preprocess to be coindexed with paradigms."""
+    features = pd.read_csv(data_file_name)
+    #  First column has to be lexemes
+    lexemes = features.columns[0]
+    features[lexemes] = unique_lexemes(features[lexemes])
+    features.set_index(lexemes, inplace=True)
+    features.fillna(value="", inplace=True)
+    return features
+
 def create_paradigms(data_file_name,
                      cols=None, verbose=False,fillna=True,
                      segcheck=False, merge_duplicates=False,
@@ -28,24 +56,6 @@ def create_paradigms(data_file_name,
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms
         (columns are cells, index are lemmas).
     """
-    def unique_lexemes(series):
-        """Rename duplicates in a serie of strings.
-
-        Take a pandas series of strings and output another serie
-        where all originally duplicate strings are given numbers,
-        so each cell contains a unique string.
-        """
-        ids = {}
-
-        def unique_id(string, ids):
-            if string in ids:
-                ids[string] += 1
-                return string + "_" + str(ids[string])
-            ids[string] = 1
-            return string
-
-        return series.apply(unique_id, args=(ids, ))
-
     def get_unknown_segments(form, unknowns, name):
         for char in form:
             try:
