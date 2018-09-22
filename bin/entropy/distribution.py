@@ -236,9 +236,8 @@ class PatternDistribution(object):
 
                     # Known classes Class(x), Class(y) and known patterns x~y
                     # plus all features
-                    known_classes = classes[
-                        [(pred, out) for pred in predictors]]
-                    known = known_classes.join(known_patterns)
+                    known_classes = classes.loc[selector,[(pred, out) for pred in predictors]]
+                    known = known_classes.join(known_patterns[selector])
                     B = self.add_features(dfsum(known, axis=1))
 
                     # Prediction of H(A|B)
@@ -557,18 +556,16 @@ class PatternDistribution(object):
 
                 # Getting intersection of patterns events for each predictor:
                 # x~z, y~z
-                local_patterns = patterns.loc[selector,:][
-                    [pat_order[(pred, out)] for pred in predictors]]
+                local_patterns = patterns.loc[selector,[pat_order[(pred, out)] for pred in predictors]]
                 A = local_patterns.apply(formatting_local_patterns, axis=1)
 
                 # Known classes Class(x), Class(y) and known patterns x~y
-                known_classes = classes.loc[selector,:][[(pred, out) for pred in predictors]]
+                known_classes = classes.loc[selector,[(pred, out) for pred in predictors]]
                 known_classes = known_classes.apply(formatting_known_classes,
                                                     axis=1)
 
-                known_patterns = patterns[pairs_of_predictors]
-                known_patterns = known_patterns.apply(formatting_known_patterns,
-                                                      axis=1)
+                known_patterns = patterns.loc[selector,pairs_of_predictors]
+                known_patterns = known_patterns.apply(formatting_known_patterns,axis=1)
 
                 B = known_classes + known_patterns
 
