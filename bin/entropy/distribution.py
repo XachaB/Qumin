@@ -68,7 +68,8 @@ class PatternDistribution(object):
             self.features_len = features.shape[1]
             self.features = pd.DataFrame.sum(features,axis=1)
         else:
-            self.features = pd.Series((None,),index=paradigms.index)
+            self.features = None
+            self.add_features = lambda x: x
 
         print("\n\nLooking for classes of applicable patterns")
         self.classes = representations.patterns.find_applicable(self.paradigms,
@@ -77,6 +78,9 @@ class PatternDistribution(object):
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
         self.entropies = [None] * 10
         self.effectifs = [None] * 10
+
+    def add_features(self, series):
+        return series + self.features[series.index]
 
     def __str__(self):
         """Return a string summary."""
@@ -235,7 +239,7 @@ class PatternDistribution(object):
                     known_classes = classes[
                         [(pred, out) for pred in predictors]]
                     known = known_classes.join(known_patterns)
-                    B = dfsum(known, axis=1) + self.features
+                    B = self.add_features(dfsum(known, axis=1))
 
                     # Prediction of H(A|B)
                     entropies.at[predictors, out] = cond_entropy(A, B, subset=selector)
@@ -280,8 +284,8 @@ class PatternDistribution(object):
 
         for a, b in patterns.columns:
             selector = self.hasforms[a] & self.hasforms[b]
-            known_ab = classes[(a, b)] + self.features
-            known_ba = classes[(b, a)] + self.features
+            known_ab = self.add_features(classes[(a, b)])
+            known_ba = self.add_features(classes[(b, a)])
 
             entropies.at[a, b] = cond_entropy(patterns[(a, b)],
                                               known_ab, subset=selector)
@@ -336,7 +340,7 @@ class PatternDistribution(object):
                 print("\n# Distribution of {}→{} \n".format(pred, out), file=logfile)
 
                 A = patterns.loc[selector,:][column]
-                B = self.classes.loc[selector,:][(pred, out)] + self.features[selector]
+                B = self.add_features(self.classes.loc[selector,:][(pred, out)])
                 cond_events = A.groupby(B, sort=False)
 
                 if sanity_check:
@@ -565,9 +569,12 @@ class PatternDistribution(object):
                 known_patterns = patterns[pairs_of_predictors]
                 known_patterns = known_patterns.apply(formatting_known_patterns,
                                                       axis=1)
-                known_features = self.features[selector].apply(format_features)
 
-                B = known_classes + known_patterns + known_features
+                B = known_classes + known_patterns
+
+                if self.features is not None:
+                    known_features = self.features[selector].apply(format_features)
+                    B = B + known_features
 
                 cond_events = A.groupby(B, sort=False)
 
@@ -693,7 +700,7 @@ class SplitPatternDistribution(PatternDistribution):
 
         for a, b in pats.columns:
             selector = self.hasforms[a] & self.hasforms[b]
-            entropies.at[a, b] = cond_entropy(pats[(a, b)],self.classes[(a,b)]+predpats[(a,b)]+self.features, subset=selector)
-            entropies.at[b, a] = cond_entropy(pats[(a, b)],self.classes[(b,a)]+predpats[(a,b)]+self.features, subset=selector)
+            entropies.at[a, b] = cond_entropy(pats[(a, b)],self.add_features(self.classes[(a,b)]+predpats[(a,b)]), subset=selector)
+            entropies.at[b, a] = cond_entropy(pats[(a, b)],self.add_features(self.classes[(b,a)]+predpats[(a,b)]), subset=selector)
 
         return entropies
