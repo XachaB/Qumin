@@ -4,7 +4,7 @@ Qumin: Quantitative modelling of inflection
 
 Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <http://www.llf.cnrs.fr/Gens/Beniamine>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . The `documentation can be found on the LLF website <http://drehu.linguist.univ-paris-diderot.fr/qumin/>`_. For more detail, you can refer to my dissertation:
 
-`Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français.<https://tel.archives-ouvertes.fr/tel-01840448>`_
+`Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français. <https://tel.archives-ouvertes.fr/tel-01840448>`_
 
 Qumin includes a subset of the French `flexique lexicon <http://www.llf.cnrs.fr/fr/flexique-fr.php>`_, distributed under a `Creative Commons Attribution-NonCommercial-ShareAlike license <http://creativecommons.org/licenses/by-nc-sa/3.0/>`_.
 
@@ -50,7 +50,7 @@ Our work on automatical inference of macroclasses was published in Beniamine, Sa
 
     bin/$ python3 find_macroclasses.py  <patterns.csv> <segments.csv>
 
-Lattices
+Latticess
 ---------
 
 Our work on inflection class lattices has been presented at the Annual Meeting of the Linguistics Association of Great Britain 2016 (Beniamine & Bonami 2016).
