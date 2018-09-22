@@ -128,7 +128,9 @@ def main(args):
                                           features=features)
 
 
-        if args.onePred:
+        if args.onePred or args.nPreds[0] == 1:
+            if args.nPreds:
+                args.nPreds.pop(0)
             ent_file = "{}onePredEntropies.csv".format(result_prefix)
             effectifs_file = "{}onePredEntropiesEffectifs.csv".format(result_prefix)
             entropies, effectifs = distrib.entropy_matrix()
