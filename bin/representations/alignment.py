@@ -10,20 +10,28 @@ from itertools import zip_longest
 import numpy as np
 from numpy import mean
 from representations import segments
+import pandas as pd
 
 PHON_INS_COST = None
+
 
 def prettyPrint(alignments,pad="\t",**kwargs):
     ins_cost = kwargs.get("ins_cost", 1) # By default use levenshtein insertion
     sub_cost_func = kwargs.get("sub_cost", lambda a,b:int(a!=b)) # By default use levenshtein substitution
+    in_notebook = kwargs.get("notebook", False) # By default use levenshtein substitution
+    print_func = print
+    if in_notebook:
+        from IPython.display import display
+        print_func = display
 
     tables = []
-    print("{} optimal alignments:".format(len(alignments)))
+    nb = len(alignments)
+    print("{} optimal alignment{}:".format(nb,"s" if nb>1 else ""))
     for table in alignments:
-        scores = ["distance"]
-        ops = ["\t"]
-        left = ["\t"]
-        right = ["\t"]
+        scores = []
+        ops = []
+        left = []
+        right = []
         for a,b in table:
             if a == '' or b == '':
                 scores.append(ins_cost)
@@ -31,21 +39,18 @@ def prettyPrint(alignments,pad="\t",**kwargs):
             else:
                 scores.append(sub_cost_func(a,b))
                 ops.append("S")
-            left.append(a or ' ')
-            right.append(b or ' ')
+            left.append(a)
+            right.append(b)
         length = len(table)
-        bars = ["\t"]+(["│"]*length)
+        bars = ["│"]*length
         scores.append(sum(scores[1:]))
         scores[1:] = [round(x,2) for x in scores[1:]]
         scores[-1] = "= "+str(scores[-1])
 
-        print()
-        print(*left,sep=pad)
-        print(*bars,sep=pad)
-        print(*right,sep=pad)
-        print(*ops,sep=pad)
-        print(*scores,sep=pad)
-        print()
+        df = pd.DataFrame([left,bars,right,scores],
+                         index=["","","","distance"]).fillna("")
+        df.columns = [""]*(len(df.columns)-1) + ["Total"]
+        print_func(df)
 
 def commonprefix(*args):
     """Given a list of strings, returns the longest common prefix"""
@@ -129,7 +134,7 @@ def align_phono(s1, s2,**kwargs):
     aligned = align_auto(s1,s2,sub_cost=_phon_sub_cost,**kwargs)
 
     if kwargs.get("prettyPrint",False):
-        prettyPrint(aligned,sub_cost=_phon_sub_cost,ins_cost=kwargs["ins_cost"])
+        prettyPrint(aligned,sub_cost=_phon_sub_cost,**kwargs)
 
     return aligned
 
@@ -147,7 +152,7 @@ def align_levenshtein(s1, s2, **kwargs):
     aligned = align_auto(s1,s2, **kwargs)
 
     if kwargs.get("prettyPrint",False):
-        prettyPrint(aligned)
+        prettyPrint(aligned,**kwargs)
 
     return aligned
 
