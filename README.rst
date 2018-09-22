@@ -30,11 +30,15 @@ This script corresponds to the work published in Bonami, Olivier, and S. Beniami
 
 **Computing entropies from one cell** ::
 
-    bin/$ python3 calc_paradigm_entropy.py -o <patterns.csv> <paradigm.csv> <segments.csv>
+    bin/$ python3 calc_paradigm_entropy.py -n 1 -- <patterns.csv> <paradigm.csv> <segments.csv>
 
-**Computing entropies from two cell** ::
+**Computing entropies from two cells** (you can specify any number of predictors, e.g. `-n 1 2 3` works too) ::
 
-    bin/$ python3 calc_paradigm_entropy.py -n 2 <patterns.csv> <paradigm.csv> <segments.csv>
+    bin/$ python3 calc_paradigm_entropy.py -n 2 -- <patterns.csv> <paradigm.csv> <segments.csv>
+
+**Add a file with features to help prediction** (for example gender) ::
+
+    bin/$ python3 calc_paradigm_entropy.py -n 2 --features <features.csv> -- <patterns.csv> <paradigm.csv> <segments.csv>
 
 Macroclass inference
 ----------------------
