@@ -2,10 +2,11 @@
 Qumin: Quantitative modelling of inflection
 ===========================================
 
-Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It is developed by `Sacha Beniamine <http://www.llf.cnrs.fr/Gens/Beniamine>`_.
-My Phd is supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . The `documentation can be found on the LLF website <http://drehu.linguist.univ-paris-diderot.fr/qumin/>`_.
+Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <http://www.llf.cnrs.fr/Gens/Beniamine>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . The `documentation can be found on the LLF website <http://drehu.linguist.univ-paris-diderot.fr/qumin/>`_. For more detail, you can refer to my dissertation:
 
-It includes a subset of the French `flexique lexicon <http://www.llf.cnrs.fr/fr/flexique-fr.php>`_, distributed under a `Creative Commons Attribution-NonCommercial-ShareAlike license <http://creativecommons.org/licenses/by-nc-sa/3.0/>`_.
+`Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français.<https://tel.archives-ouvertes.fr/tel-01840448>`_
+
+Qumin includes a subset of the French `flexique lexicon <http://www.llf.cnrs.fr/fr/flexique-fr.php>`_, distributed under a `Creative Commons Attribution-NonCommercial-ShareAlike license <http://creativecommons.org/licenses/by-nc-sa/3.0/>`_.
 
 The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas (0.18), scipy, scikit-learn, matplotlib, prettytable.
 
@@ -26,7 +27,7 @@ Alternation patterns serve as a basis for all the other scripts. The algorithm t
 Paradigm entropy
 ------------------
 
-This script corresponds to the work published in Bonami, Olivier, and S. Beniamine. "`Joint predictiveness in inflectional paradigms <http://www.llf.cnrs.fr/fr/node/4789>`_." Word Structure 9, no. 2 (2016): 156-182.
+This script corresponds to the work published in Bonami, Olivier, and S. Beniamine. "`Joint predictiveness in inflectional paradigms <http://www.llf.cnrs.fr/fr/node/4789>`_." Word Structure 9, no. 2 (2016): 156-182. Some improvements have been implemented since then.
 
 **Computing entropies from one cell** ::
 
