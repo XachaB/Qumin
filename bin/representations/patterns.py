@@ -171,28 +171,43 @@ class Pattern(object):
         quantities = {"": one, "?": optional, "+":some, "*":kleenestar}
 
         def parse_alternation(string, cells):
-            seg = "[{}]".format("".join(Segment._simple_segments))
-            classes = "\[{}+\]".format(seg)
+            simple_segs = "".join(Segment._simple_segments)
+            seg = "[{}]".format(simple_segs)
+            classes = "\[[{}\-]+\]".format(simple_segs)
             regex = "({seg}|{classes})".format(seg=seg, classes=classes)
             for c, alt in zip(cells, string.split(" ⇌ ")):
                 alts = []
                 for segs in alt.split("_"):
                     alts.append([])
                     for s in re.findall(regex, segs):
-                        if len(s) > 2 and (s[0], s[-1]) == ("[", "]"):
-                            s = _CharClass(s[1:-1])
+                        if (len(s) > 2 or "-" in s) and (s[0], s[-1]) == ("[", "]"):
+                            if "-" in s:
+                                raw_segments = s[1:-1].split("-")
+                                aliases = [Segment.get(s).alias for s in raw_segments]
+                                s = _CharClass("".join(aliases))
+                            else:
+                                # Legacy parser
+                                s = _CharClass(s[1:-1])
                         alts[-1].append(s)
                 yield c, [tuple(x) for x in alts]
 
         def parse_context(string):
-            seg = "[{}]".format("".join(Segment._simple_segments))
-            classes = "\[{}+\]".format(seg)
+            simple_segs = "".join(Segment._simple_segments)
+            seg = "[{}]".format(simple_segs)
+            classes = "\[[{}\-]+\]".format(simple_segs)
             regex = "({seg}|{classes}|_)([+*?]?)".format(seg=seg, classes=classes)
             for s, q in re.findall(regex, string):
                 if (s, q) == ("_", ""):
                     yield "{}"
-                elif len(s) > 2 and (s[0], s[-1]) == ("[", "]"):
-                    yield _CharClass(s[1:-1]), quantities[q]
+                elif (len(s) > 2 or "-" in s) and (s[0], s[-1]) == ("[", "]"):
+                    if "-" in s:
+                        raw_segments = s[1:-1].split("-")
+                        aliases = [Segment.get(s).alias for s in raw_segments]
+                        s = _CharClass("".join(aliases))
+                        yield s, quantities[q]
+                    else:
+                        # Legacy parser
+                        yield _CharClass(s[1:-1]), quantities[q]
                 else:
                     yield s, quantities[q]
 
@@ -484,7 +499,7 @@ class BinaryPattern(Pattern):
                 i += 1
 
 
-        self._saved_regex = {c : re.compile(regex[c]) for c in regex}
+        self._saved_regex = {c : re.compile("^"+regex[c]+"$") for c in regex}
         self._saved_repl = repl
 
     def _find_generalized_alt(self):
@@ -525,12 +540,7 @@ class BinaryPattern(Pattern):
         """
         try:
             regex = self._regex[cell]
-            try:
-                return bool(regex.fullmatch(form))
-            except AttributeError:
-                #  Patching re.fullmatch for python versions < 3.4 and > 3.
-                matched = regex.match(form)
-                return (matched and matched.span() == (0,len(form)))
+            return bool(regex.match(form))
         except KeyError as err:
             raise KeyError("Unknown cell {}."
                   " This pattern's cells are {}."

@@ -574,7 +574,7 @@ def initialize(filename,sep="\t", verbose=False):
                 Segment._simple_segments.append(alias)
             else:
                 alias = _CharClass(alias)
-                ipa = "[{}]".format("".join(aliases.get(a, a) for a in alias))
+                ipa = "[{}]".format("-".join(aliases.get(a, a) for a in alias))
             #print("Adding : {} ({}) = {}\n\t{}".format(ipa,alias,lattice.vertex[seg_set],classes))
             Segment(classes, features, alias, ipa, shorthand=shorthand)
             lattice.lattice[extent].alias = alias

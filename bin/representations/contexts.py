@@ -78,7 +78,7 @@ class _ContextMember(object):
     def to_str(self,mode=2):
         ## Format modes:
         ## str (0):      ([Ei]...) - with parenthesis, regex
-        ## restored (1):  [ei]...
+        ## restored and separated  (1):  [e-i]...
         ## display (2): shortest(restored,[+syll, -open])
         ## features (3): [+syll, -open]
         def to_features(segment):
