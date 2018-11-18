@@ -6,7 +6,7 @@ Author: Sacha Beniamine.
 """
 from entropy import cond_P, P
 import numpy as np
-from representations import segments, create_paradigms, patterns
+from representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
 import argparse
 from utils import get_repository_version
@@ -85,7 +85,7 @@ def k_fold_mean_accuracy(paradigms, l, step, k, train_funcs, foldback, bipartite
                 total += test_len*2
                 total_count +=1
                 for method in train_funcs:
-                    r  = accuracy_func(paradigms, a, b, train_funcs[method], test_items, train_items,foldback)
+                    r  = accuracy_func(paradigms, a, b, train_funcs[method], test_items, train_items, foldback, **kwargs)
                     accuracy[method] += r["accuracy"]
                     count[method] += r["count"]
                     prb.increment()
@@ -119,7 +119,7 @@ def bipartite_accuracy_twocols(paradigms,*args,**kwargs):
     prediction_rightB, prediction_leftB, countB = prediction_twocols(paradigmsB,*args,**kwargs)
     return {"accuracy": sum(prediction_rightA & prediction_rightB)+sum(prediction_leftA & prediction_leftB), "count":countA+countB }
 
-def prediction_twocols(paradigms, a, b, train_func, test_items, train_items, foldback):
+def prediction_twocols(paradigms, a, b, train_func, test_items, train_items, foldback, features=None):
     '''Compute the mean accuracy and mean number of patterns for one method and one pair of columns, with given train and test sets.
 
     Arguments:
@@ -145,7 +145,6 @@ def prediction_twocols(paradigms, a, b, train_func, test_items, train_items, fol
 
         if pat is not None:
             result = pat.apply(form,names=cells,raiseOnFail=False)
-
         return (result == solution)
 
     def prepare_prediction(patrons,classes):
@@ -163,12 +162,14 @@ def prediction_twocols(paradigms, a, b, train_func, test_items, train_items, fol
     except AttributeError:
         A = A[A.columns[0]]
 
-    try:
-        classes = patterns.find_applicable(train_items.append(test_items), dic)
-    except:
-        print(train_items.append(test_items))
+    classes = patterns.find_applicable(train_items.append(test_items), dic)
+
     B = classes[(a,b)]
     C = classes[(b,a)]
+
+    if features is not None:
+        B = B + features[B.index]
+        C = C + features[C.index]
 
     repli = None
     if foldback:
@@ -243,14 +244,21 @@ def main(args):
             index = list(paradigms.index)
 
         l = len(index)
-        step = (l//10)
+        step = max(1, (l//10))
         train = l-step
         test = step
         print("Total lexemes: ",len(index))
+
         #print("Train on {}, test on {}.".format(train,test))
+        if args.features is not None:
+            features = create_features(args.features)
+            features = features.apply(lambda x: x.name+"="+x.apply(str),axis=0)
+            features = pd.DataFrame.sum(features.applymap(lambda x: (str(x),)),axis=1)
 
-        results = k_fold_mean_accuracy(paradigms, l, step, args.kfolds, train_funcs,args.foldback,bipartite=args.bipartite,split=args.split,log=logfile)
+        else:
+            features = None
 
+        results = k_fold_mean_accuracy(paradigms, l, step, args.kfolds, train_funcs,args.foldback,bipartite=args.bipartite,split=args.split,log=logfile, features=features)
 
         version = get_repository_version()
         print("\n\n############### Results ###############")
@@ -324,6 +332,11 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--randomsample',
                         help="Mostly for debug",
                         type=int,
+                        default=None)
+
+    parser.add_argument('--features',
+                        help="Feature file. Features will be considered known when predicting",
+                        type=str,
                         default=None)
     args = parser.parse_args()
     main(args)
