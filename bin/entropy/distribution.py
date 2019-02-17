@@ -23,6 +23,12 @@ def merge_split_df(dfs):
                 for col in dfs[0].columns}
     return pd.DataFrame(merged,index=dfs[0].index,columns=dfs[0].columns)
 
+def dfsum(df, **kwargs):
+    cols = df.columns
+    S = df[cols[0]]
+    for col in cols:
+        S += df[col]
+    return S
 
 class PatternDistribution(object):
     """Statistical distribution of patterns.
@@ -68,7 +74,9 @@ class PatternDistribution(object):
             self.features_len = features.shape[1]
             self.features = pd.DataFrame.sum(features,axis=1)
         else:
+            self.features_len = 0
             self.features = None
+            print("Add feature is identity func")
             self.add_features = lambda x: x
 
         print("\n\nLooking for classes of applicable patterns")
@@ -123,6 +131,7 @@ class PatternDistribution(object):
             entropy  (:class:`pandas:pandas.DataFrame`):
                 Entropy matrix to register.
         """
+        entropy = entropy.applymap(lambda x: max(0,x))
         try:
             self.entropies[n] = entropy
             self.effectifs[n] = effectifs
@@ -182,7 +191,6 @@ class PatternDistribution(object):
         # For faster access
         patterns = self.patterns
         classes = self.classes
-        dfsum = pd.DataFrame.sum
         columns = list(self.paradigms.columns)
 
         def already_zero(predictors, out, zeros):
@@ -232,13 +240,14 @@ class PatternDistribution(object):
                     selector = predsselector & self.hasforms[out]
                     local_patterns = patterns[
                         [pat_order[(pred, out)] for pred in predictors]]
-                    A = dfsum(local_patterns, axis=1)
+                    A = dfsum(local_patterns)
 
                     # Known classes Class(x), Class(y) and known patterns x~y
                     # plus all features
                     known_classes = classes.loc[selector,[(pred, out) for pred in predictors]]
                     known = known_classes.join(known_patterns[selector])
-                    B = self.add_features(dfsum(known, axis=1))
+
+                    B = self.add_features(dfsum(known))
 
                     # Prediction of H(A|B)
                     entropies.at[predictors, out] = cond_entropy(A, B, subset=selector)
@@ -347,7 +356,7 @@ class PatternDistribution(object):
                     cond_p = P(cond_events)
 
                     surprisal = cond_p.groupby(level=0).apply(entropy)
-                    slow_ent = sum(classes_p * surprisal)
+                    slow_ent = min(0,np.float16(sum(classes_p * surprisal)))
                     entropies_check.at[pred, out] = slow_ent
                     print("Entropy from this distribution: ",
                           slow_ent, file=logfile)
@@ -356,13 +365,13 @@ class PatternDistribution(object):
                         ent = self.entropies[1].at[pred, out]
                         print("Entropy from the matrix: ", ent, file=logfile)
 
-                        if ent != slow_ent and abs(ent - slow_ent) > 1e-10:
+                        if ent != slow_ent and abs(ent - slow_ent) > 1e-5:
                             print("\n# Distribution of {}→{}".format(pred, out))
                             print("WARNING: Something is wrong"
                                   " in the entropy's calculation. "
                                   "Slow and fast methods produce "
                                   "different results: slow {}, fast {}"
-                                  "".format(type(slow_ent), type(ent)))
+                                  "".format(slow_ent, ent))
 
                 print("Showing distributions for ",len(cond_events)," classes", sep="", file=logfile)
 
@@ -382,8 +391,11 @@ class PatternDistribution(object):
                                                       (pred, out)),
                                                 axis=1)
                     total = sum(list(counter.values()))
-                    print("Features:",*classe[-self.features_len:], file=logfile)
-                    for my_pattern in classe[:-self.features_len]:
+                    if self.features is not None:
+                        print("Features:",*classe[-self.features_len:], file=logfile)
+                        classe = classe[:-self.features_len]
+                        
+                    for my_pattern in classe:
                         if my_pattern in counter:
                             row = (str(my_pattern),
                                    examples[my_pattern],
@@ -431,7 +443,7 @@ class PatternDistribution(object):
                     value_one = entropies_one.at[predictor, out]
 
                     if value_n > value_one and \
-                       abs(value_n - value_one) > 1e-10:
+                       abs(value_n - value_one) > 1e-5:
 
                         found_wrong = True
                         if logfile:
@@ -579,7 +591,7 @@ class PatternDistribution(object):
                     classes_p = P(B)
                     cond_p = P(cond_events)
                     surprisal = cond_p.groupby(level=0).apply(entropy)
-                    slow_ent = sum(classes_p * surprisal)
+                    slow_ent = min(0,np.float16(sum(classes_p * surprisal)))
                     entropies_check.at[predictors, out] = slow_ent
                     print("Entropy from this distribution: ",
                           slow_ent, file=logfile)
@@ -587,7 +599,7 @@ class PatternDistribution(object):
                     if n < len(self.entropies) and self.entropies[n] is not None:
                         ent = self.entropies[n].at[predictors, out]
                         print("Entropy from the matrix: ", ent, file=logfile)
-                        if ent != slow_ent and abs(ent - slow_ent) > 1e-10:
+                        if ent != slow_ent and abs(ent - slow_ent) > 1e-5:
                             print("\n# Distribution of ({}, {}) → {z} \n".format(*predictors,
                                                               z=out))
                             print("WARNING: Something is wrong"

@@ -167,7 +167,7 @@ def main(args):
         if args.importFile:
             distrib.read_entropy_from_file(args.importFile)
 
-        for n in args.nPreds:
+        for n in preds:
             n_ent_file = "{}{}PredsEntropies.csv".format(result_prefix,n)
             effectifs_file = "{}{}PredsEntropiesEffectifs.csv".format(result_prefix,n)
             n_entropies, effectifs = distrib.n_preds_entropy_matrix(n)
