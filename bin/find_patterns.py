@@ -74,10 +74,7 @@ def main(args):
     paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols, segcheck=segcheck)
 
     print("Looking for patterns...")
-    if is_of_pattern_type:
-        patterns_df, dic = patternfinder[kind](paradigms)
-    else:
-        patterns_df = patternfinder[kind](paradigms)
+    patterns_df = patternfinder[kind](paradigms, optim_mem=args.optim_mem)
 
     if merge_cols and not args.merge_cols: # Re-build duplicate columns
         for a, b in patterns_df.columns:
@@ -158,6 +155,9 @@ if __name__ == '__main__':
                          help="Keep overabundant entries.",
                          action="store_true", default=False)
 
+    parser.add_argument("--optim_mem",
+                         help="Attempt to optimize RAM usage",
+                         action="store_true", default=False)
 
     parser.add_argument("-m", "--merge_cols",
                          help="Whether to merge identical columns before looking for patterns.",

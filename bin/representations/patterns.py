@@ -679,7 +679,7 @@ def _pat_align_simple(row,cells,collection,align_func):
             alt = new_rule.to_alt(exhaustive_blanks=False)
             collection[alt].append(new_rule)
 
-def find_suffixal_patterns(paradigms, categorical=False):
+def find_suffixal_patterns(paradigms, **kwargs):
     """Find Patterns in a DataFrame with left alignment.
 
     Patterns are generalized two by two incrementally. The alternation is never generalized.
@@ -701,9 +701,9 @@ def find_suffixal_patterns(paradigms, categorical=False):
             :class:`pandas:pandas.DataFrame`,
             pat_dict is a dict mapping a column name to a list of patterns.
     """
-    return _find_patterns_aligned(paradigms, categorical=False, align_func=alignment.align_left)
+    return _find_patterns_aligned(paradigms, align_func=alignment.align_left, **kwargs)
 
-def find_prefixal_patterns(paradigms, categorical=False):
+def find_prefixal_patterns(paradigms, **kwargs):
     """Find Patterns in a DataFrame with right alignment.
 
     Patterns are generalized two by two incrementally. The alternation is never generalized.
@@ -723,7 +723,7 @@ def find_prefixal_patterns(paradigms, categorical=False):
             :class:`pandas:pandas.DataFrame`,
             pat_dict is a dict mapping a column name to a list of patterns.
     """
-    return _find_patterns_aligned(paradigms, categorical=False, align_func=alignment.align_right)
+    return _find_patterns_aligned(paradigms, align_func=alignment.align_right, **kwargs)
 
 def find_baseline_patterns(paradigms, categorical=False):
     """Find Patterns in a DataFrame with baseline alignment.
@@ -809,7 +809,7 @@ def _find_patterns_aligned(paradigms, categorical=False, align_func= alignment.a
 
     return patterns, pat_dict
 
-def find_levenshtein_patterns(paradigms, categorical=False):
+def find_levenshtein_patterns(paradigms, **kwargs):
     """Find Patterns in a DataFrame with levenshtein alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -841,9 +841,9 @@ def find_levenshtein_patterns(paradigms, categorical=False):
         ('prs.1.pl', 'prs.2.pl'): [ɔ̃ ⇌ E / amən_ <1.0>],
         ('prs.1.sg', 'prs.1.pl'): [E_ ⇌ ə_ɔ̃ / am_n_ <1.0>]}
     """
-    return _find_auto_patterns(paradigms, categorical=categorical, align_func=alignment.align_levenshtein)
+    return _find_auto_patterns(paradigms, align_func=alignment.align_levenshtein, **kwargs)
 
-def find_phonsim_patterns(paradigms, categorical=False):
+def find_phonsim_patterns(paradigms, **kwargs):
     """Find Patterns in a DataFrame with phonologically aware alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -876,9 +876,9 @@ def find_phonsim_patterns(paradigms, categorical=False):
         ('prs.1.pl', 'prs.2.pl'): [ɔ̃ ⇌ E / amən_ <1.0>],
         ('prs.1.sg', 'prs.1.pl'): [E_ ⇌ ə_ɔ̃ / am_n_ <1.0>]}
     """
-    return _find_auto_patterns(paradigms, categorical=categorical, align_func=alignment.align_phono)
+    return _find_auto_patterns(paradigms, align_func=alignment.align_phono, **kwargs)
 
-def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align_levenshtein):
+def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align_levenshtein,optim_mem=False):
     """Find Patterns in a DataFrame with automatic alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -965,8 +965,13 @@ def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align
             else:
                 best[l].add(None)
 
-        result = [PatternCollection(list(best[l])) for l in index]
-        pat_dict[(c1, c2)] = list(set.union(*[set(coll.collection) for coll in result]))
+
+
+        if optim_mem:
+            result = [repr(PatternCollection(list(best[l]))) for l in index]
+        else:
+            result = [PatternCollection(list(best[l])) for l in index]
+            pat_dict[(c1, c2)] = list(set.union(*[set(coll.collection) for coll in result]))
 
         progress.increment()
         return result
@@ -1049,7 +1054,7 @@ def find_applicable(paradigms, pat_dict, categorical=False):
 
     return classes
 
-def find_local_alternations(paradigms):
+def find_local_alternations(paradigms, **kwargs):
     """Find local alternations in a paradigm.
 
     For each pair of form in the paradigm, keep only the alternating material (words are left-aligned).
@@ -1109,7 +1114,7 @@ def find_local_alternations(paradigms):
 
     return patterns
 
-def find_global_alternations(paradigms):
+def find_global_alternations(paradigms, **kwargs):
     """Find global alternations in a paradigm.
 
     Return a DataFrame of alternations where we remove in each cell the material
@@ -1161,17 +1166,17 @@ def find_global_alternations(paradigms):
     df = paradigms.apply(segment, axis=1, args=(list(paradigms.columns), ))
     return df
 
-def find_global_alternations_pairs(paradigms):
+def find_global_alternations_pairs(paradigms, **kwargs):
     """ Find global endings in a paradigm, pair results as binary patterns."""
     return make_pairs(find_global_alternations(paradigms))
 
 
-def find_endings_pairs(paradigms, *args):
+def find_endings_pairs(paradigms, *args, **kwargs):
     """ Find global patterns in a paradigm, pair results as binary patterns."""
     return make_pairs(find_endings(paradigms))
 
 
-def find_endings(paradigms, *args):
+def find_endings(paradigms, *args, **kwargs):
     """Find suffixes in a paradigm.
 
     Return a DataFrame of endings where we remove in each row
