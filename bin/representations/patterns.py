@@ -878,7 +878,7 @@ def find_phonsim_patterns(paradigms, **kwargs):
     """
     return _find_auto_patterns(paradigms, align_func=alignment.align_phono, **kwargs)
 
-def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align_levenshtein,optim_mem=False):
+def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align_levenshtein,optim_mem=False, **kwargs):
     """Find Patterns in a DataFrame with automatic alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,

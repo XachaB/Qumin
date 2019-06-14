@@ -74,7 +74,10 @@ def main(args):
     paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols, segcheck=segcheck)
 
     print("Looking for patterns...")
-    patterns_df = patternfinder[kind](paradigms, optim_mem=args.optim_mem)
+    if is_of_pattern_type:
+        patterns_df, dic = patternfinder[kind](paradigms, optim_mem=args.optim_mem)
+    else:
+        patterns_df = patternfinder[kind](paradigms, optim_mem=args.optim_mem)
 
     if merge_cols and not args.merge_cols: # Re-build duplicate columns
         for a, b in patterns_df.columns:
