@@ -112,10 +112,13 @@ def main(args):
     patfilename = result_prefix+"_" + kind +".csv"
     print("Printing patterns (importable by other scripts) to "+patfilename)
     if is_of_pattern_type:
-        patterns.to_csv(patterns_df, patfilename, pretty=False)
-        pathumanfilename = result_prefix+"_human_readable_" + kind + ".csv"
-        print("Printing pretty patterns (for manual examination) to "+pathumanfilename)
-        patterns.to_csv(patterns_df, pathumanfilename, pretty=True)
+        if args.optim_mem:
+            patterns.to_csv(patterns_df, patfilename, pretty=False)
+            pathumanfilename = result_prefix+"_human_readable_" + kind + ".csv"
+            print("Printing pretty patterns (for manual examination) to "+pathumanfilename)
+            patterns.to_csv(patterns_df, pathumanfilename, pretty=True)
+        else:
+            patterns.to_csv(patterns_df, patfilename, pretty=False)
     else:
         patterns_df.to_csv(patfilename, sep=",")
 
