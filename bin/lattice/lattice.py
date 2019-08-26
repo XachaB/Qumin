@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import warnings
-import matplotlib.pyplot as plt
 import matplotlib
-from matplotlib.markers import MarkerStyle
+matplotlib.use("agg", force=True)
+from matplotlib import pyplot as plt
 from collections import defaultdict
 from clustering import Node
 from os.path import join, dirname
@@ -302,12 +302,12 @@ class ICLattice(object):
         return pd.Series(stats_lattice,index=["Microclasses","Base","Hauteur","Degré","Noeuds"])
 
 
-    def _draw_one(self, node, figsize=(24, 12), n=2, scale=False, colormap="Blues", point=False, **kwargs):
+    def _draw_one(self, node, figsize=(24, 12), scale=False, colormap="Blues", point=False, **kwargs):
         mini, maxi = self._pat_range()
         cm = matplotlib.cm.get_cmap(colormap)
         cnorm = matplotlib.colors.Normalize(vmin=mini, vmax=maxi)
         smap = matplotlib.cm.ScalarMappable(norm=cnorm, cmap=cm)
-        colors = ['#5fa38e', '#393d65']
+        colors = ['#444444', '#aaaaaa']
 
         def custom_zorder(node):
             return len(node.attributes["common"])
@@ -340,16 +340,13 @@ class ICLattice(object):
             return default
 
 
+        def default_edge_attr(node, child):
+            return {"color": colors[0],  "zorder": custom_zorder(node)}
+
         fig = plt.figure(figsize=figsize)  # for export: 12,6
-        lines, ordered_nodes = node.draw(horizontal=False,
-                                         square=False,
-                                         leavesfunc=leaves_label,
+        lines, ordered_nodes = node.draw(horizontal=False, square=False, leavesfunc=leaves_label,
                                          point=point_function if point else None,
-                                         edge_attributes=lambda node, child: {
-                                                                              "color": colors[0],
-                                                                              "zorder": custom_zorder(node)},
-                                         lattice=True,
-                                         **kwargs)
+                                         edge_attributes=default_edge_attr, lattice=False, **kwargs)
 
         if scale:
             colors = [smap.to_rgba(i) for i in range(mini, maxi)]
@@ -359,10 +356,17 @@ class ICLattice(object):
 
     def draw(self, filename, title="Lattice", **kwargs):
         """Draw the lattice using :class:`clustering.Node`'s drawing function."""
-        fig, *_ = self._draw_one(self.nodes, **kwargs)
+        fig, lines, ordered_nodes = self._draw_one(self.nodes, **kwargs)
         if title is not None:
             fig.suptitle(title)
         print("Drawing figure to: {}".format(filename))
+        axis = plt.gca()
+        axis.set_axis_off()
+        plt.subplots_adjust(top=1, bottom=0, right=1, left=0,
+                        hspace=0, wspace=0)
+        plt.margins(0, 0)
+        axis.xaxis.set_major_locator(plt.NullLocator())
+        axis.yaxis.set_major_locator(plt.NullLocator())
         plt.savefig(filename, bbox_inches='tight', pad_inches=0)
 
     def to_html(self, filename, node_formatter=_node_to_label_IC,**kwargs):
