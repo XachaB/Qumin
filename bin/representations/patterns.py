@@ -21,6 +21,7 @@ import pandas as pd
 import re
 
 ORTHO = False
+INS_PROP = 2
 Regex = type(re.compile(''))
 len = len
 sorted = sorted
@@ -898,7 +899,7 @@ def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align
     progress = ProgressBar(len(pairs))
 
     pat_dict = {}
-    alignment.PHON_INS_COST = alignment.get_mean_cost()/3
+    alignment.PHON_INS_COST = alignment.get_mean_cost()*INS_PROP
     paradigms_sets = paradigms.applymap(lambda x:set(x.split(";")))
 
     def attribute_best_pattern(sorted_collection,l,a,b):
