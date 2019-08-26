@@ -7,6 +7,8 @@ __pycache__/
 
 # Sphinx documentation
 doc/
+sphinx/doc_*
+sphinx/_static/
 
 # Non versionned
 commit_msg
@@ -44,3 +46,8 @@ desktop.ini
 .nfs*
 *.csync*
 dev_*.ipynb
+.idea
+
+# Qumin data & Results
+Data/
+Results/
