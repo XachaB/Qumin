@@ -776,7 +776,7 @@ def _find_patterns_aligned(paradigms, categorical=False, align_func= alignment.a
     pairs = combinations(cols, 2)
 
     patterns = pd.DataFrame(index=paradigms.index,
-                            columns=pairs, dtype=Pattern)
+                            columns=pairs)
 
     progress = ProgressBar(((n - 1) * n) / 2)
     pat_dict = {}
@@ -895,7 +895,7 @@ def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align
     cols = paradigms.columns
     pairs = list(combinations(cols,2))
     patterns_df = pd.DataFrame(index=paradigms.index,
-                            columns=pairs, dtype=Pattern)
+                            columns=pairs)
     progress = ProgressBar(len(pairs))
 
     pat_dict = {}
@@ -1033,13 +1033,11 @@ def find_applicable(paradigms, pat_dict, categorical=False):
     else:
         applicable = _applicable_patterns_tuple
 
-    data_type = str if categorical else tuple
 
     # Initialisation
     progress = ProgressBar(len(pat_dict))
     classes = pd.DataFrame(index=paradigms.index,
-                           columns=pairs,
-                           dtype=data_type)
+                           columns=pairs)
 
     for a, b in pat_dict:
         local_patterns = pat_dict[(a, b)]
@@ -1109,7 +1107,7 @@ def find_local_alternations(paradigms, **kwargs):
 
     # Create tuples pairs
     pairs = list(combinations(cols,2))
-    patterns = pd.DataFrame(index=paradigms.index, columns=pairs, dtype=str)
+    patterns = pd.DataFrame(index=paradigms.index, columns=pairs)
     progress = ProgressBar(len(pairs))
     patterns = patterns.apply(segment_columns,axis=0,args=(progress,))
 

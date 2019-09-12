@@ -2,13 +2,22 @@
 Qumin: Quantitative modelling of inflection
 ===========================================
 
-Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <http://www.llf.cnrs.fr/Gens/Beniamine>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . The `documentation can be found on the LLF website <http://drehu.linguist.univ-paris-diderot.fr/qumin/>`_. For more detail, you can refer to my dissertation:
+Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <http://www.llf.cnrs.fr/Gens/Beniamine>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . 
+The `documentation can be found on the LLF website <http://drehu.linguist.univ-paris-diderot.fr/qumin/>`_. For more detail, you can refer to my dissertation:
 
 `Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français. <https://tel.archives-ouvertes.fr/tel-01840448>`_
 
+The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas, scipy, scikit-learn, matplotlib, prettytable, networkx and pygraphviz.
+
+Data
+---------
+
+The scripts expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
+
 Qumin includes a subset of the French `flexique lexicon <http://www.llf.cnrs.fr/fr/flexique-fr.php>`_, distributed under a `Creative Commons Attribution-NonCommercial-ShareAlike license <http://creativecommons.org/licenses/by-nc-sa/3.0/>`_.
 
-The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas (0.18), scipy, scikit-learn, matplotlib, prettytable.
+For Russian nouns, see the `Inflected lexicon of Russian Nouns in IPA notation <https://zenodo.org/record/3428591>`_.
+
 
 Patterns
 ---------
@@ -37,7 +46,7 @@ This script corresponds to the work published in Bonami, Olivier, and S. Beniami
 
     bin/$ python3 calc_paradigm_entropy.py -n 2 -- <patterns.csv> <paradigm.csv> <segments.csv>
 
-**Add a file with features to help prediction** (for example gender) ::
+**Add a file with features to help prediction** (for example gender -- features will be added to the known information when predicting) ::
 
     bin/$ python3 calc_paradigm_entropy.py -n 2 --features <features.csv> -- <patterns.csv> <paradigm.csv> <segments.csv>
 
@@ -53,7 +62,7 @@ Our work on automatical inference of macroclasses was published in Beniamine, Sa
 Latticess
 ---------
 
-Our work on inflection class lattices has been presented at the Annual Meeting of the Linguistics Association of Great Britain 2016 (Beniamine & Bonami 2016).
+This script corresponds to the work published as: Beniamine, Sacha. (in press) “`One lexeme, many classes: inflection class systems as lattices<https://xachab.github.io/papers/Beniamine2019.pdf>`_” , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
 
 **Inferring a lattice of inflection classes, with html output** ::
 

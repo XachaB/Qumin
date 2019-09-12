@@ -1,13 +1,14 @@
 name: Qumin
 dependencies:
-- python>=3.6
-- pandas=0.18
+- python>=3.4
+- pandas
 - numpy
 - scipy
 - scikit-learn
 - matplotlib
 - networkx
 - pygraphviz
+- pip
 - pip:
     - concepts
     - prettytable
