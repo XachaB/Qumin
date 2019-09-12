@@ -1,0 +1,13 @@
+name: Qumin
+dependencies:
+- python>=3.6
+- pandas=0.18
+- numpy
+- scipy
+- scikit-learn
+- matplotlib
+- networkx
+- pygraphviz
+- pip:
+    - concepts
+    - prettytable
