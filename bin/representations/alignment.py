@@ -60,7 +60,7 @@ def commonprefix(*args):
     zipped = zip_longest(*args)
     for i, c in enumerate(shortest):
         zipped_i = next(zipped)
-        if any(s != c for s in zipped_i):
+        if any([s != c for s in zipped_i]):
             return shortest[:i]
     return shortest
 
