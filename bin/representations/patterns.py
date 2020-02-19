@@ -21,7 +21,7 @@ import pandas as pd
 import re
 
 ORTHO = False
-INS_PROP = 2
+INS_PROP = 1/3
 Regex = type(re.compile(''))
 len = len
 sorted = sorted
@@ -649,11 +649,11 @@ def _pat_auto_align(row, cells, collection, align_func):
                 collection[alt][t].append(new_rule)
             else:
                 done = []
+                # print("All alignments of {}, {}".format(a,b))
                 for aligned in align_func(a, b):
-                    #print("\t alignment: ",aligned)
+                    # print((aligned))
                     new_rule = Pattern(cells,aligned,aligned=True)
                     new_rule.lexemes = set([(row.name,a,b)])
-                    #print("\t rule:", new_rule)
                     if str(new_rule) not in done:
                         done.append(str(new_rule))
                         if new_rule._gen_alt:
