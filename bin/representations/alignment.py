@@ -159,7 +159,7 @@ def align_levenshtein(s1, s2, **kwargs):
 
     return aligned
 
-def align_auto(s1, s2, **kwargs):
+def align_auto(s1, s2, distance_only=False, **kwargs):
     """Return all the best alignments of two words according to some edit distance.
 
     Arguments:
@@ -196,14 +196,36 @@ def align_auto(s1, s2, **kwargs):
             paths[i, j] = _all_min([(subcost, (i-1, j-1), (a, b)),
                               (insb, (i, j-1), (fillvalue, b)),
                               (insa, (i-1, j), (a, fillvalue))])
+    if distance_only:
+        return paths[-1][-1][0][0]
+    else:
+        return _multibacktrack(paths)
 
-    return _multibacktrack(paths,-1, -1)
-
-def _multibacktrack(paths,i,j):
-    if i == 0 and j == 0:
-        return [[]]
-    steps = paths[i,j]
-    return [prev+[step[2]] for step in steps for prev in _multibacktrack(paths,*step[1])]
+def _multibacktrack(paths):
+    max_i, max_j = paths.shape
+    stack = [([], # empty alignment
+              (max_i-1, max_j-1),# start at last cell
+             set()) # No cell is forbidden.
+            ]
+    solutions = []
+    while stack != []:
+        current_path, (i,j), visited = stack.pop(0)
+        if (i,j) in visited:
+            continue # abandon this path, it is redundant
+        else:
+            visited.add((i,j))
+            if i==0 and j == 0:
+                solutions.append(current_path)
+            else:
+                #ins_del = {(i - 1, j), (i, j - 1)}
+                for step in paths[i, j]:
+                    _, idxs, action = step
+                    # Share the same visited set unless perfect match
+                    new_visited = visited if action[0] != action[1] else set()
+                    stack.append(([action]+current_path,
+                                 idxs,
+                                 new_visited))
+    return solutions
 
 
 def align_left(*args, debug=False, **kwargs):
