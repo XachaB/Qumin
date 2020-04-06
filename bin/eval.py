@@ -148,7 +148,7 @@ def prediction_twocols(paradigms, a, b, train_func, test_items, train_items, fol
         return (result == solution)
 
     def prepare_prediction(patrons,classes):
-        return cond_P(patrons,classes).groupby(level=0).aggregate(lambda x: np.argmax(x)[1]).to_dict()
+        return cond_P(patrons,classes).groupby(level=0).aggregate(lambda x: x.idxmax()[1]).to_dict()
 
     def repli_prediction(patrons):
         return dict(P(patrons))
