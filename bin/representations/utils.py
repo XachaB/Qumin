@@ -62,7 +62,7 @@ def create_paradigms(data_file_name,
                 Segment.get(char)
             except KeyError:
                 if char != ";":
-                    unknowns[char].append(form+" "+name)
+                    unknowns[char].append(restore_string(form)+" "+name)
 
     # Reading the paradigms.
     paradigms = pd.read_csv(data_file_name, na_values="#DEF#")
@@ -81,6 +81,7 @@ def create_paradigms(data_file_name,
     if cols:
         cols.append(lexemes)
         try:
+
             paradigms = paradigms[cols]
         except KeyError:
             print("The paradigm's columns are: {}".format(paradigms.columns))
@@ -91,6 +92,7 @@ def create_paradigms(data_file_name,
     paradigms.set_index(lexemes, inplace=True)
 
     paradigms.fillna(value="", inplace=True)
+
 
     if merge_duplicates:
         agenda = list(paradigms.columns)
@@ -123,7 +125,7 @@ def create_paradigms(data_file_name,
         paradigms.apply(lambda x: x.apply(get_unknown_segments, args=(unknowns, x.name)), axis=1)
 
         if len(unknowns) > 0:
-            alert = "Your paradigm has unknown segments: "+"\n ".join("[{}] (in {} forms:{}) ".format(u, len(unknowns[u]),restore_string(", ".join(unknowns[u][:10]))) for u in unknowns)
+            alert = "Your paradigm has unknown segments: "+"\n ".join("[{}] (in {} forms:{}) ".format(u, len(unknowns[u]), ", ".join(unknowns[u][:10])) for u in unknowns)
             raise ValueError(alert)
 
     if not fillna:
