@@ -65,7 +65,7 @@ def create_paradigms(data_file_name,
                     unknowns[char].append(restore_string(form)+" "+name)
 
     # Reading the paradigms.
-    paradigms = pd.read_csv(data_file_name, na_values="#DEF#")
+    paradigms = pd.read_csv(data_file_name, na_values="#DEF#", dtype="str")
 
     if not defective:
         paradigms.dropna(axis=0, inplace=True)
