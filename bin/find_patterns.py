@@ -113,12 +113,13 @@ def main(args):
     print("Printing patterns (importable by other scripts) to "+patfilename)
     if is_of_pattern_type:
         if args.optim_mem:
-            patterns.to_csv(patterns_df, patfilename, pretty=False)
+            patterns.to_csv(patterns_df, patfilename, pretty=True) # uses str because optim_mem already used repr
+            print("Since you asked for args.optim_mem, I will not export the human_readable file ")
+        else:
+            patterns.to_csv(patterns_df, patfilename, pretty=False) # uses repr
             pathumanfilename = result_prefix+"_human_readable_" + kind + ".csv"
             print("Printing pretty patterns (for manual examination) to "+pathumanfilename)
-            patterns.to_csv(patterns_df, pathumanfilename, pretty=True)
-        else:
-            patterns.to_csv(patterns_df, patfilename, pretty=False)
+            patterns.to_csv(patterns_df, pathumanfilename, pretty=True) # uses str
     else:
         patterns_df.to_csv(patfilename, sep=",")
 
