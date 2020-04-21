@@ -42,3 +42,7 @@ desktop.ini
 .nfs*
 *.csync*
 .idea
+
+
+Results/
+doc/
