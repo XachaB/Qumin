@@ -7,14 +7,14 @@ The `documentation can be found on the LLF website <http://www.llf.cnrs.fr/parta
 
 `Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français. <https://tel.archives-ouvertes.fr/tel-01840448>`_
 
-The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas, scipy, scikit-learn, matplotlib, prettytable, networkx and pygraphviz.
+The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas, scipy, matplotlib, prettytable, networkx and pygraphviz. To export lattices in html, you also need mpld3.
 
 Data
 ---------
 
 The scripts expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
 
-Qumin includes a subset of the French `flexique lexicon <http://www.llf.cnrs.fr/fr/flexique-fr.php>`_, distributed under a `Creative Commons Attribution-NonCommercial-ShareAlike license <http://creativecommons.org/licenses/by-nc-sa/3.0/>`_.
+To provide a data sample in the correct format, Qumin includes a subset of the French `flexique lexicon <http://www.llf.cnrs.fr/fr/flexique-fr.php>`_, distributed under a `Creative Commons Attribution-NonCommercial-ShareAlike license <http://creativecommons.org/licenses/by-nc-sa/3.0/>`_.
 
 For Russian nouns, see the `Inflected lexicon of Russian Nouns in IPA notation <https://zenodo.org/record/3428591>`_.
 
