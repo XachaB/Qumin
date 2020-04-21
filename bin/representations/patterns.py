@@ -168,7 +168,9 @@ class Pattern(object):
     @classmethod
     def _from_str(cls, cells, string):
         """Parse a repr str to a pattern.
-        >>> _ ⇌ E / abEs_ <0.5> """
+        >>> _ ⇌ E / abEs_ <0.5>
+        Note: Contexts strings are now separated by "-" (because phonemes can be)
+        """
         quantities = {"": one, "?": optional, "+":some, "*":kleenestar}
 
         def parse_alternation(string, cells):
@@ -311,14 +313,14 @@ class Pattern(object):
     def _iter_alt(self, features=True):
         """Generator of formatted alternating material for each cell."""
         def format_segment_ipa(chars):
-            chars_restored = restore_string(chars)
+            chars_restored = "-".join([restore(c) for c in sorted(chars)])
             if len(chars)>1:
                 chars_restored = "[{}]".format(chars_restored)
             return chars_restored
 
         def format_segment_shortest_notnode(chars):
             feats = set.intersection(*[Segment.get(x).features for x in chars])
-            return min([format_segment_ipa(chars), "[{}]".format(" ".join(feats))], key=len)
+            return min([format_segment_ipa(chars), "[{}]".format(" ".join(sorted(feats)))], key=len)
 
         if ORTHO:
             format_segment = str
