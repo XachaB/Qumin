@@ -5,10 +5,6 @@ __pycache__/
 .ipynb_checkpoints/
 *.pyc
 
-# Sphinx documentation
-doc/
-sphinx/doc_*
-sphinx/_static/
 
 # Non versionned
 commit_msg
@@ -45,9 +41,4 @@ desktop.ini
 *.unison
 .nfs*
 *.csync*
-dev_*.ipynb
 .idea
-
-# Qumin data & Results
-Data/
-Results/
