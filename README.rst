@@ -2,10 +2,17 @@
 Qumin: Quantitative modelling of inflection
 ===========================================
 
-Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <http://www.llf.cnrs.fr/Gens/Beniamine>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . 
-The `documentation can be found on the LLF website <http://www.llf.cnrs.fr/partage/qumin/>`_. For more detail, you can refer to my dissertation:
+Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <xachab.github.io>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . 
+
+**The documentation has moved to ReadTheDocs** at: https://qumin.readthedocs.io/
+For now, it is quite minimal.
+
+For more detail, you can refer to my dissertation (in French):
 
 `Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français. <https://tel.archives-ouvertes.fr/tel-01840448>`_
+
+Requirements
+-------------
 
 The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas, scipy, matplotlib, prettytable, networkx and pygraphviz. To export lattices in html, you also need mpld3.
 
@@ -36,7 +43,10 @@ Alternation patterns serve as a basis for all the other scripts. The algorithm t
 Paradigm entropy
 ------------------
 
-This script corresponds to the work published in Bonami, Olivier, and S. Beniamine. "`Joint predictiveness in inflectional paradigms <http://www.llf.cnrs.fr/fr/node/4789>`_." Word Structure 9, no. 2 (2016): 156-182. Some improvements have been implemented since then.
+This script was used in:
+
+- Bonami, Olivier, and S. Beniamine. "`Joint predictiveness in inflectional paradigms <http://www.llf.cnrs.fr/fr/node/4789>`_." Word Structure 9, no. 2 (2016): 156-182. Some improvements have been implemented since then.
+
 
 **Computing entropies from one cell** ::
 
@@ -62,7 +72,9 @@ Our work on automatical inference of macroclasses was published in Beniamine, Sa
 Lattices
 ---------
 
-This script corresponds to the work published as: Beniamine, Sacha. (in press) "`One lexeme, many classes: inflection class systems as lattices <https://xachab.github.io/papers/Beniamine2019.pdf>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
+This script was used in:
+
+- Beniamine, Sacha. (in press) "`One lexeme, many classes: inflection class systems as lattices <https://xachab.github.io/papers/Beniamine2019.pdf>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
 
 **Inferring a lattice of inflection classes, with html output** ::
 
