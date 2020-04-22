@@ -61,10 +61,11 @@ abâtardir    abâtardir       abataʁdi        abataʁdi
 
 To obtain complete usages, use the `--help` options:
 
-  python3 find_patterns.py --help 
-  python3 calc_paradigm_entropy.py --help 
-  python3 find_macroclasses.py --help 
-  python3 make_lattice.py --help
+
+    python3 find_patterns.py --help 
+    python3 calc_paradigm_entropy.py --help 
+    python3 find_macroclasses.py --help 
+    python3 make_lattice.py --help
 
 
 Usage of `bin/find_patterns.py`
