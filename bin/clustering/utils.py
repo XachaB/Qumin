@@ -32,10 +32,8 @@ class Node(object):
             Currently, three attributes are expected:
             size (int): size of the group represented by this node.
             DL (float): Description length for this node.
-            color (str): color of the splines from this node to its children,
-              in a format usable by pyplot.
-              Currently, red ("r") is used when the node didn't decrease
-              Description length, blue ("b") otherwise.
+            color (str): color of the splines from this node to its children, in a format usable by pyplot.
+            Currently, red ("r") is used when the node didn't decrease Description length, blue ("b") otherwise.
             macroclass (bool): Is the node in a macroclass ?
             macroclass_root (bool): Is the node the root of a macroclass ?
 

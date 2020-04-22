@@ -59,10 +59,10 @@ Our work on automatical inference of macroclasses was published in Beniamine, Sa
 
     bin/$ python3 find_macroclasses.py  <patterns.csv> <segments.csv>
 
-Latticess
+Lattices
 ---------
 
-This script corresponds to the work published as: Beniamine, Sacha. (in press) “`One lexeme, many classes: inflection class systems as lattices<https://xachab.github.io/papers/Beniamine2019.pdf>`_” , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
+This script corresponds to the work published as: Beniamine, Sacha. (in press) "`One lexeme, many classes: inflection class systems as lattices <https://xachab.github.io/papers/Beniamine2019.pdf>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
 
 **Inferring a lattice of inflection classes, with html output** ::
 

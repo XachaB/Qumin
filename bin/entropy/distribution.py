@@ -698,7 +698,7 @@ class SplitPatternDistribution(PatternDistribution):
             return I
 
     def cond_bipartite_entropy(self, target=0, known=1):
-        """ Entropie conditionnelle entre les deux systèmes, H(c1->c2|c1'->c2') ou H(c1'->c2'|c1->c2)
+        """ Entropie conditionnelle entre les deux systèmes, H(c1->c2\|c1'->c2') ou H(c1'->c2'\|c1->c2)
         """
         # For faster access
         print("Computing implicative H({}|{})".format(self.names[target], self.names[known]))

@@ -59,20 +59,19 @@ abasourdir   abasourdir      abazuʁdi        abazuʁdi
 abâtardir    abâtardir       abataʁdi        abataʁdi
 ============ ============ ================ =============
 
+To obtain complete usages, use the `--help` options:
+
+  python3 find_patterns.py --help 
+  python3 calc_paradigm_entropy.py --help 
+  python3 find_macroclasses.py --help 
+  python3 make_lattice.py --help
+
 
 Usage of `bin/find_patterns.py`
 -----------------------------------------
 
 Find pairwise alternation patterns from paradigms.
 This is a preliminary step necessary to obtain patterns used as input in the three scripts below.
-
-**usage**::
-
-      find_patterns.py [-h]
-                       [-k {endings,endingsPairs,globalAlt,localAlt,endingsDisc,patternsLevenshtein,patternsPhonsim,patternsSuffix,patternsPrefix,patternsBaseline}]
-                       [-d] [-o] [-m] [-f FOLDER]
-                        paradigms segments
-
 
 **Computing automatically aligned patterns** for paradigm entropy or macroclass::
 
@@ -109,11 +108,10 @@ The option -k allows one to choose the algorithm for inferring alternation patte
                                                Suffixation > Prefixation > Stem-internal alternation (ablaut/infixation)
 ====================== ====================== ==================================================================================
 
-More complete usage can be obtained by typing ::
+Most of these were implemented for comparison purposes. I recommend to use the default `patternsPhonsim` in most cases. To avoid relying on your phonological features files for alignment scores, use `patternsLevenshtein`. Only these two are full patterns with generalization both in the context and alternation.
 
-    bin/$ python3 find_patterns.py --help
-
-For lattices, we keep defective and overabundant entries. We do not for other applications.
+For lattices, we keep defective and overabundant entries. We do not usually keep them for other applications.
+The latest code for entropy can handle defective entries.
 The file you should use as input for the below scripts has a name that ends in "_patterns". The "_human_readable_patterns" file is nicer to review but is only meant for human usage.
 
 
@@ -121,14 +119,6 @@ Usage of `bin/calc_paradigm_entropy.py`
 -----------------------------------------
 
 Compute entropies of flexional paradigms' distributions.
-
-**usage**::
-
-    calc_paradigm_entropy.py [-h] [-b BIPARTITE BIPARTITE]
-                                    [--names NAMES NAMES] [-v] [-i file] [-m]
-                                    [--comp] [-o] [-n N [N ...]] [-s] [-p]
-                                    [-f FOLDER]
-                                    patterns paradigms segments
 
 **Computing entropies from one cell** ::
 
@@ -154,11 +144,6 @@ Usage of `bin/find_macroclasses.py`
 
 Cluster lexemes in macroclasses according to alternation patterns.
 
-**usage** ::
-
-     find_macroclasses.py [-h] [-m {UPGMA,DL}] [-a {TD,BU}] [-v] [-d] [-f FOLDER]
-                            patterns segments
-
 
 **Inferring macroclasses** ::
 
@@ -176,11 +161,6 @@ Usage of `bin/make_lattice.py`
 Infer Inflection classes as a lattice from alternation patterns.
 This will produce a context and an interactive html file.
 
-**usage** ::
-
-    make_lattice.py [-h] [--shorten] [-b BIPARTITE] [--aoc] [--html]
-                       [--cxt] [--stat] [--pdf] [--png] [--first] [-f FOLDER]
-                       patterns segments
 
 **Inferring a lattice of inflection classes, with html output** ::
 

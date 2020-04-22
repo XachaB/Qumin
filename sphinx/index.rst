@@ -10,5 +10,4 @@ Manual
    :numbered:
 
    How to use the scripts <usages>
-   Jupyter notebook examples <NbExamples>
    API <modules>
