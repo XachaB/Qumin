@@ -11,6 +11,7 @@ from utils import get_repository_version
 from lattice.lattice import ICLattice
 import pandas as pd
 
+
 def main(args):
     r""" Infer Inflection classes as a lattice from alternation patterns.
       ____
@@ -37,8 +38,9 @@ def main(args):
     # Setting up the output path.
     result_dir = "../Results/{}/{}".format(args.folder, day)
     makedirs(result_dir, exist_ok=True)
-    result_prefix = "{}/{}_{}_{}_{}_{}_{}lattice".format(result_dir, data_file_name, version, day, now, "aoc" if args.aoc else "full","bipartite_" if args.bipartite else "_")
-
+    result_prefix = "{}/{}_{}_{}_{}_{}_{}lattice".format(result_dir, data_file_name, version, day, now,
+                                                         "aoc" if args.aoc else "full",
+                                                         "bipartite_" if args.bipartite else "_")
 
     if features_file_name != "ORTHO":
 
@@ -50,61 +52,61 @@ def main(args):
         pat_table, _ = patterns.from_csv(data_file_path)
         # pat_table = pat_table.applymap(str)
         # pat_table.columns = [x+" ~ "+y for x,y in pat_table.columns]
-        collections=True
+        collections = True
         comp = None
         if args.bipartite is not None:
             comp = "<comp>"
             try:
                 pat_table2, _ = patterns.from_csv(args.bipartite)
-                pat_table2.columns = [(comp+c1,c2) for (c1,c2) in pat_table2.columns]
+                pat_table2.columns = [(comp + c1, c2) for (c1, c2) in pat_table2.columns]
             except:
-                pat_table2 = pd.read_csv(args.bipartite,index_col=0).fillna("")
-                pat_table2.columns = [comp+c for c in pat_table2.columns]
+                pat_table2 = pd.read_csv(args.bipartite, index_col=0).fillna("")
+                pat_table2.columns = [comp + c for c in pat_table2.columns]
             pat_table = pat_table.join(pat_table2)
     else:
         print("Reading patterns...")
-        pat_table = pd.read_csv(data_file_path,index_col=0)
-        collections=False
+        pat_table = pd.read_csv(data_file_path, index_col=0)
+        collections = False
 
     microclasses = find_microclasses(pat_table.applymap(str))
-
 
     print("Building the lattice...")
     lattice = ICLattice(pat_table.loc[list(microclasses), :], microclasses,
                         collections=collections, comp_prefix=comp, AOC=args.aoc, keep_names=(not args.shorten))
 
     if args.stat:
-        with open(result_prefix+"_stats.txt","w",encoding="utf-8") as flow:
-            print(lattice.stats().to_frame().T.to_latex(),file=flow)
+        with open(result_prefix + "_stats.txt", "w", encoding="utf-8") as flow:
+            print(lattice.stats().to_frame().T.to_latex(), file=flow)
             print(lattice.stats().to_frame().T.to_latex())
 
     if args.png:
-        lattice.draw(result_prefix + ".png", figsize=(20,10), title=None, point=True)
+        lattice.draw(result_prefix + ".png", figsize=(20, 10), title=None, point=True)
 
     if args.pdf:
-        lattice.draw(result_prefix + ".pdf", figsize=(20,10), title=None, point=True)
+        lattice.draw(result_prefix + ".pdf", figsize=(20, 10), title=None, point=True)
 
     if args.html:
-        print("Exporting to html:",result_prefix+".html")
-        lattice.to_html(result_prefix+".html")
+        print("Exporting to html:", result_prefix + ".html")
+        lattice.to_html(result_prefix + ".html")
 
     if args.cxt:
-        print("Exporting context to file:",result_prefix+".cxt")
-        lattice.context.tofile(result_prefix+".cxt",frmat='cxt')
+        print("Exporting context to file:", result_prefix + ".cxt")
+        lattice.context.tofile(result_prefix + ".cxt", frmat='cxt')
 
     if args.first:
         print("Here is the first level of the hierarchy:")
         print("Root:")
-        obj, common = lattice.nodes.attributes["objects"],lattice.nodes.attributes["common"]
+        obj, common = lattice.nodes.attributes["objects"], lattice.nodes.attributes["common"]
         if obj or common:
-            print("\tdefines:",obj,common)
+            print("\tdefines:", obj, common)
         for child in lattice.nodes.children:
-            extent, common = child.labels,child.attributes["common"]
-            print("extent:",extent,"\n\tdefines:",common,">")
+            extent, common = child.labels, child.attributes["common"]
+            print("extent:", extent, "\n\tdefines:", common, ">")
+
 
 if __name__ == '__main__':
-
     import argparse
+
     usage = main.__doc__
 
     parser = argparse.ArgumentParser(description=usage,
@@ -127,7 +129,7 @@ if __name__ == '__main__':
                              "but loses information. "
                              "The lattice shape and stats will be the same. "
                              "Avoid using with --html",
-                             action="store_true", default=False)
+                        action="store_true", default=False)
 
     parser.add_argument('-b', '--bipartite',
                         help="Add a second paradigm dataset, for bipartite systems.",
@@ -143,24 +145,24 @@ if __name__ == '__main__':
                         action="store_true", default=False)
 
     parser.add_argument("--cxt",
-                         help="Export as a context",
-                         action="store_true", default=False)
+                        help="Export as a context",
+                        action="store_true", default=False)
 
     parser.add_argument("--stat",
-                          help="Output stats about the lattice",
-                          action="store_true", default=False)
+                        help="Output stats about the lattice",
+                        action="store_true", default=False)
 
     parser.add_argument("--pdf",
-                          help="Export as png",
-                          action="store_true", default=False)
+                        help="Export as png",
+                        action="store_true", default=False)
 
     parser.add_argument("--png",
-                          help="Export as png",
-                          action="store_true", default=False)
+                        help="Export as png",
+                        action="store_true", default=False)
 
     parser.add_argument("--first",
-                          help="Write first level",
-                          action="store_true", default=False)
+                        help="Write first level",
+                        action="store_true", default=False)
 
     options = parser.add_argument_group('Options')
 

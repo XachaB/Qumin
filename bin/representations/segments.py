@@ -93,7 +93,7 @@ class Segment(object):
         return (self.alias == other.alias) or (self < other)
 
     @classmethod
-    def init_dissimilarity_matrix(cls, gap_prop=1/3, **kwargs):
+    def init_dissimilarity_matrix(cls, gap_prop=1 / 3, **kwargs):
         """Compute score matrix with dissimilarity scores."""
 
         costs = []

@@ -17,6 +17,7 @@ from clustering import Node, descriptionlength
 from clustering.clusters import _BUClustersBuilder
 import warnings
 
+
 def hamming(x, y, table, *args, **kwargs):
     """Compute hamming distances between vectors x and y.
 
@@ -62,7 +63,7 @@ def table_to_descr(table, exemplars, microclasses):
     for e in exemplars:
         microclass = microclasses[e]
         lexemes_descr.extend(microclass)
-        microcl_descr.extend(len(microclass)*[e])
+        microcl_descr.extend(len(microclass) * [e])
 
     lines = [" ".join(lexemes_descr), " ".join(microcl_descr)]
     # lines = [" ".join(exemplars)]
@@ -100,28 +101,28 @@ def compression_distance(a, b, merged):
         merged (float): Description length of the cluster merging both the clusters from a and b.
     """
     if a <= b:
-        return (merged-a)/b
+        return (merged - a) / b
     else:
-        return (merged-b)/a
+        return (merged - b) / a
 
 
 def dist_matrix(table, *args, labels=None, distfun=hamming, half=False, default=np.inf, **kwargs):
-    """Output a distance matrix between clusters.
+    """Output a distance score_matrix between clusters.
 
     Arguments:
         table (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
         distfun (fun): distance function.
         labels (iterable): the labels between which to compute distance. Defaults to the table's index.
-        half (bool): Wether to fill only a half matrix.
+        half (bool): Wether to fill only a half score_matrix.
         default (float): Default distance.
 
     Returns:
-        distances (dict): the similarity matrix.
+        distances (dict): the similarity score_matrix.
     """
     if labels is None:
         labels = table.index
 
-    progress = ProgressBar((len(labels)**2)/2)
+    progress = ProgressBar((len(labels) ** 2) / 2)
     distances = {frozenset([x]): {frozenset([y]): default for y in labels} for x in labels}
 
     for a, b in combinations(labels, 2):
@@ -144,7 +145,7 @@ class _DistanceClustersBuilder(_BUClustersBuilder):
     Attributes:
         attr (str): (class attribute) always have the value "DL", as the nodes of the Inflection class tree have a "DL" attribute.
         paradigms (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
-        distances (dict): The distance matrix between clusters.
+        distances (dict): The distance score_matrix between clusters.
     """
     attr = "dist"
 
@@ -221,11 +222,12 @@ class UPGMAClustersBuilder(_DistanceClustersBuilder):
         nodes (dict of frozenset :Node): Inherited. Maps frozensets of microclass exemplars to Nodes representing clusters.
         preferences (dict): Inherited. Configuration parameters.
         paradigms (:class:`pandas:pandas.DataFrame`): Inherited. a dataframe of patterns.
-        distances (dict): Inherited. The distance matrix between clusters.
+        distances (dict): Inherited. The distance score_matrix between clusters.
     """
+
     def __init__(self, *args, **kwargs):
         warnings.warn("The UPGMA clustering is experimental and development is not active. Use at your own risks !")
-        super().__init__(*args, distfun=hamming,**kwargs)
+        super().__init__(*args, distfun=hamming, **kwargs)
 
     def update_distances(self, new):
         """UPGMA update for distances.
@@ -236,10 +238,10 @@ class UPGMAClustersBuilder(_DistanceClustersBuilder):
         self.distances[new] = {}
         for cluster in self.nodes:
             pairs = product(cluster, new)
-            sumdist = sum(self.distances[frozenset([a])][frozenset([b])] for a,b in pairs)
+            sumdist = sum(self.distances[frozenset([a])][frozenset([b])] for a, b in pairs)
             pairslen = (len(new) * len(cluster))
             d = sumdist / pairslen
-            self.distances[new][cluster] = self.distances[cluster][new] =  d
+            self.distances[new][cluster] = self.distances[cluster][new] = d
 
 
 class CompressionDistClustersBuilder(_DistanceClustersBuilder):
@@ -256,13 +258,14 @@ class CompressionDistClustersBuilder(_DistanceClustersBuilder):
         nodes (dict of frozenset :Node): Inherited. Maps frozensets of microclass exemplars to Nodes representing clusters.
         preferences (dict): Inherited. Configuration parameters.
         paradigms (:class:`pandas:pandas.DataFrame`): Inherited. a dataframe of patterns.
-        distances (dict): Inherited. The distance matrix between clusters.
+        distances (dict): Inherited. The distance score_matrix between clusters.
         DL_dict (dict of frozenset:float): Maps each cluster to its description length.
         min_DL (float): the lowest description length for the whole system yet encountered.
     """
 
     def __init__(self, *args, **kwargs):
-        warnings.warn("The Compression Distance clustering is experimental and development is not active. Use at your own risks !")
+        warnings.warn(
+            "The Compression Distance clustering is experimental and development is not active. Use at your own risks !")
         super().__init__(*args, distfun=compression_distance_atomic, **kwargs)
         self.DL_dict = {}
         for microclass in list(self.microclasses):

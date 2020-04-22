@@ -8,39 +8,11 @@ import numpy as np
 from clustering import find_microclasses
 import warnings
 
+
 def choose(iterable):
     """Choose a random element in an iterable of iterable."""
     i = np.random.choice(len(iterable), 1)
     return iterable[int(i)]
-
-
-# def randomised(clustering_algorithm, patterns, microclasses, Clusters, n=10, **kwargs):
-#     """Randomise a clustering algorithm by running it n times.
-
-#     Arguments:
-#         clustering_algorithm (func): a clustering algorithm.
-#         patterns (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
-#         microclasses (dict of str:list): mapping of microclasses exemplars to microclasses inventories.
-#         Clusters : a cluster class to use in clustering.
-#         n : the number of repeated experiments to run.
-#         kwargs: any keywords arguments to pass to Clusters.
-#     """
-#     print("Randomised Top down clustering with {} iterations".format(n))
-
-#     solutions = []
-#     for i in range(n):
-#         tree = clustering_algorithm(patterns, microclasses, Clusters, **kwargs)
-#         DL = find_min_attribute(tree, "DL")
-#         print("Found solution with DL :", DL)
-#         solutions.append((DL, tree))
-
-#     solutions.sort(key=lambda x: x[0])
-#     best = solutions[0]
-#     worst = solutions[-1]
-
-#     print(" {} Solutions from {} to {}".format(len(solutions), best[0], worst[0]))
-
-#     return best[1]
 
 
 def top_down_clustering(patterns, microclasses, Clusters, **kwargs):
@@ -114,15 +86,16 @@ def bottom_up_clustering(patterns, microclasses, Clusters, **kwargs):
         clusters.merge(a, b)
     return clusters.rootnode()
 
+
 def log_classes(classes, prefix, suffix):
-    filename = prefix + "_"+ suffix + ".txt"
+    filename = prefix + "_" + suffix + ".txt"
     print("\nFound ", len(classes), suffix, ".\nPrinting log to ", filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(classes, key=lambda m: len(classes[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(classes[m])) + ", ".join(classes[m]))
 
 
-def hierarchical_clustering(patterns, Clusters, clustering_algorithm=bottom_up_clustering,  **kwargs):
+def hierarchical_clustering(patterns, Clusters, clustering_algorithm=bottom_up_clustering, **kwargs):
     """Perform hierarchical clustering on patterns according to a clustering algorithm and a measure.
 
     This function ::
@@ -148,7 +121,7 @@ def hierarchical_clustering(patterns, Clusters, clustering_algorithm=bottom_up_c
     # Export macroclasses
     macroclasses = node.macroclasses()
     if macroclasses:
-        log_classes(macroclasses,kwargs["prefix"],"macroclasses")
+        log_classes(macroclasses, kwargs["prefix"], "macroclasses")
     else:
         print("No macroclasses could be found "
               "(this is normal for Top Down and distances based clustering,"

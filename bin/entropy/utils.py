@@ -3,7 +3,8 @@
 
 import numpy as np
 
-def P(x,subset=None):
+
+def P(x, subset=None):
     """Return the probability distribution of elements in a :class:`pandas.core.series.Series`.
 
     Arguments:
@@ -17,7 +18,8 @@ def P(x,subset=None):
     else:
         return x[subset].value_counts(normalize=True, sort=False)
 
-def cond_P(A, B,subset=None):
+
+def cond_P(A, B, subset=None):
     """Return the conditional probability distribution P(A|B) for elements in two :class:`pandas.core.series.Series`.
 
     Arguments:
@@ -55,7 +57,7 @@ def slow_cond_entropy(A, B):
     return sum(known_p * cond_p.groupby(level=0, sort=False).apply(entropy))
 
 
-def cond_entropy(A, B,**kwargs):
+def cond_entropy(A, B, **kwargs):
     """Calculate the conditional entropy between two series of data points.
        Presupposes that values in the series are of the same type, typically tuples.
 
@@ -66,7 +68,7 @@ def cond_entropy(A, B,**kwargs):
     Return:
         H(A|B)
     """
-    return entropy(P(A+B,**kwargs)) - entropy(P(B,**kwargs))
+    return entropy(P(A + B, **kwargs)) - entropy(P(B, **kwargs))
 
 
 def entropy(A):

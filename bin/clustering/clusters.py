@@ -38,7 +38,8 @@ class _ClustersBuilder(object):
 
     def initialize_nodes(self):
         """Initialize the nodes of the Inflection Class tree."""
-        self.nodes = {frozenset([m]): Node([m], size=len(self.microclasses[m]), macroclass=False) for m in self.microclasses}
+        self.nodes = {frozenset([m]): Node([m], size=len(self.microclasses[m]), macroclass=False) for m in
+                      self.microclasses}
 
     def rootnode(self):
         """Return the root of the Inflection Class tree, if it exists."""

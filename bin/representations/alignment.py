@@ -51,6 +51,7 @@ def levenshtein_sub_cost(a, b):
 def multi_sub_cost(a, b):
     return int(b not in a)
 
+
 def align_multi(*strings, **kwargs):
     """ Levenshtein-style alignment over arguments, two by two."""
     if len(strings) == 1:

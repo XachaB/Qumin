@@ -25,7 +25,7 @@ def generalize_patterns(patterns, debug=False):
         return p0
 
     if debug:
-        print("generalizing:",patterns)
+        print("generalizing:", patterns)
     new = deepcopy(p0)
     cells = new.cells
     contexts = [p.context for p in patterns]
@@ -40,7 +40,7 @@ def generalize_patterns(patterns, debug=False):
             gen_alt = [list(x) for x in p0._gen_alt]
             partial = False
             alts = list(zip(*(p.alternation[new.cells[0]] for p in patterns)))
-            for i,segs in enumerate(alts):
+            for i, segs in enumerate(alts):
                 if len(set(segs)) == 1:
                     gen_alt[0][i] = p0.alternation[new.cells[0]][i]
                     gen_alt[1][i] = p0.alternation[new.cells[1]][i]
@@ -60,7 +60,7 @@ def generalize_patterns(patterns, debug=False):
         new._repr = new._make_str_(features=False)
         new._feat_str = new._make_str_(features=True)
         if debug:
-            print("New:",new)
+            print("New:", new)
 
     new.lexemes = set().union(*(p.lexemes for p in patterns))
     return new
@@ -91,7 +91,7 @@ def incremental_generalize_patterns(*args):
 
     exact_alternations = [x.to_alt(exhaustive_blanks=True) for x in args]
     counts = Counter(exact_alternations)
-    args = sorted(args,key=lambda x:counts[x.to_alt(exhaustive_blanks=True)],reverse=True)
+    args = sorted(args, key=lambda x: counts[x.to_alt(exhaustive_blanks=True)], reverse=True)
     merged = [args[0]]
     # print("INCREMENTAL GEN: starting with",args[0])
     for pat in args[1:]:
@@ -101,7 +101,7 @@ def incremental_generalize_patterns(*args):
             lexemes = merged[i].lexemes
             if not (lexemes.issubset(pat.lexemes) or lexemes.issuperset(pat.lexemes)):
                 # print("\t\t+",merged[i],"?")
-                new = generalize_patterns([merged[i],pat],debug=False)
+                new = generalize_patterns([merged[i], pat], debug=False)
                 if all(correct(new, a, b) for l, a, b in new.lexemes):
                     merged[i] = new
                     pat_is_merged = True

@@ -27,7 +27,8 @@ def unique_lexemes(series):
         ids[string] = 1
         return string
 
-    return series.apply(unique_id, args=(ids, ))
+    return series.apply(unique_id, args=(ids,))
+
 
 def create_features(data_file_name):
     """Read feature and preprocess to be coindexed with paradigms."""
@@ -39,8 +40,9 @@ def create_features(data_file_name):
     features.fillna(value="", inplace=True)
     return features
 
+
 def create_paradigms(data_file_name,
-                     cols=None, verbose=False,fillna=True,
+                     cols=None, verbose=False, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False):
     """Read paradigms data, and prepare it according to a Segment class pool.
@@ -56,13 +58,14 @@ def create_paradigms(data_file_name,
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms
         (columns are cells, index are lemmas).
     """
+
     def get_unknown_segments(form, unknowns, name):
         for char in form:
             try:
                 Segment.get(char)
             except KeyError:
                 if char != ";":
-                    unknowns[char].append(restore_string(form)+" "+name)
+                    unknowns[char].append(restore_string(form) + " " + name)
 
     # Reading the paradigms.
     paradigms = pd.read_csv(data_file_name, na_values="#DEF#", dtype="str")
@@ -92,7 +95,6 @@ def create_paradigms(data_file_name,
     paradigms.set_index(lexemes, inplace=True)
 
     paradigms.fillna(value="", inplace=True)
-
 
     if merge_duplicates:
         agenda = list(paradigms.columns)
@@ -125,11 +127,12 @@ def create_paradigms(data_file_name,
         paradigms.apply(lambda x: x.apply(get_unknown_segments, args=(unknowns, x.name)), axis=1)
 
         if len(unknowns) > 0:
-            alert = "Your paradigm has unknown segments: "+"\n ".join("[{}] (in {} forms:{}) ".format(u, len(unknowns[u]), ", ".join(unknowns[u][:10])) for u in unknowns)
+            alert = "Your paradigm has unknown segments: " + "\n ".join(
+                "[{}] (in {} forms:{}) ".format(u, len(unknowns[u]), ", ".join(unknowns[u][:10])) for u in unknowns)
             raise ValueError(alert)
 
     if not fillna:
-        paradigms = paradigms.replace("",np.NaN)
+        paradigms = paradigms.replace("", np.NaN)
     return paradigms
 
 
@@ -158,6 +161,7 @@ def normalize_dataframe(paradigms, aliases, normalization, verbose=False):
         new_df (:class:`pandas:pandas.DataFrame`):
             The same dataframe, normalized and simplified.
     """
+
     def _norm(cell):
         if cell:
             for key in sorted(aliases, key=lambda x: len(x), reverse=True):

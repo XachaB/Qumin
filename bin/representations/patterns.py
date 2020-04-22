@@ -24,6 +24,7 @@ len = len
 sorted = sorted
 all = all
 
+
 def _compatible_context_type(*args):
     """Returns whether several contexts with these types can be merged without verification."""
     compat = []
@@ -84,6 +85,7 @@ def restore_segment_shortest(segment):
 
 def _replace_alternation(m, r):
     """ Replace all matches in m using co-indexed functions in r."""
+
     def iter_replacements(m, r):
         g = m.groups("")
         for i in range(len(g)):
@@ -624,7 +626,6 @@ class PatternCollection(object):
         return self.collection < other.collection
 
 
-
 def find_patterns(paradigms, method, **kwargs):
     r"""Find Patterns in a DataFrame according to any general method.
 
@@ -749,11 +750,11 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
     if scoring_method == "levenshtein":
         insert_cost = alignment.levenshtein_ins_cost
-        sub_cost    = alignment.levenshtein_sub_cost
+        sub_cost = alignment.levenshtein_sub_cost
     elif scoring_method == "similarity":
         Segment.init_dissimilarity_matrix(**kwargs)
         insert_cost = Segment.insert_cost
-        sub_cost    = Segment.sub_cost
+        sub_cost = Segment.sub_cost
     else:
         raise NotImplementedError("Alignment method {} is not implemented."
                                   "Call find_patterns(paradigms, method) rather than this function.".format(
@@ -899,6 +900,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
     return patterns_df, pat_dict
 
+
 def find_applicable(paradigms, pat_dict):
     """Find all applicable rules for each form.
 
@@ -980,6 +982,7 @@ def find_alternations(paradigms, method, **kwargs):
     elif method == "global":
         return _global_alternations(paradigms, **kwargs)
 
+
 def _local_alternations(paradigms, **kwargs):
     # Variable for fast access
     cols = paradigms.columns
@@ -1057,6 +1060,7 @@ def _global_alternations(paradigms, **kwargs):
     df = paradigms.apply(segment, axis=1, args=(list(paradigms.columns),))
     return df
 
+
 def find_endings(paradigms, *args, **kwargs):
     """Find suffixes in a paradigm.
 
@@ -1107,6 +1111,7 @@ def make_pairs(paradigms):
     The output has one column for each pairs on the paradigm's columns.
     """
     print("Making pairs from", paradigms)
+
     def pair_columns(column, paradigms):
         cell1, cell2 = column.name
         return paradigms[cell1] + " ⇌ " + paradigms[cell2]
@@ -1116,10 +1121,12 @@ def make_pairs(paradigms):
     paired = pd.DataFrame(columns=pairs, index=paradigms.index)
     return paired.apply(pair_columns, args=(paradigms,))
 
+
 def to_csv(dataframe, filename, pretty=False):
     """Export a Patterns DataFrame to csv."""
     export_fun = str if pretty else repr
     dataframe.applymap(export_fun).to_csv(filename, sep=",")
+
 
 def from_csv(filename, defective=True, overabundant=True):
     """Read a Patterns Dataframe from a csv"""

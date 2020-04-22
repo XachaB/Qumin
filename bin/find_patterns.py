@@ -54,21 +54,20 @@ def main(args):
         segcheck = False
         patterns.ORTHO = True
 
-
-    method = {'globalAlt':'global',
-              'localAlt':'local',
-              'patternsLevenshtein':'levenshtein',
-              'patternsPhonsim':'similarity',
-              'patternsSuffix':'suffix',
-              'patternsPrefix':'prefix',
-              'patternsBaseline':'baseline'}
-
+    method = {'globalAlt': 'global',
+              'localAlt': 'local',
+              'patternsLevenshtein': 'levenshtein',
+              'patternsPhonsim': 'similarity',
+              'patternsSuffix': 'suffix',
+              'patternsPrefix': 'prefix',
+              'patternsBaseline': 'baseline'}
 
     merge_cols = False
     if is_of_pattern_type:
         merge_cols = True
 
-    paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols, segcheck=segcheck)
+    paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols,
+                                 segcheck=segcheck)
 
     print("Looking for patterns...")
     if kind.startswith("endings"):
@@ -77,17 +76,18 @@ def main(args):
             patterns_df = patterns.make_pairs(patterns_df)
             print(patterns_df)
     elif is_of_pattern_type:
-        patterns_df, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=args.optim_mem, gap_prop=args.gap_proportion)
+        patterns_df, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=args.optim_mem,
+                                                  gap_prop=args.gap_proportion)
     else:
         patterns_df = patterns.find_alternations(paradigms, method[kind])
 
-    if merge_cols and not args.merge_cols: # Re-build duplicate columns
+    if merge_cols and not args.merge_cols:  # Re-build duplicate columns
         for a, b in patterns_df.columns:
             if "#" in a:
                 cols = a.split("#")
                 for c in cols:
                     patterns_df[(c, b)] = patterns_df[(a, b)]
-                patterns_df.drop((a,b), axis=1, inplace=True)
+                patterns_df.drop((a, b), axis=1, inplace=True)
                 for x, y in combinations(cols, 2):
                     patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
 
@@ -95,7 +95,7 @@ def main(args):
             if "#" in b:
                 cols = b.split("#")
                 for c in cols:
-                    patterns_df[(a, c)] = patterns_df[(a,b)]
+                    patterns_df[(a, c)] = patterns_df[(a, b)]
                 patterns_df.drop((a, b), axis=1, inplace=True)
                 for x, y in combinations(cols, 2):
                     patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
@@ -111,24 +111,24 @@ def main(args):
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
-    patfilename = result_prefix+"_" + kind +".csv"
-    print("Printing patterns (importable by other scripts) to "+patfilename)
+    patfilename = result_prefix + "_" + kind + ".csv"
+    print("Printing patterns (importable by other scripts) to " + patfilename)
     if is_of_pattern_type:
         if args.optim_mem:
-            patterns.to_csv(patterns_df, patfilename, pretty=True) # uses str because optim_mem already used repr
+            patterns.to_csv(patterns_df, patfilename, pretty=True)  # uses str because optim_mem already used repr
             print("Since you asked for args.optim_mem, I will not export the human_readable file ")
         else:
-            patterns.to_csv(patterns_df, patfilename, pretty=False) # uses repr
-            pathumanfilename = result_prefix+"_human_readable_" + kind + ".csv"
-            print("Printing pretty patterns (for manual examination) to "+pathumanfilename)
-            patterns.to_csv(patterns_df, pathumanfilename, pretty=True) # uses str
+            patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
+            pathumanfilename = result_prefix + "_human_readable_" + kind + ".csv"
+            print("Printing pretty patterns (for manual examination) to " + pathumanfilename)
+            patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
     else:
         patterns_df.to_csv(patfilename, sep=",")
 
 
 if __name__ == '__main__':
-
     import argparse
+
     usage = main.__doc__
 
     parser = argparse.ArgumentParser(description=usage,
@@ -150,36 +150,34 @@ if __name__ == '__main__':
                              "Patterns with various alignments (patterns_);"
                              " alternations as in Beniamine et al. (2017) (_Alt);"
                              "endings (endings_), ",
-                        choices=['endings', 'endingsPairs', 'globalAlt', 'localAlt','endingsDisc',
+                        choices=['endings', 'endingsPairs', 'globalAlt', 'localAlt', 'endingsDisc',
                                  'patternsLevenshtein', 'patternsPhonsim', 'patternsSuffix', 'patternsPrefix',
                                  'patternsBaseline'],
                         default='patternsPhonsim')
 
     parser.add_argument("-d", "--defective",
-                         help="Keep defective entries.",
-                         action="store_true", default=False)
-
+                        help="Keep defective entries.",
+                        action="store_true", default=False)
 
     parser.add_argument("-o", "--overabundant",
-                         help="Keep overabundant entries.",
-                         action="store_true", default=False)
+                        help="Keep overabundant entries.",
+                        action="store_true", default=False)
 
     parser.add_argument("--gap_proportion",
-                         help="Proportion of the median similarity cost assigned to the insertion cost.",
-                         type=float, default=1/3)
-
+                        help="Proportion of the median similarity cost assigned to the insertion cost.",
+                        type=float, default=1 / 3)
 
     parser.add_argument("--optim_mem",
-                         help="Attempt to optimize RAM usage",
-                         action="store_true", default=False)
+                        help="Attempt to optimize RAM usage",
+                        action="store_true", default=False)
 
     parser.add_argument("-m", "--merge_cols",
-                         help="Whether to merge identical columns before looking for patterns.",
-                         action="store_true", default=False)
+                        help="Whether to merge identical columns before looking for patterns.",
+                        action="store_true", default=False)
 
     parser.add_argument("-f", "--folder",
-                         help="Output folder name",
-                         type=str, default="Patterns")
+                        help="Output folder name",
+                        type=str, default="Patterns")
 
     args = parser.parse_args()
 

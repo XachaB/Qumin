@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # !/usr/bin/python3
 import sys
-import pandas as pd
 from collections import defaultdict
+
 
 class ProgressBar(object):
     """Homemade progressbar"""
@@ -29,7 +29,7 @@ class ProgressBar(object):
 
     def animate(self):
         if not ProgressBar.silent:
-            sys.stdout.write('\r'+ str(self))
+            sys.stdout.write('\r' + str(self))
             sys.stdout.flush()
 
     def _text(self):
@@ -67,7 +67,8 @@ def get_repository_version():
     except:
         return ''
 
-def merge_duplicate_columns(df,sep=";",keep_names=True):
+
+def merge_duplicate_columns(df, sep=";", keep_names=True):
     """Merge duplicate columns and return new DataFrame.
 
     Arguments:
@@ -81,7 +82,7 @@ def merge_duplicate_columns(df,sep=";",keep_names=True):
     l = len(df.columns)
 
     for c in df.columns:
-        hashable = tuple(df.loc[:,c])
+        hashable = tuple(df.loc[:, c])
         names[hashable].append(c)
         prb.increment()
 
@@ -90,5 +91,5 @@ def merge_duplicate_columns(df,sep=";",keep_names=True):
     if keep_names:
         new_df.columns = [";".join(names[i]) for i in names]
 
-    print("Reduced from",l,"to",len(new_df.columns),"columns")
+    print("Reduced from", l, "to", len(new_df.columns), "columns")
     return new_df

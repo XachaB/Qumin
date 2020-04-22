@@ -6,6 +6,7 @@ Author:Sacha Beniamine.
 """
 try:
     from matplotlib import pyplot
+
     plt = pyplot
     matplotlib_loaded = True
 except:
@@ -13,16 +14,15 @@ except:
 
 try:
     import networkx as nx
+
     nx_loaded = True
 except:
     nx_loaded = False
 
 import numpy as np
 import re
-from collections import defaultdict
 
 class Node(object):
-
     """Represent an inflection class tree.
 
     Attributes:
@@ -80,15 +80,15 @@ class Node(object):
         return {}
 
     def _recursive_xy(self):
-        if self.attributes.get("_y",None) is None:
+        if self.attributes.get("_y", None) is None:
             y = 1
             if len(self.children) > 0:
-                xs,ys = zip(*[child._recursive_xy() for child in self.children])
+                xs, ys = zip(*[child._recursive_xy() for child in self.children])
                 y += max(ys)
-                x = sum(xs)/len(self.children)
+                x = sum(xs) / len(self.children)
                 self.attributes["_x"] = x
             self.attributes["_y"] = y
-        return self.attributes["_x"],self.attributes["_y"]
+        return self.attributes["_x"], self.attributes["_y"]
 
     def _erase_xy(self):
         self.attributes["_x"] = None
@@ -97,10 +97,10 @@ class Node(object):
             child._erase_xy()
 
     def compute_xy(self, tree_placement=False, pos=None):
-        if "_y" in self.attributes and self.attributes["_y"] is not None :
+        if "_y" in self.attributes and self.attributes["_y"] is not None:
             self._erase_xy()
 
-        if tree_placement: # For trees
+        if tree_placement:  #  For trees
             leaves = self.leaves()
             x = 0
             step = 10
@@ -117,13 +117,13 @@ class Node(object):
     def to_networkx(self):
         if not nx_loaded:
             raise ImportError("Can't convert to networkx, because it couldn't be loaded.")
-        G=nx.DiGraph()
+        G = nx.DiGraph()
         for node in self:
             name = tuple(node.labels)
-            G.add_node(name,**node.attributes)
+            G.add_node(name, **node.attributes)
             for child in node.children:
                 childname = tuple(child.labels)
-                G.add_edge(name,childname)
+                G.add_edge(name, childname)
         return G
 
     def __iter__(self):
@@ -137,7 +137,7 @@ class Node(object):
                 yield node
 
     def leaves(self):
-        return filter(lambda x:not bool(x.children),self)
+        return filter(lambda x: not bool(x.children), self)
 
     def __repr__(self):
         """Return the inflection class tree as a string with parenthesis.
@@ -152,7 +152,9 @@ class Node(object):
         """
         labels = "&".join(self.labels)
         ignore = ["_rank", "_x", "macroclass", "macroclass_root"]
-        attributes = "#".join("{}={}".format(key, str(self.attributes[key]).replace(" ", "_")) for key in sorted(self.attributes) if key not in ignore)
+        attributes = "#".join(
+            "{}={}".format(key, str(self.attributes[key]).replace(" ", "_")) for key in sorted(self.attributes) if
+            key not in ignore)
         children_str = [repr(child) for child in self.children]
         string = "(" + labels + "#" + attributes + " ".join([""] + children_str) + " )"
 
@@ -177,8 +179,8 @@ class Node(object):
         if not leavesfunc:
             def leavesfunc(n):
                 return n.labels[0]
-        if n > 0 and macroclasses :
-            if self.attributes["macroclass"] :
+        if n > 0 and macroclasses:
+            if self.attributes["macroclass"]:
                 style = "\edge[color=black!20]; "
             else:
                 style = "\edge[thick]; "
@@ -186,18 +188,18 @@ class Node(object):
             # root
             style = ""
 
-        fill_values = {"tabs": "    " * (n+2), "style": style}
+        fill_values = {"tabs": "    " * (n + 2), "style": style}
         fill_values["comment"] = ", ".join("{}={}".format(key, self.attributes[key]) for key in self.attributes)
         if self.children and len(self.children) > 0:
             template = "{tabs}{style}[.{{{label}}} %{comment}\n{children}{tabs}]\n"
 
             fill_values["label"] = nodelabel(self)
 
-            children = (child._recursive_to_latex(n+1, nodelabel=nodelabel,
+            children = (child._recursive_to_latex(n + 1, nodelabel=nodelabel,
                                                   leavesfunc=leavesfunc)
                         for child in self.children)
 
-            fill_values["children"] = "".join(sorted(children,key=len))
+            fill_values["children"] = "".join(sorted(children, key=len))
         else:
             template = "{tabs}{style}[.{{{label}}} ]%{comment}\n"
             fill_values["label"] = leavesfunc(self)
@@ -249,7 +251,7 @@ class Node(object):
 
     def draw(self, horizontal=False, square=False,
              leavesfunc=lambda n: n.labels[0],
-            nodefunc=None,
+             nodefunc=None,
              keep_above_macroclass=True,
              annotateOnlyMacroclasses=False, point=None,
              edge_attributes=None, interactive=False, lattice=False, pos=None):
@@ -306,35 +308,36 @@ class Node(object):
                 Compatible with networkx layout functions.
                 If absent, use networkx's graphviz layout.
         """
-        tree_placement= not lattice
+        tree_placement = not lattice
 
-        self.compute_xy(pos=pos,tree_placement=tree_placement)
+        self.compute_xy(pos=pos, tree_placement=tree_placement)
 
         if not matplotlib_loaded:
             return str(self)
         else:
             def annotate(node):
                 should_annotate = (not annotateOnlyMacroclasses) or \
-                                    node.attributes["macroclass_root"]
+                                  node.attributes["macroclass_root"]
                 if should_annotate and nodefunc is not None:
                     return str(nodefunc(node))
                 return ""
 
             def default_edge_attributes(node, child):
                 attributes = {"linestyle": "-" if node.children else "--"}
-                attributes["color"] = node.attributes.get("color","#333333")
+                attributes["color"] = node.attributes.get("color", "#333333")
                 if edge_attributes is not None:
                     attributes.update(edge_attributes(node, child))
                 return attributes
 
             if horizontal:
-                leafoffset = (-5,0)
-                textoffset = (5,0)
+                leafoffset = (-5, 0)
+                textoffset = (5, 0)
                 lva = "center"
                 lha = "right"
                 va = "center"
                 ha = "left"
-                r= 0
+                r = 0
+
                 def coords(node):
                     return node.attributes["_y"], node.attributes["_x"]
             else:
@@ -342,9 +345,10 @@ class Node(object):
                 lha = "right"
                 va = "bottom"
                 ha = "center"
-                leafoffset = (0,-3)
-                textoffset = (0,5)
-                r= 45
+                leafoffset = (0, -3)
+                textoffset = (0, 5)
+                r = 45
+
                 def coords(node):
                     return node.attributes["_x"], node.attributes["_y"]
 
@@ -355,25 +359,25 @@ class Node(object):
             all_nodes = []
 
             for node in self:
-                this_x,this_y = coords(node)
+                this_x, this_y = coords(node)
 
-                # Write the text
+                #  Write the text
                 if tree_placement:
                     microclass = node.labels if not node.children else None
                 else:
-                    microclass = node.attributes.get("objects",None)
+                    microclass = node.attributes.get("objects", None)
 
                 # Plot the arcs
                 for child in node.children:
                     child_x, child_y = coords(child)
-                    attr = default_edge_attributes(node,child)
+                    attr = default_edge_attributes(node, child)
                     if square:
                         if horizontal:
-                            l = ax.plot((this_x,this_x,child_x),(this_y,child_y,child_y), **attr)
+                            l = ax.plot((this_x, this_x, child_x), (this_y, child_y, child_y), **attr)
                         else:
-                            l = ax.plot((this_x,child_x,child_x),(this_y,this_y,child_y), **attr)
+                            l = ax.plot((this_x, child_x, child_x), (this_y, this_y, child_y), **attr)
                     else:
-                        l = ax.plot((this_x,child_x),(this_y,child_y), **attr)
+                        l = ax.plot((this_x, child_x), (this_y, child_y), **attr)
                     lines.extend(l)
 
                 # Plot the point
@@ -385,12 +389,13 @@ class Node(object):
                 if microclass:
                     tmp = node.labels
                     node.labels = list(microclass)
-                    plt.annotate(leavesfunc(node), xy=(this_x, this_y), xycoords='data', va=lva,ha=lha,rotation=r)
+                    plt.annotate(leavesfunc(node), xy=(this_x, this_y), xycoords='data', va=lva, ha=lha, rotation=r)
                     node.labels = tmp
                 else:
                     text = annotate(node)
                     if text is not None:
-                        plt.annotate(text, xy=(this_x,this_y),va=va, ha=ha,textcoords='offset points', xytext=textoffset)
+                        plt.annotate(text, xy=(this_x, this_y), va=va, ha=ha, textcoords='offset points',
+                                     xytext=textoffset)
 
                 all_nodes.append(node)
 
@@ -399,19 +404,19 @@ class Node(object):
 
             if interactive:
                 if horizontal:
-                    ax.margins(x=0.3,y=0.1)
+                    ax.margins(x=0.3, y=0.1)
                 else:
-                    ax.margins(y=0.3,x=0.1)
+                    ax.margins(y=0.3, x=0.1)
 
             plt.tick_params(
-                axis='both',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks
-                top='off',         # ticks along the top edge
-                bottom='off',       # ticks along the bottom edge
-                right='off',      # ticks along the right edge
-                left='off',      # ticks along the left edge
+                axis='both',  # changes apply to the x-axis
+                which='both',  # both major and minor ticks
+                top='off',  # ticks along the top edge
+                bottom='off',  # ticks along the bottom edge
+                right='off',  # ticks along the right edge
+                left='off',  # ticks along the left edge
                 labelbottom='off'
-                )
+            )
             plt.yticks([], [])
             plt.xticks([], [])
         return lines, all_nodes
@@ -476,8 +481,7 @@ def string_to_node(string, legacy_annotation_name=None):
                 try:
                     attributes[annotation_name] = float(attributes[annotation_name])
                 except ValueError:
-                    pass # only convert numbers
-
+                    pass  #  only convert numbers
 
             stack.append(Node(labels, **attributes))
 
@@ -499,6 +503,7 @@ def string_to_node(string, legacy_annotation_name=None):
 
     print(stack[0])
     return stack[0]
+
 
 def find_microclasses(paradigms):
     """Find microclasses in a paradigm (lines with identical rows).

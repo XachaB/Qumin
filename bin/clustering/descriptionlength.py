@@ -83,11 +83,14 @@ class Cluster(object):
         template = "<Cluster {} size={}; C={}; R={}; Pattern={}>"
         return template.format(self.labels, self.size, self.C, self.R, self.patterns)
 
-    def __iter__(self): return iter(self.patterns)
+    def __iter__(self):
+        return iter(self.patterns)
 
-    def __getitem__(self, key): return self.patterns[key]
+    def __getitem__(self, key):
+        return self.patterns[key]
 
-    def __setitem__(self, key, item): self.patterns[key] = item
+    def __setitem__(self, key, item):
+        self.patterns[key] = item
 
     def __radd__(self, other):
         if other == 0:
@@ -96,23 +99,23 @@ class Cluster(object):
             return self + other
 
     def __add__(self, other):
-        new  = self.__copy()
+        new = self.__copy()
         new += other
         return new
 
     def __sub__(self, other):
-        new  = self.__copy()
+        new = self.__copy()
         new -= other
         return new
 
     def __iadd__(self, other):
         self.labels = self.labels | other.labels
-        self.__update_attributes(other, lambda a,b: a+b)
+        self.__update_attributes(other, lambda a, b: a + b)
         return self
 
     def __isub__(self, other):
         self.labels = self.labels - other.labels
-        self.__update_attributes(other, lambda a,b: a-b)
+        self.__update_attributes(other, lambda a, b: a - b)
         return self
 
 
@@ -164,8 +167,10 @@ class _DLClustersBuilder(_ClustersBuilder):
         self.initialize_patterns()
         self.compute_DL(M=True)
         current_partition = " - ".join(", ".join(c) for c in self.clusters)
-        self.log("\t".join(["Partition", "M", "C", "P", "R", "DL"])+"\n", name="clusters")
-        self.log(" ".join([current_partition, ":\t", "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))), "\n"]), name="clusters")
+        self.log("\t".join(["Partition", "M", "C", "P", "R", "DL"]) + "\n", name="clusters")
+        self.log(" ".join(
+            [current_partition, ":\t", "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
+             "\n"]), name="clusters")
 
     def initialize_clusters(self, paradigms):
         self.clusters = {}
@@ -246,6 +251,7 @@ class TDDLClustersBuilder(_DLClustersBuilder):
         right (Cluster): see left.
         to_split (Node): the node that we are currently trying to split.
     """
+
     def __init__(self, microclasses, paradigms, **kwargs):
         """Constructor.
 
@@ -290,7 +296,7 @@ class TDDLClustersBuilder(_DLClustersBuilder):
         patterns = defaultdict(Counter)
 
         for cell in self.right:
-            # This is P_p
+            #  This is P_p
             patterns[cell] = Counter(list(self.right[cell])) + Counter(list(self.left[cell]))
             patterns[cell].length = sum(patterns[cell].values())
             for pattern in patterns[cell]:
@@ -300,8 +306,8 @@ class TDDLClustersBuilder(_DLClustersBuilder):
             right_patterns = self.right[cell].length
             left_patterns = self.left[cell].length
             total_patterns = right_patterns + left_patterns
-            P += weighted_log(right_patterns, total_patterns) +\
-                weighted_log(left_patterns, total_patterns)
+            P += weighted_log(right_patterns, total_patterns) + \
+                 weighted_log(left_patterns, total_patterns)
 
         return R, C, P, patterns
 
@@ -365,7 +371,9 @@ class TDDLClustersBuilder(_DLClustersBuilder):
 
             self.compute_DL()
             current_partition = " - ".join(", ".join(c) for c in self.nodes)
-            self.log(" ".join([current_partition, ":\t", "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),"\n"]), name="clusters")
+            self.log(" ".join([current_partition, ":\t",
+                               "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))), "\n"]),
+                     name="clusters")
 
             color = "r"
             if self.DL >= self.minDL:
@@ -374,12 +382,14 @@ class TDDLClustersBuilder(_DLClustersBuilder):
                 self.minDL = self.DL
             kwargs = {"macroclass": False, "DL": self.DL, "color": color}
             if len(left_leaves) > 1:
-                left = Node(left_labels, size=sum(leaf.attributes["size"] for leaf in left_leaves), children=left_leaves, **kwargs)
+                left = Node(left_labels, size=sum(leaf.attributes["size"] for leaf in left_leaves),
+                            children=left_leaves, **kwargs)
             else:
                 left = left_leaves[0]
                 left.attributes["DL"] = self.DL
             if len(right_leaves) > 1:
-                right = Node(right_labels, size=sum(leaf.attributes["size"] for leaf in right_leaves), children=right_leaves, **kwargs)
+                right = Node(right_labels, size=sum(leaf.attributes["size"] for leaf in right_leaves),
+                             children=right_leaves, **kwargs)
             else:
                 right = right_leaves[0]
                 right.attributes["DL"] = self.DL
@@ -437,7 +447,8 @@ class TDDLClustersBuilder(_DLClustersBuilder):
                 elif DL == best:
                     best_shifts.append((leaf, DL))
                 str_partition = " - ".join(", ".join(p) for p in new)
-                self.log(" ".join([str_partition, ":\t", "\t".join((str(M), str(C), str(P), str(R), str(DL))),"\n"]), name="clusters")
+                self.log(" ".join([str_partition, ":\t", "\t".join((str(M), str(C), str(P), str(R), str(DL))), "\n"]),
+                         name="clusters")
 
         return best_shifts
 
@@ -489,11 +500,11 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
 
         for cell in g1:
             # This is P_p
-            patterns[cell] = self.patterns[cell] + Counter(list(new[cell])) -\
-                            Counter(list(g1[cell])) - Counter(list(g2[cell]))
+            patterns[cell] = self.patterns[cell] + Counter(list(new[cell])) - \
+                             Counter(list(g1[cell])) - Counter(list(g2[cell]))
 
-            patterns[cell].length = self.patterns[cell].length + new[cell].length -\
-                                   g1[cell].length - g2[cell].length
+            patterns[cell].length = self.patterns[cell].length + new[cell].length - \
+                                    g1[cell].length - g2[cell].length
 
             for pattern in patterns[cell]:
                 P += weighted_log(patterns[cell][pattern], patterns[cell].length)
@@ -539,7 +550,9 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
         self.printv("\nMerging ", ", ".join(a), " and ", ", ".join(b), "with DL ", self.DL)
 
         current_partition = " - ".join([", ".join(self.nodes[c].labels) for c in self.nodes])
-        self.log(" ".join([current_partition, ":\t", "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))), "\n"]), name="clusters")
+        self.log(" ".join(
+            [current_partition, ":\t", "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
+             "\n"]), name="clusters")
 
     def find_ordered_merges(self):
         """Find the list of all best merges of two clusters.
@@ -586,6 +599,6 @@ def weighted_log(symbol_count, message_length):
     try:
         if symbol_count == 0:
             return 0
-        return symbol_count * -np.log2(symbol_count/message_length)
+        return symbol_count * -np.log2(symbol_count / message_length)
     except ZeroDivisionError:
         return 0

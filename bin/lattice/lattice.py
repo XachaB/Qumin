@@ -3,11 +3,13 @@
 
 import warnings
 import matplotlib
+
 matplotlib.use("agg", force=True)
 from matplotlib import pyplot as plt
 from collections import defaultdict
 from clustering import Node
 from os.path import join, dirname
+
 try:
     import mpld3
 except:
@@ -30,12 +32,13 @@ matplotlib.rc('grid', **grid)
 def _load_external_text(filename):
     return "\n".join(open(join(dirname(__file__), filename), "r", encoding="utf-8").readlines())
 
-def _node_to_label_IC(node,comp=None,remove_context=True):
-    objs = node.attributes.get("objects",node.labels)
+
+def _node_to_label_IC(node, comp=None, remove_context=True):
+    objs = node.attributes.get("objects", node.labels)
     if not objs:
         objs = node.labels
-    size = str(node.attributes.get("size","unknown nb of")) + " lexèmes"
-    header = "<table><thead><th colspan=2> Ex:" + objs[0] + ", " + size +" </th></thead>"
+    size = str(node.attributes.get("size", "unknown nb of")) + " lexèmes"
+    header = "<table><thead><th colspan=2> Ex:" + objs[0] + ", " + size + " </th></thead>"
     if "common" in node.attributes:
         line = "<tr><th>{}</th><td>{}</td></tr>"
         line2 = "<tr class='alternate'><th>{}</th><td>{}</td></tr>"
@@ -44,12 +47,12 @@ def _node_to_label_IC(node,comp=None,remove_context=True):
         for properties in node.attributes["common"]:
             for prop in properties.split(";"):
                 if "=" in prop:
-                    attr,val = prop.split("=")
+                    attr, val = prop.split("=")
                     val = val.split("/")[0]
                     if comp and attr.startswith(comp):
-                        common += line2.format(attr[len(comp):],val)
+                        common += line2.format(attr[len(comp):], val)
                     else:
-                        common += line.format(attr,val)
+                        common += line.format(attr, val)
                 else:
                     common += line_no_head.format(prop)
         if not common:
@@ -58,7 +61,8 @@ def _node_to_label_IC(node,comp=None,remove_context=True):
         return header + common + "</table>"
     return ""
 
-def _node_to_label_phon(node,**kwargs):
+
+def _node_to_label_phon(node, **kwargs):
     header = "<table><thead><th colspan=2> [" + "".join(node.labels) + "] </th></thead>"
     if "common" in node.attributes:
         line = "<tr><th>{}</th><td>{}</td></tr>"
@@ -82,7 +86,7 @@ def _node_to_label_phon(node,**kwargs):
     return ""
 
 
-def to_dummies(table,**kwargs):
+def to_dummies(table, **kwargs):
     """Make a context table from a dataframe.
 
     Arguments:
@@ -102,8 +106,8 @@ def to_dummies(table,**kwargs):
                     if val:
                         key = col + "=" + str(values)
                         dic_dummies[key][l] = "X"
-            else: # assuming this is a pattern collection
-                c1,c2 = col
+            else:  # assuming this is a pattern collection
+                c1, c2 = col
                 for p in values.collection:
                     if p:
                         key = str(c1) + "~" + str(c2) + "=" + str(p)
@@ -112,7 +116,7 @@ def to_dummies(table,**kwargs):
     dummies = pd.DataFrame(dic_dummies)
     dummies.fillna("", inplace=True)
 
-    return merge_duplicate_columns(dummies, sep="; ",**kwargs)
+    return merge_duplicate_columns(dummies, sep="; ", **kwargs)
 
 
 class ICLattice(object):
@@ -122,7 +126,7 @@ class ICLattice(object):
     """
 
     def __init__(self, dataframe, leaves, annotate=None, dummy_formatter=None,
-                    keep_names=True,comp_prefix=None,
+                 keep_names=True, comp_prefix=None,
                  col_formatter=None, na_value=None, AOC=False, collections=False, verbose=True):
         """
         Arguments:
@@ -139,11 +143,11 @@ class ICLattice(object):
             collections (bool): Whether the table contains :class:`representations.patterns.PatternCollection` objects.
         """
 
-        self.comp = comp_prefix # whether there are two sets of properties.
+        self.comp = comp_prefix  # whether there are two sets of properties.
         if na_value is not None:
             dataframe = dataframe.applymap(lambda x: None if x == na_value else x)
         if collections:
-            dummies = to_dummies(dataframe,keep_names=keep_names)
+            dummies = to_dummies(dataframe, keep_names=keep_names)
         elif dummy_formatter:
             dummies = dummy_formatter(dataframe)
         else:
@@ -151,7 +155,7 @@ class ICLattice(object):
             dummies = dummies.applymap(lambda x: "X" if x == 1 else "")
         if col_formatter:
             dummies.columns = col_formatter(dummies.columns)
-        dummyfile = tempfile.NamedTemporaryFile(mode="w",delete=False)
+        dummyfile = tempfile.NamedTemporaryFile(mode="w", delete=False)
         dummyname = dummyfile.name
         dummies.to_csv(dummyfile)
         dummyfile.close()
@@ -177,7 +181,6 @@ class ICLattice(object):
                 'size': 9}
         matplotlib.rc('font', **font)
 
-
     def _pat_range(self):
         mini = maxi = 1
         for extent, intent in self.lattice:
@@ -189,7 +192,7 @@ class ICLattice(object):
         return mini, maxi
 
     def _lattice_to_nodeAOC(self):
-        def make_nodes(concepts,prb):
+        def make_nodes(concepts, prb):
             nodes = {}
             for concept in concepts:
                 extent = concept.extent
@@ -197,22 +200,25 @@ class ICLattice(object):
                 properties = concept.properties
                 objects = concept.objects
                 size = sum(len(self.leaves[label]) for label in extent if label in self.leaves)
-                nodes[extent] = Node(extent, intent=intent, size=size, common=properties, objects=objects, macroclass=False)
+                nodes[extent] = Node(extent, intent=intent, size=size, common=properties, objects=objects,
+                                     macroclass=False)
                 prb.increment()
             return nodes
 
-        AOC = sorted([v for v in self.lattice if (v == self.lattice.supremum or v.properties or v.objects) and v.extent != ()],key=lambda x:len(x.extent),reverse=True)
-        prb = ProgressBar(len(AOC)*2)
+        AOC = sorted(
+            [v for v in self.lattice if (v == self.lattice.supremum or v.properties or v.objects) and v.extent != ()],
+            key=lambda x: len(x.extent), reverse=True)
+        prb = ProgressBar(len(AOC) * 2)
 
         # Creating nodes
-        nodes = make_nodes(AOC,prb)
+        nodes = make_nodes(AOC, prb)
 
         # Creating arcs
         for vertice in AOC:
             span = set(vertice.extent)
             for descendant in vertice.downset():
                 descendant_extent = set(descendant.extent)
-                if descendant != vertice and descendant in AOC and (span&descendant_extent) :
+                if descendant != vertice and descendant in AOC and (span & descendant_extent):
                     nodes[vertice.extent].children.append(nodes[descendant.extent])
                     span = span - descendant_extent
                     if len(span) == 0:
@@ -221,7 +227,7 @@ class ICLattice(object):
         return nodes[AOC[0].extent]
 
     def _lattice_to_node(self):
-        def make_nodes(concepts,prb):
+        def make_nodes(concepts, prb):
             nodes = {}
             for concept in concepts:
                 extent = concept.extent
@@ -230,15 +236,16 @@ class ICLattice(object):
                 objects = concept.objects
                 size = sum(len(self.leaves[label]) for label in extent if label in self.leaves)
                 annotations = getattr(concept, '_extra_qumin_annotation', {})
-                nodes[extent] = Node(extent, intent=intent,size=size, common=properties, objects=objects, macroclass=False, **annotations)
+                nodes[extent] = Node(extent, intent=intent, size=size, common=properties, objects=objects,
+                                     macroclass=False, **annotations)
                 prb.increment()
             return nodes
 
-        concepts = sorted([v for v in self.lattice if v.extent != ()],key=lambda x:len(x.extent),reverse=True)
-        prb = ProgressBar(len(concepts)*2)
+        concepts = sorted([v for v in self.lattice if v.extent != ()], key=lambda x: len(x.extent), reverse=True)
+        prb = ProgressBar(len(concepts) * 2)
 
         # Creating nodes
-        nodes = make_nodes(concepts,prb)
+        nodes = make_nodes(concepts, prb)
 
         # Creating arcs
         for vertice in concepts:
@@ -247,7 +254,6 @@ class ICLattice(object):
                     nodes[vertice.extent].children.append(nodes[daughter.extent])
             prb.increment()
         return nodes[concepts[0].extent]
-
 
     def parents(self, identifier):
         """Return all direct parents of a node  which corresponds to the identifier."""
@@ -262,6 +268,7 @@ class ICLattice(object):
         """Returns some stats about the classification size and shape.
         Based on self.nodes, not self.lattice: stats are different depending on AOC/not AOC.
         """
+
         def height(node):
             if not node.children:
                 node.attributes["height"] = 1
@@ -269,19 +276,19 @@ class ICLattice(object):
             else:
                 if "height" in node.attributes:
                     return node.attributes["height"]
-                h = max(height(child) for child in node.children)+1
+                h = max(height(child) for child in node.children) + 1
                 node.attributes["height"] = h
                 return h
 
         stats_lattice = {}
-        stats_lattice["Microclasses"]=len(self.leaves)
-        base=len(self.lattice.atoms)
-        stats_lattice["Base"]=base
-        stats_lattice["Hauteur"]=height(self.nodes)
+        stats_lattice["Microclasses"] = len(self.leaves)
+        base = len(self.lattice.atoms)
+        stats_lattice["Base"] = base
+        stats_lattice["Hauteur"] = height(self.nodes)
         nb_arcs = sum(len(x.children) for x in self.nodes)
-        nb_noeuds = len([ x for x in self.nodes])
-        stats_lattice["Degré"]=nb_arcs/(nb_noeuds-2) #-2 car on ignore supremum et infimum
-        stats_lattice["Noeuds"]=nb_noeuds-1 #-1 car on ignore infimum
+        nb_noeuds = len([x for x in self.nodes])
+        stats_lattice["Degré"] = nb_arcs / (nb_noeuds - 2)  # -2 car on ignore supremum et infimum
+        stats_lattice["Noeuds"] = nb_noeuds - 1  # -1 car on ignore infimum
 
         if self.comp:
             left = 0
@@ -296,11 +303,10 @@ class ICLattice(object):
                         left += 1
                 else:
                     right += 1
-            print("Concepts définissant des propriétés de la classification de gauche (-b):",left)
-            print("Concepts définissant des propriétés de la classification de droite:",right)
-            print("Concepts définissant des propriétés des deux classifications:",both)
-        return pd.Series(stats_lattice,index=["Microclasses","Base","Hauteur","Degré","Noeuds"])
-
+            print("Concepts définissant des propriétés de la classification de gauche (-b):", left)
+            print("Concepts définissant des propriétés de la classification de droite:", right)
+            print("Concepts définissant des propriétés des deux classifications:", both)
+        return pd.Series(stats_lattice, index=["Microclasses", "Base", "Hauteur", "Degré", "Noeuds"])
 
     def _draw_one(self, node, figsize=(24, 12), scale=False, colormap="Blues", point=False, **kwargs):
         mini, maxi = self._pat_range()
@@ -313,35 +319,34 @@ class ICLattice(object):
             return len(node.attributes["common"])
 
         def leaves_label(node):
-            n = " ({})".format(str(node.attributes.get("size",1)))
+            n = " ({})".format(str(node.attributes.get("size", 1)))
             return ", ".join(node.labels) + n
 
         def point_function(node):
             l = len(node.attributes["common"])
             default = {"color": colors[0],
-                        "edgecolors" : colors[0],
+                       "edgecolors": colors[0],
                        "zorder": 3}
 
             default["marker"] = matplotlib.markers.MarkerStyle(marker="o")
 
             if self.comp:
                 cmp = sum(att.startswith(self.comp) for att in node.attributes["common"])
-                if cmp > 0:# bicolor marker
+                if cmp > 0:  # bicolor marker
                     if cmp < len(node.attributes["common"]):
                         default["facecolor"] = colors[1]
-                        default["linewidth"]= 3
+                        default["linewidth"] = 3
                         del default["color"]
-                    else: # marker in color 2
+                    else:  # marker in color 2
                         default["facecolor"] = colors[1]
                         default["edgecolor"] = colors[1]
                         del default["color"]
-            default["s"] = 20+((node.attributes.get("size",0)/self.nodes.attributes.get("size",0))*100)
+            default["s"] = 20 + ((node.attributes.get("size", 0) / self.nodes.attributes.get("size", 0)) * 100)
             node.attributes["point_settings"] = default
             return default
 
-
         def default_edge_attr(node, child):
-            return {"color": colors[0],  "zorder": custom_zorder(node)}
+            return {"color": colors[0], "zorder": custom_zorder(node)}
 
         fig = plt.figure(figsize=figsize)  # for export: 12,6
         lines, ordered_nodes = node.draw(horizontal=False, square=False, leavesfunc=leaves_label,
@@ -363,13 +368,13 @@ class ICLattice(object):
         axis = plt.gca()
         axis.set_axis_off()
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0,
-                        hspace=0, wspace=0)
+                            hspace=0, wspace=0)
         plt.margins(0, 0)
         axis.xaxis.set_major_locator(plt.NullLocator())
         axis.yaxis.set_major_locator(plt.NullLocator())
         plt.savefig(filename, bbox_inches='tight', pad_inches=0)
 
-    def to_html(self, filename, node_formatter=_node_to_label_IC,**kwargs):
+    def to_html(self, filename, node_formatter=_node_to_label_IC, **kwargs):
         """Draw an interactive lattice using :class:`clustering.Node`'s drawing function and mpld3.
 
         Arguments:
@@ -381,12 +386,12 @@ class ICLattice(object):
                                                    n=4,
                                                    scale=False,
                                                    point={"s": 50},
-                                                   interactive=True,**kwargs)
+                                                   interactive=True, **kwargs)
 
         paths = list(filter(lambda obj: type(obj) is matplotlib.collections.PathCollection,
-                            fig.axes[0].get_children(),))
+                            fig.axes[0].get_children(), ))
         lines = list(filter(lambda obj: type(obj) is matplotlib.lines.Line2D and
-                            len(obj.get_xdata(orig=True)) > 1,
+                                        len(obj.get_xdata(orig=True)) > 1,
                             fig.axes[0].get_children()))
         points_ids = []
         corrd_to_points = {}
@@ -395,7 +400,7 @@ class ICLattice(object):
             x, y = v.attributes["_x"], v.attributes["_y"]
             p_id = mpld3.utils.get_id(p)  # ,"pts")
             corrd_to_points[(x, y)] = p_id
-            label = node_formatter(v,comp=self.comp)
+            label = node_formatter(v, comp=self.comp)
             points_ids.append(p_id)
             tooltip = mpld3.plugins.PointHTMLTooltip(p, [label], css=css)
             mpld3.plugins.connect(fig, tooltip)
@@ -415,15 +420,15 @@ class ICLattice(object):
 
         point_to_artists = {p: list(point_to_artists[p]) for p in point_to_artists}
 
-
         # root = corrd_to_points[(node.attributes["_x"],node.attributes["_y"])]
         mpld3.plugins.connect(fig, _HighlightSubTrees(points_ids, dict(point_to_artists)))
         mpld3.save_html(fig, filename, template_type="simple")
 
 
 if not mpld3:
-    def to_html_disabled(*args,**kwargs):
+    def to_html_disabled(*args, **kwargs):
         print("Warning: mpld3 could not be imported. No html export possible.")
+
 
     ICLattice.to_html = to_html_disabled
 else:

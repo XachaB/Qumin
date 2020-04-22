@@ -6,8 +6,10 @@ Author: Sacha Beniamine.
 """
 try:
     import matplotlib
+
     matplotlib.use("agg")
     import matplotlib.pyplot as plt
+
     MATPLOTLIB_LOADED = True
 except ImportError:
     MATPLOTLIB_LOADED = False
@@ -16,6 +18,7 @@ from utils import get_repository_version
 from representations import segments, patterns
 from clustering import algorithms, descriptionlength, find_min_attribute, distances
 import pandas as pd
+
 
 def main(args):
     r"""Cluster lexemes in macroclasses according to alternation patterns.
@@ -43,7 +46,7 @@ def main(args):
     data_file_name = path.basename(data_file_path).rstrip("_")
     version = get_repository_version()
     print(data_file_name)
-    kind = re.match(".+_(.+)\.csv",data_file_name).groups()[0]
+    kind = re.match(".+_(.+)\.csv", data_file_name).groups()[0]
 
     # Setting up the output path.
     result_dir = "../Results/{}/{}".format(args.folder, day)
@@ -54,10 +57,10 @@ def main(args):
 
     if features_file_name != "ORTHO":
         segments.initialize(features_file_name, sep="\t")
-        pat_table, pat_dic = patterns.from_csv(data_file_path,defective=False,overabundant=False)
+        pat_table, pat_dic = patterns.from_csv(data_file_path, defective=False, overabundant=False)
         pat_table = pat_table.applymap(str)
     else:
-        pat_table = pd.read_csv(data_file_path,index_col=0)
+        pat_table = pd.read_csv(data_file_path, index_col=0)
 
     result_prefix += args.algorithm + "_" + args.measure
 
@@ -88,9 +91,7 @@ def main(args):
     else:
         DL = ""
 
-
     experiment_id = " ".join([args.algorithm, args.measure, " on ", kind, DL, "(", version, day, now, ")", ])
-
 
     # Saving png figure
     if MATPLOTLIB_LOADED:
@@ -99,7 +100,7 @@ def main(args):
         print("Drawing figure to: {}".format(figname))
         node.draw(horizontal=True,
                   square=True,
-                  leavesfunc=lambda x: x.labels[0]+" ("+str(x.attributes["size"])+")",
+                  leavesfunc=lambda x: x.labels[0] + " (" + str(x.attributes["size"]) + ")",
                   nodefunc=lambda x: "{0:.3f}".format(x.attributes[attr[args.measure]]),
                   keep_above_macroclass=True)
 
@@ -112,12 +113,13 @@ def main(args):
     string_tree = repr(node)
     flow = open(result_prefix + "_tree.txt", "w", encoding="utf8")
     flow.write(string_tree)
-    flow.write("\n"+experiment_id)
+    flow.write("\n" + experiment_id)
     flow.close()
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     import argparse
+
     usage = main.__doc__
 
     parser = argparse.ArgumentParser(description=usage,
@@ -138,10 +140,10 @@ if __name__ == '__main__':
                         help="Cluster with measure: "
                              " Description length (DL)"
                              " Hamming distances (UPGMA, experimental)"
-                             #" Compression distances (CD, experimental)"
+                        # " Compression distances (CD, experimental)"
                              "Defaults to DL. "
                              "UPGMA is experimental and not in development. It is only available for Bottom up algorithm",
-                        choices=['UPGMA', 'DL'], #'CD'],
+                        choices=['UPGMA', 'DL'],  # 'CD'],
                         default='DL')
 
     parser.add_argument('-a', '--algorithm',
