@@ -6,7 +6,6 @@ This module addresses the modeling of inflectional alternation patterns."""
 
 from os.path import commonprefix
 from itertools import combinations, product
-from scipy.stats.mstats import hmean
 from representations import alignment, normalize_dataframe
 from representations.segments import Segment, _CharClass, restore, restore_string
 from representations.contexts import Context
@@ -21,18 +20,17 @@ import pandas as pd
 import re
 
 ORTHO = False
-INS_PROP = 1/3
-Regex = type(re.compile(''))
 len = len
 sorted = sorted
 all = all
+
 def _compatible_context_type(*args):
     """Returns whether several contexts with these types can be merged without verification."""
     compat = []
-    greedyany = {"greedy","any"}
+    greedyany = {"greedy", "any"}
     for positions in zip(*args):
         for types in zip(*positions):
-            if "precise"  in types or "lazy" in types :
+            if "precise" in types or "lazy" in types:
                 return False
             settypes = set(types)
             if len(settypes) == 1 or settypes == greedyany:
@@ -41,18 +39,19 @@ def _compatible_context_type(*args):
                 compat.append(False)
     return all(compat)
 
-def _get_pattern_matchtype(p,c1,c2):
+
+def _get_pattern_matchtype(p, c1, c2):
     """Determine a type of match for an elementary pattern"""
-    type_names = {(True,True):"precise",
-                    (True,False):"greedy",
-                    (False,True):"lazy",
-                    (False, False):"any"}
+    type_names = {(True, True): "precise",
+                  (True, False): "greedy",
+                  (False, True): "lazy",
+                  (False, False): "any"}
     match_type1 = []
     match_type2 = []
     i = 0
-    for i,group in enumerate(p.context):
-        match_type1.append([False,False])
-        match_type2.append([False,False])
+    for i, group in enumerate(p.context):
+        match_type1.append([False, False])
+        match_type2.append([False, False])
         # print("i,group:",i,group)
         if group.blank:
             ctxt = repr(group)
@@ -64,8 +63,8 @@ def _get_pattern_matchtype(p,c1,c2):
             match_type2[i][0] = alt2 != "" and alt2 in ctxt
             # print("is",alt2,"in the left context ?",match_type1[i][0])
 
-            if i+1<len(p.context):
-                ctxt2 = repr(p.context[i+1])
+            if i + 1 < len(p.context):
+                ctxt2 = repr(p.context[i + 1])
                 # print("right context:",ctxt2)
                 match_type1[i][1] = alt1 != "" and alt1 in ctxt2
                 # print("is",alt1,"in the right context",ctxt2," ?",match_type1[i][1])
@@ -74,6 +73,7 @@ def _get_pattern_matchtype(p,c1,c2):
 
     return tuple(type_names[tuple(x)] for x in match_type1), tuple(type_names[tuple(x)] for x in match_type2)
 
+
 def restore_segment_shortest(segment):
     """Restore segment to the shortest of either the original character or its feature list."""
     if segment:
@@ -81,26 +81,28 @@ def restore_segment_shortest(segment):
     else:
         return segment
 
+
 def _replace_alternation(m, r):
     """ Replace all matches in m using co-indexed functions in r."""
-    def iter_replacements(m,r):
+    def iter_replacements(m, r):
         g = m.groups("")
         for i in range(len(g)):
-            yield  r[i](g[i])
-    return "".join(iter_replacements(m,r))
+            yield r[i](g[i])
+
+    return "".join(iter_replacements(m, r))
+
 
 def are_all_identical(iterable):
     """Test whether all elements in the iterable are identical."""
     return iterable and len(set(iterable)) == 1
+
 
 class NotApplicable(Exception):
     """Raised when a :class:`patterns.Pattern` can't be applied to a form."""
     pass
 
 
-
 class Pattern(object):
-
     r"""Represent an alternation pattern and its context.
 
     The pattern can be defined over an arbitrary number of forms.
@@ -144,9 +146,9 @@ class Pattern(object):
         self.alternation = {}
         self.context = ()
         self.cells = cells
-        if aligned :
+        if aligned:
             alignment_of_forms = list(forms)
-        else :
+        else:
             alignment_of_forms = list(alignment.align_left(*list(forms), fillvalue=""))
 
         self._init_from_alignment(alignment_of_forms)
@@ -166,12 +168,22 @@ class Pattern(object):
         return copy
 
     @classmethod
+    def new_identity(cls, cells):
+        """Create a new identity pattern for a given set of cells.
+        """
+        p = cls(cells, [""] * len(cells))
+        p.context = [(Segment._max, kleenestar)]
+        p._repr = p._make_str_(features=False)
+        p._feat_str = p._make_str_(features=True)
+        return p
+
+    @classmethod
     def _from_str(cls, cells, string):
         """Parse a repr str to a pattern.
         >>> _ ⇌ E / abEs_ <0.5>
         Note: Contexts strings are now separated by "-" (because phonemes can be)
         """
-        quantities = {"": one, "?": optional, "+":some, "*":kleenestar}
+        quantities = {"": one, "?": optional, "+": some, "*": kleenestar}
 
         def parse_alternation(string, cells):
             simple_segs = "".join(Segment._simple_segments)
@@ -219,7 +231,8 @@ class Pattern(object):
         try:
             alt_str, ctxt_str, score_str = re.match("(.*) / (.*) ?<([\d.e-]+)>", string).groups()
         except AttributeError as e:
-            message = "I can't create a pattern from this: {}. Maybe the pattern has been exported with str and not repr ?".format(string)
+            message = "I can't create a pattern from this: {}. Maybe the pattern has been exported with str and not repr ?".format(
+                string)
             raise ValueError(message) from e
 
         new.context = Context(list(parse_context(ctxt_str)))
@@ -253,11 +266,10 @@ class Pattern(object):
             self._feat_str = self._make_str_(features=True)
             return self._feat_str
 
-
     def is_identity(self):
         return all(self.alternation[x] == [()] for x in self.cells)
 
-    def _make_str_(self, features=True,reverse=False):
+    def _make_str_(self, features=True, reverse=False):
         """Return a string verbosely representing the segmentation.
 
         """
@@ -268,7 +280,7 @@ class Pattern(object):
         else:
             alternation = " ⇌ ".join("_".join(alt) for alt in alternation)
 
-        context = self.context.to_str(mode=int(features)+1)
+        context = self.context.to_str(mode=int(features) + 1)
 
         return alternation + " / " + context
 
@@ -308,13 +320,14 @@ class Pattern(object):
 
     def to_alt(self, exhaustive_blanks=True, use_gen=False, **kwargs):
         """Join the alternating material obtained with alternation_list() in a str."""
-        return " ⇌ ".join(self.alternation_list(exhaustive_blanks=exhaustive_blanks, use_gen=use_gen,**kwargs))
+        return " ⇌ ".join(self.alternation_list(exhaustive_blanks=exhaustive_blanks, use_gen=use_gen, **kwargs))
 
     def _iter_alt(self, features=True):
         """Generator of formatted alternating material for each cell."""
+
         def format_segment_ipa(chars):
             chars_restored = "-".join([restore(c) for c in sorted(chars)])
-            if len(chars)>1:
+            if len(chars) > 1:
                 chars_restored = "[{}]".format(chars_restored)
             return chars_restored
 
@@ -366,14 +379,13 @@ class Pattern(object):
                        for cell, alt
                        in zip_longest(self.cells,
                                       zip(*alternation),
-                                      fillvalue=("", ))}
-        context = [(x,one) if x != "{}" else "{}" for x in context]
+                                      fillvalue=("",))}
+        context = [(x, one) if x != "{}" else "{}" for x in context]
 
         self.alternation, self.context = alternation, Context(context)
 
 
 class BinaryPattern(Pattern):
-
     r"""Represent the alternation pattern between two forms.
 
     A BinaryPattern is a `Patterns.Pattern` over just two forms.
@@ -418,7 +430,6 @@ class BinaryPattern(Pattern):
         copy._gen_alt = deepcopy(self._gen_alt)
         return copy
 
-
     @property
     def _regex(self):
         """Get the regex, ensure its creation."""
@@ -427,8 +438,6 @@ class BinaryPattern(Pattern):
         except AttributeError:
             self._create_regex()
             return self._saved_regex
-        else:
-            raise
 
     @property
     def _repl(self):
@@ -438,8 +447,6 @@ class BinaryPattern(Pattern):
         except AttributeError:
             self._create_regex()
             return self._saved_repl
-        else:
-            raise
 
     @_repl.setter
     def _repl(self, value):
@@ -454,26 +461,31 @@ class BinaryPattern(Pattern):
         """
         c1, c2 = self.cells
 
-        def make_transform_repl(a, b): return lambda x: Segment.get_from_transform(x,(a,b))
-        def make_sub_repl(chars): return lambda x:chars
-        def identity(x): return x
+        def make_transform_repl(a, b):
+            return lambda x: Segment.get_from_transform(x, (a, b))
+
+        def make_sub_repl(chars):
+            return lambda x: chars
+
+        def identity(x):
+            return x
 
         def iter_alternation(alt):
-            for is_transform, group in groupby(alt, lambda x:type(x) is _CharClass):
+            for is_transform, group in groupby(alt, lambda x: type(x) is _CharClass):
                 if is_transform:
                     for x in group:
-                        yield (is_transform,x)
+                        yield (is_transform, x)
                 else:
-                    yield (is_transform,"".join(group))
+                    yield (is_transform, "".join(group))
 
         # Build alternation as list of zipped segments / transformations
         alternances = []
-        for left,right in zip(self.alternation[c1], self.alternation[c2]):
-            alternances.append(list(zip_longest(iter_alternation(left),iter_alternation(right),fillvalue=(False,""))))
+        for left, right in zip(self.alternation[c1], self.alternation[c2]):
+            alternances.append(
+                list(zip_longest(iter_alternation(left), iter_alternation(right), fillvalue=(False, ""))))
 
-        #
-        regex = {c1:"",c2:""}
-        repl = {c1:[],c2:[]}
+        regex = {c1: "", c2: ""}
+        repl = {c1: [], c2: []}
         i = 0
 
         for group in self.context:
@@ -484,16 +496,16 @@ class BinaryPattern(Pattern):
             repl[c2].append(identity)
 
             if group.blank:
-                # alternation
-                # We build one regex group for each continuous sequence of segments and each transformation
-                for (is_transform, chars_1),(is_transform,chars_2) in alternances[i]:
+                #  alternation
+                #  We build one regex group for each continuous sequence of segments and each transformation
+                for (is_transform, chars_1), (is_transform, chars_2) in alternances[i]:
                     # Replacements
                     if is_transform:
-                        # Transformation replacement make_transform_repl with two segments in argument
-                        repl[c1].append(make_transform_repl(chars_2,chars_1))
-                        repl[c2].append(make_transform_repl(chars_1,chars_2))
+                        #  Transformation replacement make_transform_repl with two segments in argument
+                        repl[c1].append(make_transform_repl(chars_2, chars_1))
+                        repl[c2].append(make_transform_repl(chars_1, chars_2))
                     else:
-                        # Substitution replacement make_subl_repl with target segment as argument
+                        #  Substitution replacement make_subl_repl with target segment as argument
                         repl[c1].append(make_sub_repl(chars_1))
                         repl[c2].append(make_sub_repl(chars_2))
                     # Regex matches these segments as one group
@@ -501,22 +513,21 @@ class BinaryPattern(Pattern):
                     regex[c2] += "({})".format(chars_2)
                 i += 1
 
-
-        self._saved_regex = {c : re.compile("^"+regex[c]+"$") for c in regex}
+        self._saved_regex = {c: re.compile("^" + regex[c] + "$") for c in regex}
         self._saved_repl = repl
 
     def _find_generalized_alt(self):
         """See if the alternation can be expressed in a more general way using features."""
         c1, c2 = self.cells
-        this_alt = {c1:[],c2:[]}
+        this_alt = {c1: [], c2: []}
         gen_any = False
-        for left,right in zip(self.alternation[c1], self.alternation[c2]):
+        for left, right in zip(self.alternation[c1], self.alternation[c2]):
             gen_left = []
             gen_right = []
-            for a,b in zip_longest(left,right,fillvalue=""):
-                A,B = Segment.transformation(a,b)
-                if a != "" and b != "" and (len(A)>1 or len(B)>1):
-                    gen_any=True
+            for a, b in zip_longest(left, right, fillvalue=""):
+                A, B = Segment.transformation(a, b)
+                if a != "" and b != "" and (len(A) > 1 or len(B) > 1):
+                    gen_any = True
                     gen_left.append(A)
                     gen_right.append(B)
                 else:
@@ -529,7 +540,6 @@ class BinaryPattern(Pattern):
             self._create_regex()
         else:
             self._gen_alt = None
-
 
     def applicable(self, form, cell):
         """Test if this pattern matches a form, i.e. if the pattern is applicable to the form.
@@ -546,8 +556,8 @@ class BinaryPattern(Pattern):
             return bool(regex.match(form))
         except KeyError as err:
             raise KeyError("Unknown cell {}."
-                  " This pattern's cells are {}."
-                  "".format(err, " and ".join(self.cells)))
+                           " This pattern's cells are {}."
+                           "".format(err, " and ".join(self.cells)))
 
     def apply(self, form, names, raiseOnFail=True):
         """Apply the pattern to a form.
@@ -568,8 +578,9 @@ class BinaryPattern(Pattern):
         if nb_subs == 0 and (not self.applicable(form, from_cell)):
             if raiseOnFail:
                 raise NotApplicable("The context {} from the pattern {} and cells {} -> {}"
-                                "doesn't match the form \"{}\""
-                                "".format(restore_string(self._regex[from_cell].pattern),self,from_cell,to_cell, form))
+                                    "doesn't match the form \"{}\""
+                                    "".format(restore_string(self._regex[from_cell].pattern), self, from_cell, to_cell,
+                                              form))
             else:
                 return None
         return string
@@ -577,7 +588,7 @@ class BinaryPattern(Pattern):
     def _generalize_alt(self):
         """Use the generalized alternation, using features when possible rather than segments."""
         if self._gen_alt:
-            self.alternation = dict(zip(self.cells,self._gen_alt))
+            self.alternation = dict(zip(self.cells, self._gen_alt))
             self._repr = self._make_str_(features=False)
             self._feat_str = self._make_str_(features=True)
         else:
@@ -586,6 +597,7 @@ class BinaryPattern(Pattern):
     def _is_max_gen(self):
         maxi_seg = Segment._max
         return all([x in [(maxi_seg, kleenestar), "{}"] for x in self.context])
+
 
 class PatternCollection(object):
     """Represent a set of patterns."""
@@ -597,7 +609,7 @@ class PatternCollection(object):
         return ";".join(str(p) for p in self.collection)
 
     def _reverse_str(self):
-        return ";".join(p._make_str_(features=True,reverse=True) for p in self.collection)
+        return ";".join(p._make_str_(features=True, reverse=True) for p in self.collection)
 
     def __repr__(self):
         return ";".join(repr(p) for p in self.collection)
@@ -611,163 +623,63 @@ class PatternCollection(object):
     def __lt__(self, other):
         return self.collection < other.collection
 
-def _score(p, cells, forms, index):
-    def test_all(row, p, cells):
-        correct = 0
-        l, a_list, b_list = row
-        if a_list == b_list: # If the lists are identical, do not compute product
-            pairs = [(x,x) for x in b_list]
-        else:
-            pairs = product(a_list,b_list)
-        for a,b in pairs:
-            if a and b :
-                if (l,a,b) in p.lexemes:
-                    correct += 1
-                else:
-                    correct_one = (p.apply(a, cells,raiseOnFail=False) == b) and (p.apply(b, cells[::-1],raiseOnFail=False) == a)
-                    if correct_one:
-                        correct += 1
-                        p.lexemes.add((l,a,b))
-        return correct
-    counts = np.apply_along_axis(test_all, 1, forms, p, cells)
-    return counts.sum(axis=0)
 
 
-def _pat_auto_align(row, cells, collection, align_func):
+def find_patterns(paradigms, method, **kwargs):
+    r"""Find Patterns in a DataFrame according to any general method.
 
-    if row[0] == row[1]: # If the lists are identical, do not compute product
-        pairs = [(x,x) for x in row[0]]
+    Methods can be:
+        - suffix (align left),
+        - prefix (align right),
+        - baseline (see Albright & Hayes 2002)
+        - levenshtein (dynamic alignment using levenshtein scores)
+        - similarity (dynamic alignment using segment similarity scores)
+
+    Arguments:
+        paradigms (:class:`pandas:pandas.DataFrame`):
+            paradigms (columns are cells, index are lemmas).
+        method (str): "suffix", "prefix", "baseline", "levenshtein" or "similarity"
+
+    Returns:
+        (tuple):
+            **patterns,pattern_dict**. Patterns is the created
+            :class:`pandas:pandas.DataFrame`,
+            pat_dict is a dict mapping a column name to a list of patterns.
+    """
+    if method in ["levenshtein", "similarity"]:
+        return _with_dynamic_alignment(paradigms, scoring_method=method, **kwargs)
+    elif method in ["suffix", "prefix", "baseline"]:
+        return _with_deterministic_alignment(paradigms, method=method, **kwargs)
     else:
-        pairs = product(*row)
-
-    #print("row: ",row)
-    for a,b in pairs:
-        if a and b:
-            if a == b:
-                new_rule = Pattern(cells, zip(a,b),aligned=True)
-                new_rule.lexemes = set([(row.name,a,b)])
-                alt = new_rule.to_alt(exhaustive_blanks=False)
-                t = _get_pattern_matchtype(new_rule,cells[0],cells[1])
-                collection[alt][t].append(new_rule)
-            else:
-                done = []
-                # print("All alignments of {}, {}".format(a,b))
-                for aligned in align_func(a, b):
-                    # print((aligned))
-                    new_rule = Pattern(cells,aligned,aligned=True)
-                    new_rule.lexemes = set([(row.name,a,b)])
-                    if str(new_rule) not in done:
-                        done.append(str(new_rule))
-                        if new_rule._gen_alt:
-                            alt = new_rule.to_alt(exhaustive_blanks=False,use_gen=True)
-                        else:
-                            alt = new_rule.to_alt(exhaustive_blanks=False)
-                        t = _get_pattern_matchtype(new_rule,cells[0],cells[1])
-                        collection[alt][t].append(new_rule)
+        raise NotImplementedError("Alignment method {} is not implemented, "
+                                  "choose from suffix, prefix or baseline.".format(method))
 
 
+def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
+    r"""Find Patterns in a DataFrame according to a deterministic alignment method.
 
-def _pat_align_simple(row,cells,collection,align_func):
-    a, b = row
-    if row[0] == row[1]: # If the lists are identical, do not compute product
-        pairs = [(x,x) for x in row[0]]
+    Methods can be suffix (align left), prefix (align right) or baseline (see Albright & Hayes 2002).
+
+    Arguments:
+        paradigms (:class:`pandas:pandas.DataFrame`):
+            paradigms (columns are cells, index are lemmas).
+        method (str): "suffix", "prefix" or "baseline"
+
+    Returns:
+        (tuple):
+            **patterns,pattern_dict**. Patterns is the created
+            :class:`pandas:pandas.DataFrame`,
+            pat_dict is a dict mapping a column name to a list of patterns.
+    """
+    if method == "suffix":
+        align_func = alignment.align_left
+    elif method == "prefix":
+        align_func = alignment.align_right
+    elif method == "baseline":
+        align_func = alignment.align_baseline
     else:
-        pairs = product(*row)
-
-    for a,b in pairs:
-        if a and b:
-            aligned = align_func(a,b)
-            new_rule = Pattern(cells, aligned, aligned=True)
-            new_rule.lexemes.add(row.name)
-            alt = new_rule.to_alt(exhaustive_blanks=False)
-            collection[alt].append(new_rule)
-
-def find_suffixal_patterns(paradigms, **kwargs):
-    """Find Patterns in a DataFrame with left alignment.
-
-    Patterns are generalized two by two incrementally. The alternation is never generalized.
-
-    Arguments:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            paradigms (columns are cells, index are lemmas).
-        align_func (func, optional):
-            Function used to align forms. From: align_baseline, align_left, align_right.
-        categorical (bool, optional):
-            has a inpact on output type:
-            if categorical: cells are filled with str
-            else: cells are filled with patterns
-
-    Returns:
-
-        (tuple):
-            **patterns,pattern_dict**. Patterns is the created
-            :class:`pandas:pandas.DataFrame`,
-            pat_dict is a dict mapping a column name to a list of patterns.
-    """
-    return _find_patterns_aligned(paradigms, align_func=alignment.align_left, **kwargs)
-
-def find_prefixal_patterns(paradigms, **kwargs):
-    """Find Patterns in a DataFrame with right alignment.
-
-    Patterns are generalized two by two incrementally. The alternation is never generalized.
-
-    Arguments:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            paradigms (columns are cells, index are lemmas).
-        categorical (bool, optional):
-            has a inpact on output type:
-            if categorical: cells are filled with str
-            else: cells are filled with patterns
-
-    Returns:
-
-        (tuple):
-            **patterns,pattern_dict**. Patterns is the created
-            :class:`pandas:pandas.DataFrame`,
-            pat_dict is a dict mapping a column name to a list of patterns.
-    """
-    return _find_patterns_aligned(paradigms, align_func=alignment.align_right, **kwargs)
-
-def find_baseline_patterns(paradigms, categorical=False):
-    """Find Patterns in a DataFrame with baseline alignment.
-
-    Patterns are generalized two by two incrementally. The alternation is never generalized.
-
-    Arguments:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            paradigms (columns are cells, index are lemmas).
-        categorical (bool, optional):
-            has a inpact on output type:
-            if categorical: cells are filled with str
-            else: cells are filled with patterns
-
-    Returns:
-
-        (tuple):
-            **patterns,pattern_dict**. Patterns is the created
-            :class:`pandas:pandas.DataFrame`,
-            pat_dict is a dict mapping a column name to a list of patterns.
-    """
-    return _find_patterns_aligned(paradigms, categorical=False, align_func=alignment.align_baseline)
-
-def _find_patterns_aligned(paradigms, categorical=False, align_func= alignment.align_left):
-    r"""Find Patterns in a DataFrame according to some alignment function....
-
-    Arguments:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            paradigms (columns are cells, index are lemmas).
-        categorical (bool, optional):
-            has a inpact on output type:
-            if categorical: cells are filled with str
-            else: cells are filled with patterns
-
-    Returns:
-
-        (tuple):
-            **patterns,pattern_dict**. Patterns is the created
-            :class:`pandas:pandas.DataFrame`,
-            pat_dict is a dict mapping a column name to a list of patterns.
-    """
+        raise NotImplementedError("Alignment method {} is not implemented."
+                                  "Call find_patterns(paradigms, method) rather than this function.".format(method))
 
     # Variable for fast access
     cols = paradigms.columns
@@ -775,113 +687,52 @@ def _find_patterns_aligned(paradigms, categorical=False, align_func= alignment.a
 
     # Create tuples pairs
 
-    pairs = combinations(cols, 2)
+    pairs = list(combinations(cols, 2))
 
     patterns = pd.DataFrame(index=paradigms.index,
                             columns=pairs)
 
     progress = ProgressBar(((n - 1) * n) / 2)
     pat_dict = {}
-    paradigms_sets = paradigms.applymap(lambda x:set(x.split(";")))
+    paradigms_sets = paradigms.applymap(lambda x: set(x.split(";")))
 
-    def find_patterns_col(column, pat_dict, progress):
+    def generate_rules(row, cells, collection):
+        if row[0] == row[1]:  # If the lists are identical, do not compute product
+            pairs = [(x, x) for x in row[0]]
+        else:
+            pairs = product(*row)
+
+        for a, b in pairs:
+            if a and b:
+                aligned = align_func(a, b)
+                new_rule = Pattern(cells, aligned, aligned=True)
+                new_rule.lexemes.add(row.name)
+                alt = new_rule.to_alt(exhaustive_blanks=False)
+                collection[alt].append(new_rule)
+
+    def find_patterns_in_col(column, pat_dict, progress):
         pattern_collection = defaultdict(list)
         progress.increment()
-        a,b = column.name
+        a, b = column.name
 
-        paradigms_sets[[a, b]].apply(_pat_align_simple,
-                                         axis=1,
-                                         args=((a, b),
-                                               pattern_collection,
-                                               align_func))
+        paradigms_sets[[a, b]].apply(generate_rules, axis=1, args=((a, b), pattern_collection))
         results = {}
-        pat_dict[(a,b)] = []
+        pat_dict[(a, b)] = []
 
         for alt in pattern_collection:
             pattern = generalize_patterns(pattern_collection[alt])
-            pat_dict[(a,b)].append(pattern)
+            pat_dict[(a, b)].append(pattern)
             for name in pattern.lexemes:
                 results[name] = pattern
 
         return pd.Series(results)
 
-    patterns = patterns.apply(find_patterns_col, axis=0, args=(pat_dict,progress))
-
-    if categorical:
-        patterns = patterns.applymap(str)
+    patterns = patterns.apply(find_patterns_in_col, axis=0, args=(pat_dict, progress))
 
     return patterns, pat_dict
 
-def find_levenshtein_patterns(paradigms, **kwargs):
-    """Find Patterns in a DataFrame with levenshtein alignment.
 
-    Patterns are chosen according to their coverage and accuracy among competing patterns,
-    and they are merged as much as possible. Their alternation can be generalized.
-
-    Arguments:
-        paradigms: a DataFrame.
-
-    Returns:
-        a tuple of the DataFrame and a dict of pairs of cells
-        to the list of unique patterns used for that pair of cells.
-
-    In the following example, the inventory is equivalent to the DataFrame of patterns,
-    as we consider only one lexeme. For the same reason, the example cannot illustrate merging of patterns.
-
-    Example:
-        >>> df = pd.DataFrame([["amEn", "amənõ", "amənE"]],
-             columns=["prs.1.sg", "prs.1.pl", "prs.2.pl"],
-             index=["amener"])
-        >>> df
-               prs.1.sg prs.1.pl prs.2.pl
-        amener     amEn    amənõ    amənE
-        >>> pats, inventory = find_patterns(df)
-        >>> pats
-               (prs.1.sg, prs.1.pl) (prs.1.sg, prs.2.pl) (prs.1.pl, prs.2.pl)
-        amener    E_ ⇌ ə_ɔ̃ / am_n_     E_ ⇌ ə_E / am_n_       ɔ̃ ⇌ E / amən_
-        >>> inventory
-        {('prs.1.sg', 'prs.2.pl'): [E_ ⇌ ə_E / am_n_ <1.0>],
-        ('prs.1.pl', 'prs.2.pl'): [ɔ̃ ⇌ E / amən_ <1.0>],
-        ('prs.1.sg', 'prs.1.pl'): [E_ ⇌ ə_ɔ̃ / am_n_ <1.0>]}
-    """
-    return _find_auto_patterns(paradigms, align_func=alignment.align_levenshtein, **kwargs)
-
-def find_phonsim_patterns(paradigms, **kwargs):
-    """Find Patterns in a DataFrame with phonologically aware alignment.
-
-    Patterns are chosen according to their coverage and accuracy among competing patterns,
-    and they are merged as much as possible. Their alternation can be generalized.
-
-    Arguments:
-        paradigms: a DataFrame.
-
-    Returns:
-        a tuple of the DataFrame and a dict of pairs of cells
-        to the list of unique patterns used for that pair of cells.
-
-
-    In the following example, the inventory is equivalent to the DataFrame of patterns,
-    as we consider only one lexeme. For the same reason, the example cannot illustrate merging of patterns.
-
-    Example:
-        >>> df = pd.DataFrame([["amEn", "amənõ", "amənE"]],
-             columns=["prs.1.sg", "prs.1.pl", "prs.2.pl"],
-             index=["amener"])
-        >>> df
-               prs.1.sg prs.1.pl prs.2.pl
-        amener     amEn    amənõ    amənE
-        >>> pats, inventory = find_patterns(df)
-        >>> pats
-               (prs.1.sg, prs.1.pl) (prs.1.sg, prs.2.pl) (prs.1.pl, prs.2.pl)
-        amener    E_ ⇌ ə_ɔ̃ / am_n_     E_ ⇌ ə_E / am_n_       ɔ̃ ⇌ E / amən_
-        >>> inventory
-        {('prs.1.sg', 'prs.2.pl'): [E_ ⇌ ə_E / am_n_ <1.0>],
-        ('prs.1.pl', 'prs.2.pl'): [ɔ̃ ⇌ E / amən_ <1.0>],
-        ('prs.1.sg', 'prs.1.pl'): [E_ ⇌ ə_ɔ̃ / am_n_ <1.0>]}
-    """
-    return _find_auto_patterns(paradigms, align_func=alignment.align_phono, **kwargs)
-
-def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align_levenshtein,optim_mem=False, **kwargs):
+def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, **kwargs):
     """Find Patterns in a DataFrame with automatic alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -889,45 +740,112 @@ def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align
 
     Arguments:
         paradigms: a DataFrame.
+        scoring_method (str): method for scoring best pairwise alignments. Can be "levenshtein" or "similarity".
 
     Returns:
         a tuple of the DataFrame and a dict of pairs of cells
         to the list of unique patterns used for that pair of cells.
     """
+
+    if scoring_method == "levenshtein":
+        insert_cost = alignment.levenshtein_ins_cost
+        sub_cost    = alignment.levenshtein_sub_cost
+    elif scoring_method == "similarity":
+        Segment.init_dissimilarity_matrix(**kwargs)
+        insert_cost = Segment.insert_cost
+        sub_cost    = Segment.sub_cost
+    else:
+        raise NotImplementedError("Alignment method {} is not implemented."
+                                  "Call find_patterns(paradigms, method) rather than this function.".format(
+            scoring_method))
+
     cols = paradigms.columns
-    pairs = list(combinations(cols,2))
+    pairs = list(combinations(cols, 2))
     patterns_df = pd.DataFrame(index=paradigms.index,
-                            columns=pairs)
+                               columns=pairs)
     progress = ProgressBar(len(pairs))
 
     pat_dict = {}
-    alignment.PHON_INS_COST = alignment.get_mean_cost()*INS_PROP
-    paradigms_sets = paradigms.applymap(lambda x:set(x.split(";")))
+    paradigms_sets = paradigms.applymap(lambda x: set(x.split(";")))
 
-    def attribute_best_pattern(sorted_collection,l,a,b):
+    def generate_rules(row, cells, collection):
+        if row[0] == row[1]:  # If the lists are identical, do not compute product
+            pairs = [(x, x) for x in row[0]]
+        else:
+            pairs = product(*row)
+
+        # print("row: ",row)
+        for a, b in pairs:
+            if a and b:
+                if a == b:
+                    new_rule = Pattern(cells, zip(a, b), aligned=True)
+                    new_rule.lexemes = set([(row.name, a, b)])
+                    alt = new_rule.to_alt(exhaustive_blanks=False)
+                    t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
+                    collection[alt][t].append(new_rule)
+                else:
+                    done = []
+                    # print("All alignments of {}, {}".format(a,b))
+                    for aligned in alignment.align_auto(a, b, insert_cost, sub_cost):
+                        # print((aligned))
+                        new_rule = Pattern(cells, aligned, aligned=True)
+                        new_rule.lexemes = set([(row.name, a, b)])
+                        if str(new_rule) not in done:
+                            done.append(str(new_rule))
+                            if new_rule._gen_alt:
+                                alt = new_rule.to_alt(exhaustive_blanks=False, use_gen=True)
+                            else:
+                                alt = new_rule.to_alt(exhaustive_blanks=False)
+                            t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
+                            collection[alt][t].append(new_rule)
+
+    def attribute_best_pattern(sorted_collection, l, a, b):
         for p in sorted_collection:
-            if (l,a,b) in p.lexemes:
+            if (l, a, b) in p.lexemes:
                 return p
 
-    def find_patterns_col(column, progress, pat_dict):
-        collection = defaultdict(lambda :defaultdict(list))
+    def _score(p, cells, forms, index):
+        def test_all(row, p, cells):
+            correct = 0
+            l, a_list, b_list = row
+            if a_list == b_list:  # If the lists are identical, do not compute product
+                pairs = [(x, x) for x in b_list]
+            else:
+                pairs = product(a_list, b_list)
+            for a, b in pairs:
+                if a and b:
+                    if (l, a, b) in p.lexemes:
+                        correct += 1
+                    else:
+                        correct_one = (p.apply(a, cells, raiseOnFail=False) == b) and (
+                                p.apply(b, cells[::-1], raiseOnFail=False) == a)
+                        if correct_one:
+                            correct += 1
+                            p.lexemes.add((l, a, b))
+            return correct
+
+        counts = np.apply_along_axis(test_all, 1, forms, p, cells)
+        return counts.sum(axis=0)
+
+    def find_patterns_in_col(column, progress, pat_dict):
+        collection = defaultdict(lambda: defaultdict(list))
         c1, c2 = column.name
         col = paradigms_sets[[c1, c2]]
         index = col.index
         forms = col.reset_index().values
 
-        col.apply(_pat_auto_align, axis=1, args=((c1, c2), collection, align_func))
+        col.apply(generate_rules, axis=1, args=((c1, c2), collection))
 
         sorted_collection = []
 
         for alt in collection:
             # print("\n\n####Considering alt:",alt)
-            # Attempt to generalize
+            #  Attempt to generalize
             types = list(collection[alt])
             pats = []
             # print("1.Generalizing in each type")
             for j in collection[alt]:
-                # print("\tlooking at :",j)
+                # print("\tlooking at :",collection[alt][j])
                 if _compatible_context_type(j):
                     collection[alt][j] = [generalize_patterns(collection[alt][j])]
                     # print("\t\tcontexts compatible",collection[alt][j])
@@ -943,32 +861,30 @@ def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align
                 # print("\tlooking at incompatible:",pats)
                 collection[alt] = incremental_generalize_patterns(*pats)
             # print("Result:",collection[alt])
-            # Score
+            #  Score
             for p in collection[alt]:
                 p.score = _score(p, (c1, c2), forms, index)
                 sorted_collection.append(p)
 
-        # Sort by score and choose best patterns
+        #  Sort by score and choose best patterns
         sorted_collection = sorted(sorted_collection, key=lambda x: x.score, reverse=True)
         best = defaultdict(set)
 
         nullset = {''}
 
         for l in index:
-            row = col.at[l,c1],col.at[l,c2]
+            row = col.at[l, c1], col.at[l, c2]
 
-            if row != (nullset,nullset):
-                if row[0] == row[1]: # If the lists are identical, do not compute product
-                    pairs = [(x,x) for x in row[0]]
+            if row != (nullset, nullset):
+                if row[0] == row[1]:  #  If the lists are identical, do not compute product
+                    pairs = [(x, x) for x in row[0]]
                 else:
                     pairs = product(*row)
 
-                for a,b in pairs:
+                for a, b in pairs:
                     best[l].add(attribute_best_pattern(sorted_collection, l, a, b))
             else:
                 best[l].add(None)
-
-
 
         if optim_mem:
             result = [repr(PatternCollection(list(best[l]))) for l in index]
@@ -979,14 +895,11 @@ def _find_auto_patterns(paradigms, categorical=False, align_func=alignment.align
         progress.increment()
         return result
 
-    patterns_df = patterns_df.apply(find_patterns_col, axis=0, args=(progress, pat_dict))
-
-    if categorical:
-        patterns_df = patterns_df.applymap(str)
+    patterns_df = patterns_df.apply(find_patterns_in_col, axis=0, args=(progress, pat_dict))
 
     return patterns_df, pat_dict
 
-def find_applicable(paradigms, pat_dict, categorical=False):
+def find_applicable(paradigms, pat_dict):
     """Find all applicable rules for each form.
 
     We name sets of applicable rules *classes*. *Classes* are oriented:
@@ -997,10 +910,6 @@ def find_applicable(paradigms, pat_dict, categorical=False):
         paradigms (:class:`pandas:pandas.DataFrame`):
             paradigms (columns are cells, index are lemmas).
         pat_dict  (dict): a dict mapping a column name to a list of patterns.
-        categorical  (bool, optional): has a inpact on output type:
-            if categorical: cells are filled with strings
-            representing the class
-            else: cells are filled with tuples of patterns.
 
     Returns:
         (:class:`pandas:pandas.DataFrame`):
@@ -1008,6 +917,7 @@ def find_applicable(paradigms, pat_dict, categorical=False):
             and an ordered pair of paradigm cells (columns)
             to a tuple representing a class of applicable patterns.
     """
+
     def _iter_applicable_patterns(form, local_patterns, cell):
         known_regexes = set()
         for pattern in local_patterns:
@@ -1019,22 +929,13 @@ def find_applicable(paradigms, pat_dict, categorical=False):
                 known_regexes.add(regex)
                 yield pattern
 
-    def _applicable_patterns_tuple(*args):
+    def applicable(*args):
         return tuple(_iter_applicable_patterns(*args))
-
-    def _applicable_patterns_str(*args):
-        return ", ".join(str(pat) for pat in _iter_applicable_patterns(*args))
 
     # The result has (a, b) and (b, a) columns
     # for each (a, b) column of patterns
     # -> pairs are ordered, patterns.columns weren't
     pairs = [y for x in pat_dict for y in (x, x[::-1])]
-
-    if categorical:
-        applicable = _applicable_patterns_str
-    else:
-        applicable = _applicable_patterns_tuple
-
 
     # Initialisation
     progress = ProgressBar(len(pat_dict))
@@ -1055,8 +956,9 @@ def find_applicable(paradigms, pat_dict, categorical=False):
 
     return classes
 
-def find_local_alternations(paradigms, **kwargs):
-    """Find local alternations in a paradigm.
+
+def find_alternations(paradigms, method, **kwargs):
+    """Find local alternations in a Dataframe of paradigms.
 
     For each pair of form in the paradigm, keep only the alternating material (words are left-aligned).
     Return the resulting DataFrame.
@@ -1065,57 +967,44 @@ def find_local_alternations(paradigms, **kwargs):
         paradigms (pandas.DataFrame):
             a dataframe containing inflectional paradigms.
             Columns are cells, and rows are lemmas.
+        method (str): "local" uses pairs of forms, "global" uses entire paradigms.
 
     Returns:
         pandas.DataFrame:
             a dataframe with the same indexes as `paradigms`
             and as many columns as possible combinations of columns
             in `paradigms`, filled with segmented patterns.
-
-    Example:
-        >>> df = pd.DataFrame([["amEn", "amEn", "amEn", "amənõ", "amənE", "amEn"]],
-             columns=["prs.1.sg",  "prs.2.sg", "prs.3.sg", "prs.1.pl", "prs.2.pl","prs.3.pl"],
-             index=["amener"])
-        >>> df
-               prs.1.sg prs.2.sg prs.3.sg prs.1.pl prs.2.pl prs.3.pl
-        amener     amEn     amEn     amEn    amənõ    amənE     amEn
-        >>> find_local_alternations(df)
-               (prs.1.sg, prs.2.sg) (prs.1.sg, prs.3.sg) (prs.1.sg, prs.1.pl)
-        amener              __ ⇌ __              __ ⇌ __          _E_ ⇌ _ə_ɔ̃
-               (prs.1.sg, prs.2.pl) (prs.1.sg, prs.3.pl) (prs.2.sg, prs.3.sg)
-        amener           _E_ ⇌ _ə_E              __ ⇌ __              __ ⇌ __
-               (prs.2.sg, prs.1.pl) (prs.2.sg, prs.2.pl) (prs.2.sg, prs.3.pl)
-        amener          _E_ ⇌ _ə_ɔ̃           _E_ ⇌ _ə_E              __ ⇌ __
-               (prs.3.sg, prs.1.pl) (prs.3.sg, prs.2.pl) (prs.3.sg, prs.3.pl)
-        amener          _E_ ⇌ _ə_ɔ̃           _E_ ⇌ _ə_E              __ ⇌ __
-               (prs.1.pl, prs.2.pl) (prs.1.pl, prs.3.pl) (prs.2.pl, prs.3.pl)
-        amener             _ɔ̃ ⇌ _E          _ə_ɔ̃ ⇌ _E_           _ə_E ⇌ _E_
-
     """
+    if method == "local":
+        return _local_alternations(paradigms, **kwargs)
+    elif method == "global":
+        return _global_alternations(paradigms, **kwargs)
+
+def _local_alternations(paradigms, **kwargs):
     # Variable for fast access
     cols = paradigms.columns
 
     def segment(forms, cells):
-        if not forms[0] or not forms[1] :
+        if not forms[0] or not forms[1]:
             return None
         segmented = Pattern(cells, forms)
         return segmented.to_alt()
 
-    def segment_columns(col,progress):
-        a,b = col.name
+    def segment_columns(col, progress):
+        a, b = col.name
         progress.increment()
-        return paradigms[[a, b]].apply(segment, args=([a, b], ), axis=1)
-
+        return paradigms[[a, b]].apply(segment, args=([a, b],), axis=1)
 
     # Create tuples pairs
-    pairs = list(combinations(cols,2))
+    pairs = list(combinations(cols, 2))
     patterns = pd.DataFrame(index=paradigms.index, columns=pairs)
     progress = ProgressBar(len(pairs))
-    patterns = patterns.apply(segment_columns,axis=0,args=(progress,))
+    patterns = patterns.apply(segment_columns, axis=0, args=(progress,))
 
     return patterns
 
-def find_global_alternations(paradigms, **kwargs):
+
+def _global_alternations(paradigms, **kwargs):
     """Find global alternations in a paradigm.
 
     Return a DataFrame of alternations where we remove in each cell the material
@@ -1143,18 +1032,19 @@ def find_global_alternations(paradigms, **kwargs):
         amener      _E_      _E_      _E_    _ə_ɔ̃     _ə_E      _E_
 
     """
-    def row_as_list(cells,row):
+
+    def row_as_list(cells, row):
         """Make a list of forms from a paradigm row."""
-        for cell,forms in zip(cells,row):
+        for cell, forms in zip(cells, row):
             for form in forms.split(";"):
                 if pd.notnull(forms) and forms != "":
-                    yield (cell,form)
+                    yield (cell, form)
 
     def segment(forms, cells):
-        newcells, formlist = zip(*row_as_list(cells,forms))
+        newcells, formlist = zip(*row_as_list(cells, forms))
         segmented = Pattern(newcells, formlist)
         forms = defaultdict(list)
-        for cell,ending in zip(newcells,segmented.alternation_list()):
+        for cell, ending in zip(newcells, segmented.alternation_list()):
             forms[cell].append(ending)
 
         for cell in cells:
@@ -1164,18 +1054,8 @@ def find_global_alternations(paradigms, **kwargs):
                 forms[cell] = "#DEF#"
         return pd.Series(forms)[cells]
 
-    df = paradigms.apply(segment, axis=1, args=(list(paradigms.columns), ))
+    df = paradigms.apply(segment, axis=1, args=(list(paradigms.columns),))
     return df
-
-def find_global_alternations_pairs(paradigms, **kwargs):
-    """ Find global endings in a paradigm, pair results as binary patterns."""
-    return make_pairs(find_global_alternations(paradigms))
-
-
-def find_endings_pairs(paradigms, *args, **kwargs):
-    """ Find global patterns in a paradigm, pair results as binary patterns."""
-    return make_pairs(find_endings(paradigms))
-
 
 def find_endings(paradigms, *args, **kwargs):
     """Find suffixes in a paradigm.
@@ -1202,11 +1082,12 @@ def find_endings(paradigms, *args, **kwargs):
         amener       En       En       En      ənõ      ənE       En
 
     """
+
     def row_as_list(row):
         """Make a list of forms from a paradigm row."""
         return [form for forms in row for form in forms.split(";") if (pd.notnull(forms) and forms != "")]
 
-    def segment(forms,l=0):
+    def segment(forms, l=0):
         """Segment all semicolon separated forms at the l character"""
         return ";".join(form[l:] if form else "#DEF#" for form in forms.split(";"))
 
@@ -1214,41 +1095,40 @@ def find_endings(paradigms, *args, **kwargs):
         """Remove the common prefix in all strings of a row."""
         progress.increment()
         l = len(commonprefix(row_as_list(row)))
-        return row.apply(segment,args=(l,))
+        return row.apply(segment, args=(l,))
 
     progress = ProgressBar(len(paradigms.index))
-    return paradigms.apply(row_ending, axis=1, args=(progress, ))
+    return paradigms.apply(row_ending, axis=1, args=(progress,))
+
 
 def make_pairs(paradigms):
     """Join columns with " ⇌ " by combination.
 
     The output has one column for each pairs on the paradigm's columns.
     """
+    print("Making pairs from", paradigms)
     def pair_columns(column, paradigms):
         cell1, cell2 = column.name
         return paradigms[cell1] + " ⇌ " + paradigms[cell2]
 
     # Pairing cells
-    pairs = combinations(paradigms.columns, 2)
+    pairs = list(combinations(paradigms.columns, 2))
     paired = pd.DataFrame(columns=pairs, index=paradigms.index)
-
-    return paired.apply(pair_columns, args=(paradigms, ))
-
+    return paired.apply(pair_columns, args=(paradigms,))
 
 def to_csv(dataframe, filename, pretty=False):
     """Export a Patterns DataFrame to csv."""
     export_fun = str if pretty else repr
     dataframe.applymap(export_fun).to_csv(filename, sep=",")
 
-
-def from_csv(filename,defective=True,overabundant=True):
+def from_csv(filename, defective=True, overabundant=True):
     """Read a Patterns Dataframe from a csv"""
 
     def format_header(item):
         splitted = item.strip("'() ").split(",")
-        return (splitted[0].strip("' "),splitted[1].strip("' "))
+        return (splitted[0].strip("' "), splitted[1].strip("' "))
 
-    def read_pattern(raw_value,names,collection):
+    def read_pattern(raw_value, names, collection):
         result = []
         if raw_value:
             for string in raw_value.split(";"):
@@ -1292,12 +1172,4 @@ def from_csv(filename,defective=True,overabundant=True):
 
     collection = {column: list(collection[column].values()) for column in collection}
 
-
     return pat_table, collection
-
-def max_identity_pattern(cells):
-    p = Pattern(cells, [""]*len(cells))
-    p.context = [(Segment._max, kleenestar)]
-    p._repr = p._make_str_(features=False)
-    p._feat_str = p._make_str_(features=True)
-    return p

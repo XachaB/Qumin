@@ -54,17 +54,14 @@ def main(args):
         segcheck = False
         patterns.ORTHO = True
 
-    patternfinder = {'endings':patterns.find_endings,
-                     'endingsPairs':patterns.find_endings_pairs,
-                     'endingsDisc':patterns.find_global_alternations,
-                     'globalAlt':patterns.find_global_alternations_pairs,
-                     'localAlt':patterns.find_local_alternations,
-                     'patternsLevenshtein':patterns.find_levenshtein_patterns,
-                     'patternsPhonsim':patterns.find_phonsim_patterns,
-                     'patternsSuffix':patterns.find_suffixal_patterns,
-                     'patternsPrefix':patterns.find_prefixal_patterns,
-                     'patternsBaseline':patterns.find_baseline_patterns,
-                      }
+
+    method = {'globalAlt':'global',
+              'localAlt':'local',
+              'patternsLevenshtein':'levenshtein',
+              'patternsPhonsim':'similarity',
+              'patternsSuffix':'suffix',
+              'patternsPrefix':'prefix',
+              'patternsBaseline':'baseline'}
 
 
     merge_cols = False
@@ -74,10 +71,15 @@ def main(args):
     paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols, segcheck=segcheck)
 
     print("Looking for patterns...")
-    if is_of_pattern_type:
-        patterns_df, dic = patternfinder[kind](paradigms, optim_mem=args.optim_mem)
+    if kind.startswith("endings"):
+        patterns_df = patterns.find_endings(paradigms)
+        if kind.endswith("Pairs"):
+            patterns_df = patterns.make_pairs(patterns_df)
+            print(patterns_df)
+    elif is_of_pattern_type:
+        patterns_df, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=args.optim_mem, gap_prop=args.gap_proportion)
     else:
-        patterns_df = patternfinder[kind](paradigms, optim_mem=args.optim_mem)
+        patterns_df = patterns.find_alternations(paradigms, method[kind])
 
     if merge_cols and not args.merge_cols: # Re-build duplicate columns
         for a, b in patterns_df.columns:
@@ -87,7 +89,7 @@ def main(args):
                     patterns_df[(c, b)] = patterns_df[(a, b)]
                 patterns_df.drop((a,b), axis=1, inplace=True)
                 for x, y in combinations(cols, 2):
-                    patterns_df[(x, y)] = patterns.max_identity_pattern((x, y))
+                    patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
 
         for a, b in patterns_df.columns:
             if "#" in b:
@@ -96,7 +98,7 @@ def main(args):
                     patterns_df[(a, c)] = patterns_df[(a,b)]
                 patterns_df.drop((a, b), axis=1, inplace=True)
                 for x, y in combinations(cols, 2):
-                    patterns_df[(x, y)] = patterns.max_identity_pattern((x, y))
+                    patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
 
     if patterns_df.isnull().values.any():
         print("Warning: error, some patterns are None")
@@ -161,6 +163,11 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--overabundant",
                          help="Keep overabundant entries.",
                          action="store_true", default=False)
+
+    parser.add_argument("--gap_proportion",
+                         help="Proportion of the median similarity cost assigned to the insertion cost.",
+                         type=float, default=1/3)
+
 
     parser.add_argument("--optim_mem",
                          help="Attempt to optimize RAM usage",

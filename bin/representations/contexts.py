@@ -4,10 +4,9 @@
 
 This module implements patterns' contexts, which are series of phonological restrictions."""
 
-from itertools import zip_longest
-from representations.segments import Segment, _CharClass, restore, restore_string
+from representations.segments import Segment, restore
 from representations.quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
-from representations.alignment import align_right, align_left, align_levenshtein_multi
+from representations.alignment import align_right, align_left, align_multi
 
 def restore_segment_shortest(segment):
     """Restore segment to the shortest of either the original character or its feature list."""
@@ -219,7 +218,7 @@ class Context(object):
         leftblank = False
         align_funcs = {(False,True):align_right,
                        (True,False):align_left,
-                        (False,False):align_levenshtein_multi, # This is an identity pattern, alignment is arbitrary.
+                        (False,False):align_multi, # This is an identity pattern, alignment is arbitrary.
                        (True,True):_align_edges}
 
         for i in range(l):
@@ -237,7 +236,7 @@ class Context(object):
                         restrictions.append(c[i].restrictions)
             align_func = align_funcs[(leftblank,rightblank)]
 
-            yield (align_func(*restrictions,fillvalue=("", optional),debug=debug),opt,rightblank)
+            yield (align_func(*restrictions,fillvalue=("", optional)),opt,rightblank)
             leftblank = rightblank
 
     @classmethod
@@ -255,8 +254,8 @@ class Context(object):
         new_context = []
         if debug:
             print("Alignigning",contexts)
-            print(list(cls._align(contexts, debug=debug)))
-        for group,opt,blank in cls._align(contexts, debug=debug):
+            print(list(cls._align(contexts)))
+        for group,opt,blank in cls._align(contexts):
             context_members = []
 
             buffer_sources = [] # for debug purposes

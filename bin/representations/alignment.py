@@ -4,59 +4,15 @@
 
 This module is used to align sequences.
 """
-
-from itertools import combinations
 from itertools import zip_longest
 import numpy as np
-from numpy import mean
-from representations import segments
-import pandas as pd
 
-PHON_INS_COST = None
-
-
-def prettyPrint(alignments,pad="\t",**kwargs):
-    ins_cost = kwargs.get("ins_cost", 1) # By default use levenshtein insertion
-    sub_cost_func = kwargs.get("sub_cost", lambda a,b:int(a!=b)) # By default use levenshtein substitution
-    in_notebook = kwargs.get("notebook", False) # By default use levenshtein substitution
-    print_func = print
-    if in_notebook:
-        from IPython.display import display
-        print_func = display
-
-    tables = []
-    nb = len(alignments)
-    print("{} optimal alignment{}:".format(nb,"s" if nb>1 else ""))
-    for table in alignments:
-        scores = []
-        ops = []
-        left = []
-        right = []
-        for a,b in table:
-            if a == '' or b == '':
-                scores.append(ins_cost)
-                ops.append("I")
-            else:
-                scores.append(sub_cost_func(a,b))
-                ops.append("S")
-            left.append(a)
-            right.append(b)
-        length = len(table)
-        bars = ["│"]*length
-        scores.append(sum(scores[1:]))
-        scores[1:] = [round(x,2) for x in scores[1:]]
-        scores[-1] = "= "+str(scores[-1])
-
-        df = pd.DataFrame([left,bars,right,scores],
-                         index=["","","","distance"]).fillna("")
-        df.columns = [""]*(len(df.columns)-1) + ["Total"]
-        print_func(df)
 
 def commonprefix(*args):
     """Given a list of strings, returns the longest common prefix"""
     if not args:
         return None
-    shortest,*args = sorted(args,key=len)
+    shortest, *args = sorted(args, key=len)
     zipped = zip_longest(*args)
     for i, c in enumerate(shortest):
         zipped_i = next(zipped)
@@ -64,24 +20,11 @@ def commonprefix(*args):
             return shortest[:i]
     return shortest
 
+
 def commonsuffix(*args):
     """Given a list of strings, returns the longest common suffix"""
     return commonprefix(*(x[::-1] for x in args))[::-1]
 
-def get_mean_cost():
-    """Get the mean cost of substituting two segments in the segment inventory."""
-    values = []
-    for a, b in combinations(segments.Segment._simple_segments, 2):
-        seg_a = segments.Segment._pool[a]
-        seg_b = segments.Segment._pool[b]
-        values.append(1-seg_a.similarity(seg_b))
-    return mean(values)
-
-def _phon_sub_cost(a, b):
-    """Get the phonologically weighted substitution cost between two segments."""
-    if a == b:
-        return 0
-    return 1-segments.Segment.get(a).similarity(segments.Segment.get(b))
 
 def _all_min(iterable):
     """Return all minimum elements from an iterable according to the first element of its tuples."""
@@ -96,139 +39,111 @@ def _all_min(iterable):
             minimums.append(x)
     return minimums
 
-def align_levenshtein_multi(*args,**kwargs):
-    """ Levenshtein alignment over arguments, two by two.
-    """
-    if len(args) == 1:
-        return [(elem, ) for elem in args[0]]
-    
-    fillvalue = kwargs.get("fillvalue","")
-    def flatten_alignment(alignment,multi_fillvalue):
-        for a,b in alignment:
+
+def levenshtein_ins_cost(*_):
+    return 1
+
+
+def levenshtein_sub_cost(a, b):
+    return int(a != b)
+
+
+def multi_sub_cost(a, b):
+    return int(b not in a)
+
+def align_multi(*strings, **kwargs):
+    """ Levenshtein-style alignment over arguments, two by two."""
+    if len(strings) == 1:
+        return [(elem,) for elem in strings[0]]
+
+    fillvalue = kwargs.get("fillvalue", "")
+    kwargs["insert_cost"] = levenshtein_ins_cost
+    kwargs["sub_cost"] = multi_sub_cost
+
+    def flatten_alignment(alignment, multi_fillvalue):
+        for a, b in alignment:
             if a == fillvalue:
                 a = multi_fillvalue
-            yield a+(b,)
+            yield a + (b,)
 
-    def multi_sub_cost(a,b):
-        return int(b not in a)
+    aligned = align_auto(strings[0], strings[1], **kwargs)[0]
 
-    aligned = align_auto(args[0],args[1], **kwargs)[0]
-
-    for i in range(2,len(args)):
+    for i in range(2, len(strings)):
         multi_fillvalue = tuple(fillvalue for _ in range(i))
-        aligned = list(flatten_alignment(align_auto(aligned, args[i],
-                            sub_cost=multi_sub_cost,
-                             **kwargs)[0], multi_fillvalue))
+        aligned = list(flatten_alignment(align_auto(aligned, strings[i], **kwargs)[0], multi_fillvalue))
     return aligned
 
-def align_phono(s1, s2,**kwargs):
-    """Return all the best alignments of two words according to phonologically weighted edit distance.
+
+def align_auto(s1, s2, insert_cost, sub_cost, distance_only=False, fillvalue="", **kwargs):
+    """Return all the best alignments of two words according to some edit distance matrix.
 
     Arguments:
         s1 (str): first word to align
         s2 (str): second word to align
+        insert_cost (func): A function which takes one value and returns an insertion cost
+        sub_cost (func): A function which takes two values and returns a substitution cost
         fillvalue: (optional) the value with which to pad when iterable have varying lengths. Default:  "".
 
     Returns:
         a `list` of `list` of zipped tuples.
     """
-    if "ins_cost" not in kwargs:
-        kwargs["ins_cost"] = PHON_INS_COST
-    aligned = align_auto(s1,s2,sub_cost=_phon_sub_cost,**kwargs)
-
-    if kwargs.get("prettyPrint",False):
-        prettyPrint(aligned,sub_cost=_phon_sub_cost,**kwargs)
-
-    return aligned
-
-def align_levenshtein(s1, s2, **kwargs):
-    """Return all the best alignments of two words according to levenshtein edit distance.
-
-    Arguments:
-        s1 (str): first word to align
-        s2 (str): second word to align
-        fillvalue: (optional) the value with which to pad when iterable have varying lengths. Default:  "".
-
-    Returns:
-        a `list` of `list` of zipped tuples.
-    """
-    aligned = align_auto(s1,s2, **kwargs)
-
-    if kwargs.get("prettyPrint",False):
-        prettyPrint(aligned,**kwargs)
-
-    return aligned
-
-def align_auto(s1, s2, distance_only=False, **kwargs):
-    """Return all the best alignments of two words according to some edit distance.
-
-    Arguments:
-        s1 (str): first word to align
-        s2 (str): second word to align
-        fillvalue: (optional) the value with which to pad when iterable have varying lengths. Default:  "".
-
-    Returns:
-        a `list` of `list` of zipped tuples.
-    """
-    fillvalue = kwargs.get("fillvalue", "")
-    ins_cost = kwargs.get("ins_cost", 1) # By default use levenshtein insertion
-    sub_cost_func = kwargs.get("sub_cost", lambda a,b:int(a!=b)) # By default use levenshtein substitution
     m = len(s1)
     n = len(s2)
-    paths = np.empty((m+1, n+1), dtype=list)
-    paths[0, 0] = [(0,(0,0),("",""))]
+    paths = np.empty((m + 1, n + 1), dtype=list)
+    paths[0, 0] = [(0, (0, 0), ("", ""))]
 
     for i, a in enumerate(s1):
-        paths[i+1, 0] = [(paths[i,0][0][0]+ins_cost,(i,0),(a, fillvalue))]
+        paths[i + 1, 0] = [(paths[i, 0][0][0] + insert_cost(a), (i, 0), (a, fillvalue))]
 
     for j, b in enumerate(s2):
-        paths[0, j+1] = [(paths[0, j][0][0]+ins_cost,(0,j),(fillvalue, b))]
+        paths[0, j + 1] = [(paths[0, j][0][0] + insert_cost(b), (0, j), (fillvalue, b))]
 
-    for i in range(1, m+1):
-        a = s1[i-1]
+    for i in range(1, m + 1):
+        a = s1[i - 1]
 
-        for j in range(1, n+1):
-            b = s2[j-1]
-            subcost = paths[i-1, j-1][0][0] + sub_cost_func(a, b)
-            insb = paths[i, j-1][0][0] + ins_cost
-            insa = paths[i-1, j][0][0] + ins_cost
+        for j in range(1, n + 1):
+            b = s2[j - 1]
+            subcost = paths[i - 1, j - 1][0][0] + sub_cost(a, b)
+            insb = paths[i, j - 1][0][0] + insert_cost(b)
+            insa = paths[i - 1, j][0][0] + insert_cost(a)
 
-            paths[i, j] = _all_min([(subcost, (i-1, j-1), (a, b)),
-                              (insb, (i, j-1), (fillvalue, b)),
-                              (insa, (i-1, j), (a, fillvalue))])
+            paths[i, j] = _all_min([(subcost, (i - 1, j - 1), (a, b)),
+                                    (insb, (i, j - 1), (fillvalue, b)),
+                                    (insa, (i - 1, j), (a, fillvalue))])
     if distance_only:
         return paths[-1][-1][0][0]
     else:
         return _multibacktrack(paths)
 
+
 def _multibacktrack(paths):
     max_i, max_j = paths.shape
-    stack = [([], # empty alignment
-              (max_i-1, max_j-1),# start at last cell
-             set()) # No cell is forbidden.
-            ]
+    stack = [([],  # empty alignment
+              (max_i - 1, max_j - 1),  # start at last cell
+              set())  # No cell is forbidden.
+             ]
     solutions = []
     while stack != []:
-        current_path, (i,j), visited = stack.pop(0)
-        if (i,j) in visited:
-            continue # abandon this path, it is redundant
+        current_path, (i, j), visited = stack.pop(0)
+        if (i, j) in visited:
+            continue  # abandon this path, it is redundant
         else:
-            visited.add((i,j))
-            if i==0 and j == 0:
+            visited.add((i, j))
+            if i == 0 and j == 0:
                 solutions.append(current_path)
             else:
-                #ins_del = {(i - 1, j), (i, j - 1)}
+                # ins_del = {(i - 1, j), (i, j - 1)}
                 for step in paths[i, j]:
                     _, idxs, action = step
                     # Share the same visited set unless perfect match
                     new_visited = visited if action[0] != action[1] else set()
-                    stack.append(([action]+current_path,
-                                 idxs,
-                                 new_visited))
+                    stack.append(([action] + current_path,
+                                  idxs,
+                                  new_visited))
     return solutions
 
 
-def align_left(*args, debug=False, **kwargs):
+def align_left(*args, **kwargs):
     """Align left all arguments (wrapper around zip_longest).
 
     Examples:
@@ -254,7 +169,7 @@ def align_left(*args, debug=False, **kwargs):
     return list(zip_longest(*args, **kwargs))
 
 
-def align_right(*iterables, debug=False, **kwargs):
+def align_right(*iterables, **kwargs):
     """Align right all arguments. Zip longest with right alignment.
 
     Examples:

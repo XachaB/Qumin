@@ -10,6 +10,9 @@ from collections import defaultdict
 from lattice.lattice import ICLattice
 import functools
 import unicodedata
+import numpy as np
+from itertools import combinations
+
 
 class _CharClass(str):
     """A `_CharClass` is a `str` with sorted chars and brackets.
@@ -58,6 +61,8 @@ class Segment(object):
     _normalization = {}
     _aliases = {}
     _lattice = None
+    _score_matrix = {}
+    _gap_score = None
 
     def __new__(cls, classes, features, alias, chars, shorthand=None):
         obj = cls._pool.get(alias, None)
@@ -88,6 +93,30 @@ class Segment(object):
         return (self.alias == other.alias) or (self < other)
 
     @classmethod
+    def init_dissimilarity_matrix(cls, gap_prop=1/3, **kwargs):
+        """Compute score matrix with dissimilarity scores."""
+
+        costs = []
+        for a, b in combinations(cls._simple_segments, 2):
+            seg_a = cls._pool[a]
+            seg_b = cls._pool[b]
+            cost = 1 - seg_a.similarity(seg_b)
+            cls._score_matrix[(a, b)] = cls._score_matrix[(b, a)] = cost
+            costs.append(cost)
+
+        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop
+        for a in cls._simple_segments:
+            cls._score_matrix[(a, a)] = 0
+
+    @classmethod
+    def insert_cost(cls, *_):
+        return cls._gap_score
+
+    @classmethod
+    def sub_cost(cls, a, b):
+        return cls._score_matrix[(a, b)]
+
+    @classmethod
     def set_max(cls):
         """Set a variable to the top of the natural classes lattice."""
         cls._max = max(cls._pool, key=len)
@@ -107,7 +136,6 @@ class Segment(object):
         cls._normalization.clear()
         cls._aliases.clear()
 
-
     @classmethod
     def intersect(cls, *args):
         """Intersect some segments from their names/aliases.
@@ -116,19 +144,18 @@ class Segment(object):
         Returns:
             a str or _CharClass representing the segment which classes are the intersection of the input.
         """
-        #print("  intersecting :",args," to :",functools.reduce(lambda x, y: x & y, (cls.get(x) for x in args if x)).alias)
+        # print("  intersecting :",args," to :",functools.reduce(lambda x, y: x & y, (cls.get(x) for x in args if x)).alias)
         return cls.lattice["".join(args)].alias
-
 
     @classmethod
     def get(cls, descriptor):
         """Get a Segment from an alias."""
         try:
-            # Simple case: the descriptor is a  known alias
+            #  Simple case: the descriptor is a  known alias
             return cls._pool[descriptor]
         except:
             try:
-                # Alternate case: use lattice to recover segment
+                #  Alternate case: use lattice to recover segment
                 return cls._pool[cls.lattice[descriptor].alias]
             except:
                 raise KeyError("The segment {} isn't known".format(descriptor))
@@ -159,14 +186,15 @@ class Segment(object):
             >>> print(a,b)
             [bdpt] [fsvz]
         """
-        def select_if_reciprocal(cls,segs,left,right):
+
+        def select_if_reciprocal(cls, segs, left, right):
             tmp = ""
             for x in segs.alias:
                 try:
                     y = cls.get((cls.get(x).features - left) | right)
                     if y:
                         x_back = cls.get((y.features - right) | left)
-                        #print("x :",x,"y:",y,"x_back",x_back.alias)
+                        # print("x :",x,"y:",y,"x_back",x_back.alias)
                         if x == x_back.alias:
                             tmp += x
                 except:
@@ -175,8 +203,8 @@ class Segment(object):
 
         a = cls.get(a).features
         b = cls.get(b).features
-        left = a-b
-        right = b-a
+        left = a - b
+        right = b - a
         A, B = cls.get(left), cls.get(right)
         A = select_if_reciprocal(cls, A, left, right)
         B = select_if_reciprocal(cls, B, right, left)
@@ -197,31 +225,31 @@ class Segment(object):
             'z'
         """
         a = cls.get(a).features
-        t1 =  set.intersection(*[cls.get(x).features for x in transform[0]])
+        t1 = set.intersection(*[cls.get(x).features for x in transform[0]])
         t2 = set.intersection(*[cls.get(x).features for x in transform[1]])
-        f1 = t1-t2
-        f2 = t2-t1
+        f1 = t1 - t2
+        f2 = t2 - t1
         return cls.get((a - f1) | f2).alias
 
     @classmethod
     def pool_to_context(cls):
-        context = defaultdict(lambda:defaultdict(lambda:0))
+        context = defaultdict(lambda: defaultdict(lambda: 0))
         print(cls._simple_segments)
         for segment in cls._simple_segments:
             seg = cls._pool[segment].ipa
             for feat in cls._pool[segment].features:
                 context[feat][seg] = 1
         context = pd.DataFrame(context)
-        context.fillna(0,inplace=True)
+        context.fillna(0, inplace=True)
         return context
 
     @classmethod
-    def show_pool(cls,only_single=False):
+    def show_pool(cls, only_single=False):
         """Return a string description of the whole segment pool."""
         if not only_single:
-            return "\n".join([repr(cls._pool[seg]) for seg in sorted(cls._pool,key=lambda x:len(x))])
+            return "\n".join([repr(cls._pool[seg]) for seg in sorted(cls._pool, key=lambda x: len(x))])
         else:
-            return "\n".join([repr(cls._pool[seg]) for seg in sorted(cls._pool,key=lambda x:len(x)) if len(seg) == 1])
+            return "\n".join([repr(cls._pool[seg]) for seg in sorted(cls._pool, key=lambda x: len(x)) if len(seg) == 1])
 
     @functools.lru_cache(maxsize=None)
     def similarity(self, other):
@@ -241,7 +269,7 @@ class Segment(object):
         """
         if self == other:
             return 1
-        return len(self.classes & other.classes)/len(self.classes | other.classes)
+        return len(self.classes & other.classes) / len(self.classes | other.classes)
 
     def __repr__(self):
         r"""Return the representation of one segment.
@@ -252,7 +280,7 @@ class Segment(object):
             ...      -rond, -cor, +cont, +bas, -nas, -ant]
 
         """
-        if str(self.ipa) != str(self.alias) :
+        if str(self.ipa) != str(self.alias):
             return "{} ({}) = {}".format(self.ipa, self.alias, self.shorthand)
         return "{} = {}".format(self.alias, self.shorthand)
 
@@ -265,6 +293,7 @@ class Segment(object):
             "[iEøâô]". # Complex segment
         """
         return str(self.alias)
+
 
 def make_aliases(ipa):
     """Associate one symbol to segments that take two characters. Return restoration map.
@@ -290,7 +319,8 @@ def make_aliases(ipa):
         alias_map (dict):
             maps from the simplified name to the original segments name.
     """
-    reserved = ".^$*+?{}[]/|()<>_ ⇌,;" # these characters shouldn't be names for segments.
+    reserved = ".^$*+?{}[]/|()<>_ ⇌,;"  # these characters shouldn't be names for segments.
+
     def alias(row, all_segments, dict_confusables, alias_map):
         """alias for a segment's name.
 
@@ -304,8 +334,10 @@ def make_aliases(ipa):
         """
         segment, alias, code = row
         if segment in reserved:
-            raise ValueError("The characters "+reserved+" are reserved. Please choose other representations for the segments. Occured at: "+str(segment)+" "+str(code))
-        if len(segment) == 1 :
+            raise ValueError(
+                "The characters " + reserved + " are reserved. Please choose other representations for the segments. Occured at: " + str(
+                    segment) + " " + str(code))
+        if len(segment) == 1:
             return segment
         else:
             alt = []
@@ -316,8 +348,8 @@ def make_aliases(ipa):
                 if 0 < i < 1114111:
                     alt.append(chr(int(code)))
 
-            # Compose segments that are composable, normalize otherwise
-            normalized = unicodedata.normalize("NFKC",segment)
+            #  Compose segments that are composable, normalize otherwise
+            normalized = unicodedata.normalize("NFKC", segment)
             l = len(normalized)
             if l == 1:
                 alt.append(normalized)
@@ -341,13 +373,13 @@ def make_aliases(ipa):
                 if seg not in all_segments and seg not in reserved:
                     all_segments.add(seg)
                     alias_map[seg] = segment
-                    #print("I chose ",seg," as alias for ",segment)
+                    # print("I chose ",seg," as alias for ",segment)
                     return seg
 
     from representations import confusables
     from os.path import dirname
 
-    dict_confusables = confusables.parse(dirname(__file__)+"/confusables.txt")
+    dict_confusables = confusables.parse(dirname(__file__) + "/confusables.txt")
     alias_map = {}
     all_segments = set(ipa["Seg."])
     if "UNICODE" not in ipa.columns:
@@ -355,9 +387,9 @@ def make_aliases(ipa):
     if "ALIAS" not in ipa.columns:
         ipa["ALIAS"] = ""
 
-    ipa["Seg."] = ipa[["Seg.", "ALIAS","UNICODE"]].apply(alias,
-                                         args=(all_segments, dict_confusables, alias_map),
-                                         axis=1)
+    ipa["Seg."] = ipa[["Seg.", "ALIAS", "UNICODE"]].apply(alias,
+                                                          args=(all_segments, dict_confusables, alias_map),
+                                                          axis=1)
 
     ipa.drop("UNICODE", axis=1, inplace=True)
     ipa.drop("ALIAS", axis=1, inplace=True)
@@ -395,71 +427,74 @@ def normalize(ipa, features):
         norm_map (dict):
             translation table from the segment's nameto its normalized name.
     """
-    def find_indentical_rows(segment,table):
+
+    def find_indentical_rows(segment, table):
         seg_features = table.loc[segment, :]
         try:
             same_features_as_seg = (table == seg_features).all(axis=1)
-        except ValueError as e :
+        except ValueError as e:
             if seg_features.shape[0] > 1:
-                raise ValueError("You have more than one segment definition for {}\n{}".format(segment,seg_features))
+                raise ValueError("You have more than one segment definition for {}\n{}".format(segment, seg_features))
         return same_features_as_seg
 
     ipa["Normalized"] = ""
 
     for segment in ipa[features].drop_duplicates().index:
-        same_features_as_seg = find_indentical_rows(segment,ipa[features])
+        same_features_as_seg = find_indentical_rows(segment, ipa[features])
 
         if (ipa.loc[same_features_as_seg, "Normalized"] == "").all():
             ipa.loc[same_features_as_seg, "Normalized"] = segment
 
     norm_map = str.maketrans({seg: norm
-                             for seg, norm
-                             in zip(ipa.index, ipa["Normalized"])
-                             if seg != norm})
+                              for seg, norm
+                              in zip(ipa.index, ipa["Normalized"])
+                              if seg != norm})
     return norm_map
-
 
 
 def restore(char):
     """Restore the original string from an alias."""
-    if char in Segment._pool :
+    if char in Segment._pool:
         return Segment.get(char).ipa
     else:
         return str(char)
+
 
 def restore_string(string):
     """Restore the original string from a string of aliases."""
     return "".join(restore(char) for char in string)
 
+
 def _merge_duplicate_cols(dataframe):
     """Merge any duplicate columns in the dataframe."""
 
     def complementaire(values):
-        a,b = values
+        a, b = values
         return (a == b == -1) or (a == (not b))
 
-    agenda = set([c for c in dataframe.columns if c not in ["Seg.","UNICODE","ALIAS"]])
+    agenda = set([c for c in dataframe.columns if c not in ["Seg.", "UNICODE", "ALIAS"]])
     changed = defaultdict(set)
     while agenda:
         col = agenda.pop()
         agenda -= {col}
-        for col2 in agenda :
+        for col2 in agenda:
             identical = all(dataframe[col] == dataframe[col2])
-            compl = all(dataframe[[col,col2]].apply(complementaire,axis=1))
-            if identical or compl :
+            compl = all(dataframe[[col, col2]].apply(complementaire, axis=1))
+            if identical or compl:
                 changed[col].add(col2)
-                dataframe.drop(col2, axis=1,inplace=True)
+                dataframe.drop(col2, axis=1, inplace=True)
 
         agenda -= changed[col]
 
-    for col in dataframe.columns :
+    for col in dataframe.columns:
         if changed[col]:
             print("Merged: ", col, changed[col])
 
-def initialize(filename,sep="\t", verbose=False):
+
+def initialize(filename, sep="\t", verbose=False):
     Segment._reinitialize()
     print("Reading table")
-    with open(filename,"r",encoding="utf-8") as f:
+    with open(filename, "r", encoding="utf-8") as f:
         first_line = f.readline()
         if "Seg.," in first_line or '"Seg.",' in first_line:
             sep = ","
@@ -468,28 +503,28 @@ def initialize(filename,sep="\t", verbose=False):
     table = pd.read_table(filename, header=0,
                           index_col=False, sep=sep, encoding="utf-8")
 
-
     if "Seg." in list(table.iloc[0]):
         table.columns = table.iloc[0]
         table.drop(0, axis=0, inplace=True)
     else:
         short_features_names = []
         for name in table.columns:
-            if name in ["Seg.", "UNICODE", "ALIAS","value"] or len(name) <= 3:
+            if name in ["Seg.", "UNICODE", "ALIAS", "value"] or len(name) <= 3:
                 short_features_names.append(name)
             else:
-                names = [name[:i] for i in range(3, len(name)+1)]
+                names = [name[:i] for i in range(3, len(name) + 1)]
                 while names and names[0] in short_features_names:
                     names.pop(0)
                 short_features_names.append(names[0])
         table.columns = short_features_names
 
-    # Checking segments names legality
+    #  Checking segments names legality
     for col in table["Seg."]:
         if col == "":
             raise ValueError("One of your segments doesn't have a name !")
         if col.strip("#") == "":
-            raise ValueError("The symbol \"#\" is reserved and can only be used in a shorthand name (#V# for a vowel, etc)")
+            raise ValueError(
+                "The symbol \"#\" is reserved and can only be used in a shorthand name (#V# for a vowel, etc)")
 
     if "value" in table.columns:
         table.drop("value", axis=1, inplace=True)
@@ -511,10 +546,10 @@ def initialize(filename,sep="\t", verbose=False):
 
     print("Aliasing multi-chars segments")
     aliases = make_aliases(table)
-    Segment._aliases.update({aliases[x]:x for x in aliases}) # Need the opposite mapping to make_aliases dataframes
+    Segment._aliases.update({aliases[x]: x for x in aliases})  #  Need the opposite mapping to make_aliases dataframes
     table.set_index("Seg.", inplace=True)
     if verbose:
-        print("Aliases map: ", {x:aliases[x] for x in aliases if aliases[x] != x})
+        print("Aliases map: ", {x: aliases[x] for x in aliases if aliases[x] != x})
 
     attributes = list(table.columns)
 
@@ -530,26 +565,27 @@ def initialize(filename,sep="\t", verbose=False):
     def formatter(columns):
         signs = ["-", "+"] + [str(x) for x in range(2, 11)]
         for c in columns:
-            key,val = c.split("=")
-            yield signs[int(val)]+key.replace(" ","_")
+            key, val = c.split("=")
+            yield signs[int(val)] + key.replace(" ", "_")
 
-    leaves = {t:[] for t in table.index}
-    table = table.applymap(lambda x:str(x))
+    leaves = {t: [] for t in table.index}
+    table = table.applymap(lambda x: str(x))
 
     lattice = ICLattice(table, leaves,
-                         na_value="-1",
-                         col_formatter=formatter,
-                         verbose=False)
+                        na_value="-1",
+                        col_formatter=formatter,
+                        verbose=False)
 
     Segment.lattice = lattice.lattice
 
-    if shorthands is not None :
-        shorthand_lattice = ICLattice(shorthands,  {t:[] for t in shorthands.index},
-                             na_value="-1",
-                             col_formatter=formatter,
-                             verbose=False)
+    if shorthands is not None:
+        shorthand_lattice = ICLattice(shorthands, {t: [] for t in shorthands.index},
+                                      na_value="-1",
+                                      col_formatter=formatter,
+                                      verbose=False)
 
-        shorthands = {lattice.lattice[i].intent:e[0].strip("#") for e,i in shorthand_lattice.lattice if e and len(e) ==1}
+        shorthands = {lattice.lattice[i].intent: e[0].strip("#") for e, i in shorthand_lattice.lattice if
+                      e and len(e) == 1}
         shorthands[()] = "X"
     else:
         shorthands = {(): "X"}
@@ -559,23 +595,23 @@ def initialize(filename,sep="\t", verbose=False):
             shorthand = "[{}]".format(" ".join(intent))
             if intent in shorthands:
                 shorthand = shorthands[intent]
-            elif len(extent) >1 :
+            elif len(extent) > 1:
                 lower = set().union(*(set(x.intent) for x in lattice.lattice[extent].upper_neighbors))
                 minimal = set(intent) - lower
                 if minimal:
                     shorthand = "[{}]".format(" ".join(minimal))
 
             ancestors = lattice.ancestors(extent)
-            classes = sorted(["".join(sorted(ancestor.extent)) for ancestor in ancestors]+[extent],key=len)
+            classes = sorted(["".join(sorted(ancestor.extent)) for ancestor in ancestors] + [extent], key=len)
             features = set(intent)
 
             if len(alias) == 1:
-                ipa =  aliases.get(alias, alias)
+                ipa = aliases.get(alias, alias)
                 Segment._simple_segments.append(alias)
             else:
                 alias = _CharClass(alias)
                 ipa = "[{}]".format("-".join(aliases.get(a, a) for a in alias))
-            #print("Adding : {} ({}) = {}\n\t{}".format(ipa,alias,lattice.vertex[seg_set],classes))
+            # print("Adding : {} ({}) = {}\n\t{}".format(ipa,alias,lattice.vertex[seg_set],classes))
             Segment(classes, features, alias, ipa, shorthand=shorthand)
             lattice.lattice[extent].alias = alias
 
@@ -583,21 +619,21 @@ def initialize(filename,sep="\t", verbose=False):
     for leaf in leaves:
         lattice_node = "".join(sorted(lattice.lattice[leaf].extent))
         if leaf != lattice_node:
-            not_actual_leaves.append((leaf,lattice_node))
-            #Segment._pool[leaf] = Segment._pool[lattice_node]
+            not_actual_leaves.append((leaf, lattice_node))
+            # Segment._pool[leaf] = Segment._pool[lattice_node]
 
-    #lattice.to_html("test.html")
+    # lattice.to_html("test.html")
     if not_actual_leaves:
         alert = ""
-        for leaf,lattice_node in not_actual_leaves:
+        for leaf, lattice_node in not_actual_leaves:
             other = "".join((set(lattice_node) - {leaf}))
-            leaf_alias = aliases.get(leaf,leaf)
+            leaf_alias = aliases.get(leaf, leaf)
 
             alert += "\n\t" + leaf_alias + " is the same node as " + Segment.get(lattice_node).ipa
             alert += "\n\t\t" + repr(Segment.get(lattice_node))
             for o in other:
                 alert += "\n\t\t" + repr(Segment.get(o))
 
-        raise Exception("Warning, some of the segments aren't actual leaves :"+alert)
+        raise Exception("Warning, some of the segments aren't actual leaves :" + alert)
 
     Segment.set_max()
