@@ -2,7 +2,7 @@
 # !/usr/bin/python3
 import sys
 from collections import defaultdict
-
+import subprocess
 
 class ProgressBar(object):
     """Homemade progressbar"""
@@ -52,17 +52,9 @@ def get_repository_version():
      Returns:
         (str): svn/git version or ''.
      """
-    import subprocess
     try:
         kwargs = {"universal_newlines": True}
-        try:
-            no_svn = subprocess.call(["svn", "info"], **kwargs)
-        except FileNotFoundError:
-            no_svn = 1
-        if no_svn == 0:
-            version = subprocess.check_output(["svnversion"], **kwargs)
-        else:
-            version = subprocess.check_output(["git", "describe"], **kwargs)
+        version = subprocess.check_output(["git", "describe"], **kwargs)
         return version.strip("\n ")
     except:
         return ''
