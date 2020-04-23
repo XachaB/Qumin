@@ -203,7 +203,7 @@ class ICLattice(object):
                 size = sum(len(self.leaves[label]) for label in extent if label in self.leaves)
                 nodes[extent] = Node(extent, intent=intent, size=size, common=properties, objects=objects,
                                      macroclass=False)
-                prb.increment()
+                prb.update(1)
             return nodes
 
         AOC = sorted(
@@ -240,21 +240,21 @@ class ICLattice(object):
                 annotations = getattr(concept, '_extra_qumin_annotation', {})
                 nodes[extent] = Node(extent, intent=intent, size=size, common=properties, objects=objects,
                                      macroclass=False, **annotations)
-                prb.increment()
+                prb.update(1)
             return nodes
 
         concepts = sorted([v for v in self.lattice if v.extent != ()], key=lambda x: len(x.extent), reverse=True)
-        prb = ProgressBar(len(concepts) * 2)
 
-        # Creating nodes
-        nodes = make_nodes(concepts, prb)
+        with tqdm(total=len(concepts) * 2) as prb:
+            # Creating nodes
+            nodes = make_nodes(concepts, prb)
 
-        # Creating arcs
-        for vertice in concepts:
-            for daughter in vertice.lower_neighbors:
-                if daughter.extent != ():
-                    nodes[vertice.extent].children.append(nodes[daughter.extent])
-            prb.increment()
+            # Creating arcs
+            for vertice in concepts:
+                for daughter in vertice.lower_neighbors:
+                    if daughter.extent != ():
+                        nodes[vertice.extent].children.append(nodes[daughter.extent])
+                prb.update(1)
         return nodes[concepts[0].extent]
 
     def parents(self, identifier):
