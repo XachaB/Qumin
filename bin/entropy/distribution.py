@@ -11,11 +11,11 @@ from collections import Counter, defaultdict
 from prettytable import PrettyTable, ALL
 from itertools import combinations
 
-from utils import ProgressBar
 from functools import reduce
 from entropy import cond_entropy, entropy, P
 import representations.patterns
 from representations.segments import restore
+from tqdm import tqdm
 
 
 def merge_split_df(dfs):
@@ -223,9 +223,8 @@ class PatternDistribution(object):
                                  columns=columns)
         iterations = len(indexes)
 
-        progress = ProgressBar(iterations)
 
-        for predictors in indexes:
+        for predictors in tqdm(indexes):
 
             # combinations gives us all x, y unordered unique pair for all of
             # the n predictors.
@@ -256,7 +255,6 @@ class PatternDistribution(object):
                     entropies.at[predictors, out] = cond_entropy(A, B, subset=selector)
                     effectifs.at[predictors, out] = sum(selector)
 
-            progress.increment()
 
         print()
 
@@ -503,12 +501,6 @@ class PatternDistribution(object):
         print("\n\nPrinting log of "
               "P( (c1, ..., c{!s}) → c{!s} ).".format(n, n + 1))
 
-        if sanity_check:
-            columns = list(self.paradigms.columns)
-            indexes = list(combinations(columns, n))
-            entropies_check = pd.DataFrame(index=indexes,
-                                           columns=columns,
-                                           dtype="float16")
 
         print("Logging n preds probabilities, with n = {}".format(n), file=logfile)
         print(" P(x, y → z) = P(x~z, y~z | Class(x), Class(y), x~y)", file=logfile)
@@ -524,9 +516,12 @@ class PatternDistribution(object):
             pat_order[(b, a)] = (a, b)
 
         indexes = list(combinations(columns, n))
-        iterations = len(indexes)
 
-        progress = ProgressBar(iterations)
+        if sanity_check:
+            columns = list(self.paradigms.columns)
+            entropies_check = pd.DataFrame(index=indexes,
+                                           columns=columns,
+                                           dtype="float16")
 
         def format_patterns(series, string):
             patterns = ("; ".join(str(pattern)
@@ -557,7 +552,7 @@ class PatternDistribution(object):
         def formatting_known_patterns(x):
             return format_patterns(x, known_pat_string)
 
-        for predictors in indexes:
+        for predictors in tqdm(indexes):
             #   combinations gives us all x, y unordered unique pair for all of
             # the n predictors.
             pairs_of_predictors = list(combinations(predictors, 2))
@@ -639,7 +634,6 @@ class PatternDistribution(object):
 
                     print(table.get_string(), file=logfile)
 
-            progress.increment()
 
         if sanity_check:
             return entropies_check

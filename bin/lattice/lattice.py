@@ -17,8 +17,9 @@ except:
     warnings.warn("Warning: mpld3 could not be imported. No html export possible.")
 from concepts import Context
 import pandas as pd
-from utils import merge_duplicate_columns, ProgressBar
+from utils import merge_duplicate_columns
 import tempfile
+from tqdm import tqdm
 
 axes = {'facecolor': 'None', 'edgecolor': 'None', 'linewidth': 0}
 grid = {'alpha': 0, 'linewidth': 0}
@@ -208,22 +209,23 @@ class ICLattice(object):
         AOC = sorted(
             [v for v in self.lattice if (v == self.lattice.supremum or v.properties or v.objects) and v.extent != ()],
             key=lambda x: len(x.extent), reverse=True)
-        prb = ProgressBar(len(AOC) * 2)
 
-        # Creating nodes
-        nodes = make_nodes(AOC, prb)
+        with tqdm(total=len(AOC) * 2) as prb:
+            # Creating nodes
+            nodes = make_nodes(AOC, prb)
 
-        # Creating arcs
-        for vertice in AOC:
-            span = set(vertice.extent)
-            for descendant in vertice.downset():
-                descendant_extent = set(descendant.extent)
-                if descendant != vertice and descendant in AOC and (span & descendant_extent):
-                    nodes[vertice.extent].children.append(nodes[descendant.extent])
-                    span = span - descendant_extent
-                    if len(span) == 0:
-                        break
-            prb.increment()
+            # Creating arcs
+            for vertice in AOC:
+                span = set(vertice.extent)
+                for descendant in vertice.downset():
+                    descendant_extent = set(descendant.extent)
+                    if descendant != vertice and descendant in AOC and (span & descendant_extent):
+                        nodes[vertice.extent].children.append(nodes[descendant.extent])
+                        span = span - descendant_extent
+                        if len(span) == 0:
+                            break
+                prb.update(1)
+
         return nodes[AOC[0].extent]
 
     def _lattice_to_node(self):

@@ -9,21 +9,21 @@ Author: Sacha Beniamine
 """
 
 from itertools import combinations, product
-from utils import ProgressBar
 from collections import Counter
 import numpy as np
 import re
 from clustering import Node, descriptionlength
 from clustering.clusters import _BUClustersBuilder
 import warnings
-
+from tqdm import tqdm
 
 def hamming(x, y, table, *args, **kwargs):
-    """Compute hamming distances between vectors x and y.
+    """Compute hamming distances between x and y in table.
 
     Arguments:
         x (any iterable): vector.
         y (any iterable): vector.
+        table (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
 
     Returns:
         (int): the hamming distance between x and y.
@@ -122,11 +122,9 @@ def dist_matrix(table, *args, labels=None, distfun=hamming, half=False, default=
     if labels is None:
         labels = table.index
 
-    progress = ProgressBar((len(labels) ** 2) / 2)
     distances = {frozenset([x]): {frozenset([y]): default for y in labels} for x in labels}
 
-    for a, b in combinations(labels, 2):
-        progress.increment()
+    for a, b in tqdm(combinations(labels, 2)):
         d = distfun(a, b, table, *args, **kwargs)
         a = frozenset([a])
         b = frozenset([b])

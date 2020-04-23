@@ -12,9 +12,9 @@ import argparse
 from utils import get_repository_version
 from collections import defaultdict
 from itertools import combinations
-from utils import ProgressBar
 from os import path
 import time
+
 def mean(x):
     '''Compute the mean of values in an iterable.'''
     return sum(x)/len(x)
@@ -62,8 +62,8 @@ def k_fold_mean_accuracy(paradigms, l, step, k, train_funcs, foldback, bipartite
         combinations_cols = combinations_cols[left:right]
         print("Nb de paires de cases à traiter:",len(combinations_cols))
 
-    n = len(columns)
-    prb = ProgressBar(k*len(train_funcs)*len(combinations_cols))
+    total_it = k*len(train_funcs)*len(combinations_cols)
+    done = 0
     bound  = 0
     for i in range(k):
         new_bound = bound + step
@@ -88,17 +88,17 @@ def k_fold_mean_accuracy(paradigms, l, step, k, train_funcs, foldback, bipartite
                     r  = accuracy_func(paradigms, a, b, train_funcs[method], test_items, train_items, foldback, **kwargs)
                     accuracy[method] += r["accuracy"]
                     count[method] += r["count"]
-                    prb.increment()
+                    done += 1
                     print("\t",a,"<->",b,method,
                          "\tthis accuracy:",round(r["accuracy"]/(test_len*2),4),
                          "\tmean accuracy:",round(accuracy[method]/total,4),
                          "\tmean count:",round(count[method]/total_count,4),
-                         "\tdone",prb.done,"%")
+                         "\tdone", (done/total_it)*100 ,"%")
         for method in train_funcs:
             print("END ITER",i,method,
                  "\tmean accuracy:",round(accuracy[method]/total,4),
                  "\tmean count:",round(count[method]/total_count,4),
-                 "\tdone",prb.done,"%")
+                 "\tdone",(done/total_it)*100,"%")
         bound = new_bound
 
     result = {}
@@ -212,7 +212,6 @@ def main(args):
 
         train_funcs = {m : train_funcs[m] for m in args.methods}
 
-        ProgressBar.silent = True
         segments.initialize(args.segments)
         paradigms = create_paradigms(args.paradigms, segcheck=True, fillna=False, merge_cols=True, overabundant=False, defective=True)
 

@@ -5,12 +5,11 @@
 Author: Sacha Beniamine
 """
 import numpy as np
-from utils import ProgressBar
 from collections import defaultdict, Counter
 from itertools import combinations, chain
 from clustering import Node
 from clustering.clusters import _ClustersBuilder, _BUClustersBuilder
-
+from tqdm import tqdm
 
 class Cluster(object):
     """A single cluster in MDL clustering.
@@ -562,10 +561,9 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
         """
         best_merges = []
         best = np.inf
-        pairs = list(combinations(sorted(self.nodes), 2))
-        progress = ProgressBar(len(pairs))
+        pairs = combinations(sorted(self.nodes), 2)
 
-        for g1, g2 in pairs:
+        for g1, g2 in tqdm(pairs):
             R, C, P, *_ = self._simulate_merge(g1, g2)
             DL = self.M + R + C + P
             if DL < best:
@@ -573,7 +571,6 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
                 best = DL
             elif DL == best:
                 best_merges.append((g1, g2, DL))
-            progress.increment()
 
         if len(best_merges) > 1:
             choices = ", ".join(["({}, {})".format("-".join(a), "-".join(b)) for a, b, _ in best_merges])

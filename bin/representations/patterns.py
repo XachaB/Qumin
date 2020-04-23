@@ -14,10 +14,10 @@ from representations.generalize import generalize_patterns, incremental_generali
 from itertools import groupby, zip_longest
 from collections import defaultdict
 from copy import deepcopy
-from utils import ProgressBar
 import numpy as np
 import pandas as pd
 import re
+import tqdm
 
 ORTHO = False
 len = len
@@ -693,7 +693,6 @@ def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
     patterns = pd.DataFrame(index=paradigms.index,
                             columns=pairs)
 
-    progress = ProgressBar(((n - 1) * n) / 2)
     pat_dict = {}
     paradigms_sets = paradigms.applymap(lambda x: set(x.split(";")))
 
@@ -711,9 +710,8 @@ def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
                 alt = new_rule.to_alt(exhaustive_blanks=False)
                 collection[alt].append(new_rule)
 
-    def find_patterns_in_col(column, pat_dict, progress):
+    def find_patterns_in_col(column, pat_dict):
         pattern_collection = defaultdict(list)
-        progress.increment()
         a, b = column.name
 
         paradigms_sets[[a, b]].apply(generate_rules, axis=1, args=((a, b), pattern_collection))
@@ -728,7 +726,8 @@ def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
 
         return pd.Series(results)
 
-    patterns = patterns.apply(find_patterns_in_col, axis=0, args=(pat_dict, progress))
+    tqdm.pandas()
+    patterns = patterns.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict, ))
 
     return patterns, pat_dict
 
@@ -764,7 +763,6 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
     pairs = list(combinations(cols, 2))
     patterns_df = pd.DataFrame(index=paradigms.index,
                                columns=pairs)
-    progress = ProgressBar(len(pairs))
 
     pat_dict = {}
     paradigms_sets = paradigms.applymap(lambda x: set(x.split(";")))
@@ -828,7 +826,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         counts = np.apply_along_axis(test_all, 1, forms, p, cells)
         return counts.sum(axis=0)
 
-    def find_patterns_in_col(column, progress, pat_dict):
+    def find_patterns_in_col(column, pat_dict):
         collection = defaultdict(lambda: defaultdict(list))
         c1, c2 = column.name
         col = paradigms_sets[[c1, c2]]
@@ -893,10 +891,10 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
             result = [PatternCollection(list(best[l])) for l in index]
             pat_dict[(c1, c2)] = list(set.union(*[set(coll.collection) for coll in result]))
 
-        progress.increment()
         return result
 
-    patterns_df = patterns_df.apply(find_patterns_in_col, axis=0, args=(progress, pat_dict))
+    tqdm.pandas()
+    patterns_df = patterns_df.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict, ))
 
     return patterns_df, pat_dict
 
@@ -940,11 +938,10 @@ def find_applicable(paradigms, pat_dict):
     pairs = [y for x in pat_dict for y in (x, x[::-1])]
 
     # Initialisation
-    progress = ProgressBar(len(pat_dict))
     classes = pd.DataFrame(index=paradigms.index,
                            columns=pairs)
 
-    for a, b in pat_dict:
+    for a, b in tqdm(pat_dict):
         local_patterns = pat_dict[(a, b)]
 
         # Iterate on paradigms' rows of corresponding columns to fill with the
@@ -954,7 +951,6 @@ def find_applicable(paradigms, pat_dict):
         classes[(b, a)] = paradigms[b].apply(applicable,
                                              args=(local_patterns, b))
 
-        progress.increment()
 
     return classes
 
@@ -993,16 +989,15 @@ def _local_alternations(paradigms, **kwargs):
         segmented = Pattern(cells, forms)
         return segmented.to_alt()
 
-    def segment_columns(col, progress):
+    def segment_columns(col):
         a, b = col.name
-        progress.increment()
         return paradigms[[a, b]].apply(segment, args=([a, b],), axis=1)
 
     # Create tuples pairs
     pairs = list(combinations(cols, 2))
     patterns = pd.DataFrame(index=paradigms.index, columns=pairs)
-    progress = ProgressBar(len(pairs))
-    patterns = patterns.apply(segment_columns, axis=0, args=(progress,))
+    tqdm.pandas()
+    patterns = patterns.progress_apply(segment_columns, axis=0)
 
     return patterns
 
@@ -1095,14 +1090,13 @@ def find_endings(paradigms, *args, **kwargs):
         """Segment all semicolon separated forms at the l character"""
         return ";".join(form[l:] if form else "#DEF#" for form in forms.split(";"))
 
-    def row_ending(row, progress):
+    def row_ending(row):
         """Remove the common prefix in all strings of a row."""
-        progress.increment()
         l = len(commonprefix(row_as_list(row)))
         return row.apply(segment, args=(l,))
 
-    progress = ProgressBar(len(paradigms.index))
-    return paradigms.apply(row_ending, axis=1, args=(progress,))
+    tqdm.pandas()
+    return paradigms.progress_apply(row_ending, axis=1)
 
 
 def make_pairs(paradigms):
