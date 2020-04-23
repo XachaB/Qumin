@@ -54,7 +54,7 @@ def get_repository_version():
      """
     try:
         kwargs = {"universal_newlines": True}
-        version = subprocess.check_output(["git", "describe"], **kwargs)
+        version = subprocess.check_output(["git", "describe", "--tags"], **kwargs)
         return version.strip("\n ")
     except:
         return ''
