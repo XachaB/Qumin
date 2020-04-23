@@ -61,7 +61,7 @@ def align_multi(*strings, **kwargs):
     kwargs["insert_cost"] = levenshtein_ins_cost
     kwargs["sub_cost"] = multi_sub_cost
 
-    def flatten_alignment(alignment, multi_fillvalue):
+    def flatten_alignment(alignment):
         for a, b in alignment:
             if a == fillvalue:
                 a = multi_fillvalue
@@ -71,7 +71,7 @@ def align_multi(*strings, **kwargs):
 
     for i in range(2, len(strings)):
         multi_fillvalue = tuple(fillvalue for _ in range(i))
-        aligned = list(flatten_alignment(align_auto(aligned, strings[i], **kwargs)[0], multi_fillvalue))
+        aligned = list(flatten_alignment(align_auto(aligned, strings[i], **kwargs)[0]))
     return aligned
 
 
@@ -83,10 +83,11 @@ def align_auto(s1, s2, insert_cost, sub_cost, distance_only=False, fillvalue="",
         s2 (str): second word to align
         insert_cost (func): A function which takes one value and returns an insertion cost
         sub_cost (func): A function which takes two values and returns a substitution cost
+        distance_only (bool): defaults to False. If True, returns only the best distance. If False, returns an alignment.
         fillvalue: (optional) the value with which to pad when iterable have varying lengths. Default:  "".
 
     Returns:
-        a `list` of `list` of zipped tuples.
+        Either an alignment (a `list` of `list` of zipped tuples), or a distance (if `distance_only` is True).
     """
     m = len(s1)
     n = len(s2)
@@ -124,7 +125,7 @@ def _multibacktrack(paths):
               set())  # No cell is forbidden.
              ]
     solutions = []
-    while stack != []:
+    while stack:
         current_path, (i, j), visited = stack.pop(0)
         if (i, j) in visited:
             continue  # abandon this path, it is redundant
@@ -185,7 +186,7 @@ def align_right(*iterables, **kwargs):
 
 
     Arguments:
-        *args: any number of iterables >= 2
+        *iterables: any number of iterables >= 2
         fillvalue: the value with which to pad when iterable have varying lengths. Default:  "".
 
     Returns:
@@ -247,12 +248,12 @@ def align_baseline(*args, **kwargs):
     D = commonsuffix(*rest)
 
     if C:
-        C = list(zip(*[C for i in range(la)]))
+        C = list(zip(*[C for _ in range(la)]))
     else:
         C = []
     if D:
         AB = [x[:-len(D)] for x in rest]
-        D = list(zip(*[D for i in range(la)]))
+        D = list(zip(*[D for _ in range(la)]))
     else:
         AB = rest
         D = []

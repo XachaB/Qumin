@@ -6,6 +6,7 @@ This module is used to get characters similar to other utf8 characters.
 """
 from collections import defaultdict
 
+
 def parse(filename):
     """Parse a file with confusable chars association, return a dict."""
     confusables = defaultdict(set)

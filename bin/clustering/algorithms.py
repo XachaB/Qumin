@@ -91,7 +91,7 @@ def log_classes(classes, prefix, suffix):
     filename = prefix + "_" + suffix + ".txt"
     print("\nFound ", len(classes), suffix, ".\nPrinting log to ", filename)
     with open(filename, "w", encoding="utf-8") as flow:
-        for m in sorted(classes, key=lambda m: len(classes[m])):
+        for m in sorted(classes, key=lambda x: len(classes[x])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(classes[m])) + ", ".join(classes[m]))
 
 

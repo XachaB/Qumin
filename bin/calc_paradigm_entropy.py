@@ -55,7 +55,7 @@ def main(args):
         preds.pop(0)
     result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
 
-    if onePred:
+    if onePred: #TODO: Changer la gestion du fichier de log
         logfile_name = result_prefix + "onePred_log.log"
     if args.nPreds:
         logfile_name = result_prefix + "nPreds_log.log"
@@ -126,9 +126,6 @@ def main(args):
         distrib = PatternDistribution(paradigms,
                                       pat_table,
                                       pat_dic,
-                                      logfile=logfile
-                                      if verbose or args.probabilities
-                                      else None,
                                       features=features)
 
     if onePred:
@@ -160,9 +157,6 @@ def main(args):
                       "entropies to: {}".format(check_file))
 
                 check.to_csv(check_file, sep="\t")
-
-    else:
-        entropies = None
 
     if preds:
 

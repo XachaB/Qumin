@@ -26,7 +26,8 @@ class _ClustersBuilder(object):
     def __init__(self, microclasses, *args, **kwargs):
         self.preferences = kwargs
         self.microclasses = microclasses
-        self.initialize_nodes()
+        self.nodes = {frozenset([m]): Node([m], size=len(self.microclasses[m]), macroclass=False) for m in
+                      self.microclasses}
 
         if "verbose" not in kwargs or not kwargs["verbose"]:
             self.printv = _do_nothing
@@ -35,11 +36,6 @@ class _ClustersBuilder(object):
             print("Writing logs to : ", self.preferences["filename"].format("<...>"))
         else:
             self.log = _do_nothing
-
-    def initialize_nodes(self):
-        """Initialize the nodes of the Inflection Class tree."""
-        self.nodes = {frozenset([m]): Node([m], size=len(self.microclasses[m]), macroclass=False) for m in
-                      self.microclasses}
 
     def rootnode(self):
         """Return the root of the Inflection Class tree, if it exists."""

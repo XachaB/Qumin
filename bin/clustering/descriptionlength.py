@@ -11,6 +11,7 @@ from clustering import Node
 from clustering.clusters import _ClustersBuilder, _BUClustersBuilder
 from tqdm import tqdm
 
+
 class Cluster(object):
     """A single cluster in MDL clustering.
 
@@ -51,7 +52,10 @@ class Cluster(object):
         This assumes an initialization with only one microclass.
 
         Arguments:
-            class_size (int): the size of the microclass"""
+            class_size (int): the size of the microclass
+            paradigms (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
+            size (int): total size
+        """
         self.size = class_size
         self.totalsize = size
         self.R = 0
@@ -488,8 +492,8 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
         """Simulate merging two clusters, return parameters for the DL.
 
         Parameters:
-            a (str): the label of a cluster to merge.
-            b (str): the label of a cluster to merge."""
+            a (frozenset): the label of a cluster to merge.
+            b (frozenset): the label of a cluster to merge."""
         g1 = self.clusters[a]
         g2 = self.clusters[b]
         new = g1 + g2
@@ -499,11 +503,12 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
 
         for cell in g1:
             # This is P_p
-            patterns[cell] = self.patterns[cell] + Counter(list(new[cell])) - \
-                             Counter(list(g1[cell])) - Counter(list(g2[cell]))
+            patterns[cell] = self.patterns[cell] + \
+                             Counter(list(new[cell])) - \
+                             Counter(list(g1[cell])) - \
+                             Counter(list(g2[cell]))
 
-            patterns[cell].length = self.patterns[cell].length + new[cell].length - \
-                                    g1[cell].length - g2[cell].length
+            patterns[cell].length = self.patterns[cell].length + new[cell].length - g1[cell].length - g2[cell].length
 
             for pattern in patterns[cell]:
                 P += weighted_log(patterns[cell][pattern], patterns[cell].length)

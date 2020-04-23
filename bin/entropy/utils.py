@@ -9,6 +9,7 @@ def P(x, subset=None):
 
     Arguments:
         x (:class:`pandas.core.series.Series`): A series of data.
+        subset (iterable): Only give the distribution for a subset of values.
 
     Returns:
         A :class:`pandas.core.series.Series` which index are x's elements and which values are their probability in x.
@@ -25,6 +26,7 @@ def cond_P(A, B, subset=None):
     Arguments:
         A (:class:`pandas.core.series.Series`): A series of data.
         B (:class:`pandas.core.series.Series`): A series of data.
+        subset (iterable): Only give the distribution for a subset of values.
 
     Return:
         A :class:`pandas.core.series.Series` whith two indexes.

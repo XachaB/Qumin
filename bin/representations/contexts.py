@@ -70,11 +70,11 @@ class _ContextMember(object):
         return self.to_str(mode=0)
 
     def to_str(self, mode=2):
-        ## Format modes:
-        ## str (0):      ([Ei]...) - with parenthesis, regex
-        ## restored and separated  (1):  [e-i]...
-        ## display (2): shortest(restored,[+syll, -open])
-        ## features (3): [+syll, -open]
+        # Format modes:
+        # str (0):      ([Ei]...) - with parenthesis, regex
+        # restored and separated  (1):  [e-i]...
+        # display (2): shortest(restored,[+syll, -open])
+        # features (3): [+syll, -open]
         def to_features(segment):
             if segment:
                 return Segment.get(segment).shorthand
@@ -172,7 +172,7 @@ class Context(object):
     """Context for an alternation pattern"""
 
     def __init__(self, segments):
-        if segments == []:
+        if not segments:
             self.elements = _ContextMember([], blank=True)
         elif type(segments[0]) is _ContextMember:
             self.elements = segments
@@ -206,8 +206,7 @@ class Context(object):
 
     @classmethod
     def _align(cls, contexts, debug=False):
-        ''' Align contexts segment by segment in order to merge (generator).
-        '''
+        """ Align contexts segment by segment in order to merge (generator)."""
         l = max(len(c) for c in contexts)
 
         leftblank = False
@@ -231,7 +230,7 @@ class Context(object):
                         restrictions.append(c[i].restrictions)
             align_func = align_funcs[(leftblank, rightblank)]
 
-            yield (align_func(*restrictions, fillvalue=("", optional)), opt, rightblank)
+            yield align_func(*restrictions, fillvalue=("", optional)), opt, rightblank
             leftblank = rightblank
 
     @classmethod
@@ -242,6 +241,7 @@ class Context(object):
 
         Arguments:
             contexts: iterable of Contexts.
+            debug: whether to print debug strings.
 
         Returns:
             a merged context

@@ -46,7 +46,7 @@ def main(args):
     data_file_name = path.basename(data_file_path).rstrip("_")
     version = get_repository_version()
     print(data_file_name)
-    kind = re.match(".+_(.+)\.csv", data_file_name).groups()[0]
+    kind = re.match(r".+_(.+)\.csv", data_file_name).groups()[0]
 
     # Setting up the output path.
     result_dir = "../Results/{}/{}".format(args.folder, day)

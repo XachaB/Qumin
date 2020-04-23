@@ -54,9 +54,13 @@ def create_paradigms(data_file_name,
         cols (list of str): a subset of columns to use from the paradigm file.
         verbose (bool): verbosity switch.
         merge_duplicates (bool): should identical columns be merged ?
+        fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ? Otherwise they are filled with empty strings ("").
+        segcheck (bool): Defaults to False. Should I check that all the phonological segments in the table are defined in the segments table ?
+        defective (bool): Defaults to False. Should I keep rows with defective forms ?
+        overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
+        merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
     Returns:
-        paradigms (:class:`pandas:pandas.DataFrame`): paradigms
-        (columns are cells, index are lemmas).
+        paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
     """
 
     def get_unknown_segments(form, unknowns, name):
@@ -101,7 +105,7 @@ def create_paradigms(data_file_name,
         while agenda:
             a = agenda.pop(0)
             for i, b in enumerate(agenda):
-                if all(paradigms[a] == paradigms[b]):
+                if (paradigms[a] == paradigms[b]).all():
                     print("Identical columns ", a, " and ", b)
                     new = a + " & " + b
                     agenda.pop(i)
@@ -154,7 +158,9 @@ def normalize_dataframe(paradigms, aliases, normalization, verbose=False):
         since .translate assumes mapping of 1: 1 chars.
 
     Arguments:
-        df (:class:`pandas:pandas.DataFrame`): A dataframe.
+        paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
+        aliases (dict): dictionnary of segments (as found in the paradigms) to their aliased versions (one char length)
+        normalization (dict): dictionnary of 1 aliased character to another, to replace segments which have the same feature set.
         verbose (bool): verbosity switch.
 
     Returns:

@@ -45,7 +45,7 @@ class Node(object):
         """Node constructor.
 
         Arguments:
-            labels (list): labels of all the leaves under this node.
+            labels (iterable): labels of all the leaves under this node.
             children (list): direct children of this node.
             kwargs: any other keyword argument will be added as node attributes.
              Note that certain algorithm expect the Node to have (int) "size",
@@ -186,8 +186,8 @@ class Node(object):
             # root
             style = ""
 
-        fill_values = {"tabs": "    " * (n + 2), "style": style}
-        fill_values["comment"] = ", ".join("{}={}".format(key, self.attributes[key]) for key in self.attributes)
+        fill_values = {"tabs": "    " * (n + 2), "style": style,
+                       "comment": ", ".join("{}={}".format(key, self.attributes[key]) for key in self.attributes)}
         if self.children and len(self.children) > 0:
             template = "{tabs}{style}[.{{{label}}} %{comment}\n{children}{tabs}]\n"
 
@@ -216,6 +216,7 @@ class Node(object):
             leavesfunc (fun):
                 A function that will be applied to leaves
                 before writing them down. Takes a Node, returns a str.
+            scale (int): defaults to 1. tikzpicture scale argument.
         """
         tikzset = ["level distance={}pt, ".format(level_dist)]
         if vertical and square:
@@ -250,7 +251,7 @@ class Node(object):
     def draw(self, horizontal=False, square=False,
              leavesfunc=lambda n: n.labels[0],
              nodefunc=None,
-             keep_above_macroclass=True,
+             keep_above_macroclass=True, #TODO: This argument is not used anymore.
              annotateOnlyMacroclasses=False, point=None,
              edge_attributes=None, interactive=False, lattice=False, pos=None):
         """Draw the tree as a dendrogram-style pyplot graph.
@@ -321,14 +322,14 @@ class Node(object):
                 return ""
 
             def default_edge_attributes(node, child):
-                attributes = {"linestyle": "-" if node.children else "--"}
-                attributes["color"] = node.attributes.get("color", "#333333")
+                attributes = {"linestyle": "-" if node.children else "--",
+                              "color": node.attributes.get("color", "#333333")}
                 if edge_attributes is not None:
                     attributes.update(edge_attributes(node, child))
                 return attributes
 
             if horizontal:
-                leafoffset = (-5, 0)
+                leafoffset = (-5, 0) #TODO: this is not used anymore
                 textoffset = (5, 0)
                 lva = "center"
                 lha = "right"
@@ -343,7 +344,7 @@ class Node(object):
                 lha = "right"
                 va = "bottom"
                 ha = "center"
-                leafoffset = (0, -3)
+                leafoffset = (0, -3) #TODO: This is not used anymore
                 textoffset = (0, 5)
                 r = 45
 
@@ -351,7 +352,7 @@ class Node(object):
                     return node.attributes["_x"], node.attributes["_y"]
 
             ax = plt.gca()
-            bg = ax.patch.get_facecolor()
+            # bg = ax.patch.get_facecolor()
 
             lines = []
             all_nodes = []
@@ -538,6 +539,7 @@ def find_min_attribute(tree, attr):
     """Find the minimum value for an attribute in a tree.
 
     Arguments:
+        tree (Node): The tree in which to find the minimum attribute.
         attr (str): the attribute's key."""
     agenda = [tree]
     mini = np.inf

@@ -102,7 +102,7 @@ def main(args):
 
     if patterns_df.isnull().values.any():
         print("Warning: error, some patterns are None")
-        patterns_df[patterns_df.isnull().values]
+        print(patterns_df[patterns_df.isnull().values])
 
     microclasses = find_microclasses(patterns_df.applymap(str))
     filename = result_prefix + "_microclasses.txt"

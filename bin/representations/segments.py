@@ -83,10 +83,10 @@ class Segment(object):
             self.shorthand = "[{}]".format(" ".join(self.features))
 
     def __lt__(self, other):
-        ''' Checks if self is a descendant of other.
+        """ Checks if self is a descendant of other.
 
         X is a descendant of Y if Y is in X's ancestor list.
-        '''
+        """
         return other.alias in self.classes
 
     def __le__(self, other):
@@ -317,6 +317,8 @@ def make_aliases(ipa):
                 set of all existing segments names.
             alias_map (dict):
                 maps from the simplified name to the original segments name.
+            dict_confusables (dict):
+                dictionnary providing mapping to similar characters.
         """
         segment, alias, code = row
         if segment in reserved:
@@ -418,7 +420,7 @@ def normalize(ipa, features):
         seg_features = table.loc[segment, :]
         try:
             same_features_as_seg = (table == seg_features).all(axis=1)
-        except ValueError as e:
+        except ValueError:
             if seg_features.shape[0] > 1:
                 raise ValueError("You have more than one segment definition for {}\n{}".format(segment, seg_features))
         return same_features_as_seg
@@ -471,8 +473,8 @@ def _merge_duplicate_cols(dataframe):
         col = agenda.pop()
         agenda -= {col}
         for col2 in agenda:
-            identical = all(dataframe[col] == dataframe[col2])
-            compl = all(dataframe[[col, col2]].apply(complementaire, axis=1))
+            identical = (dataframe[col] == dataframe[col2]).all()
+            compl = dataframe[[col, col2]].apply(complementaire, axis=1).all()
             if identical or compl:
                 changed[col].add(col2)
                 dataframe.drop(col2, axis=1, inplace=True)

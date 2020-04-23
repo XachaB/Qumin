@@ -282,15 +282,14 @@ class ICLattice(object):
                 node.attributes["height"] = h
                 return h
 
-        stats_lattice = {}
-        stats_lattice["Microclasses"] = len(self.leaves)
-        base = len(self.lattice.atoms)
-        stats_lattice["Base"] = base
-        stats_lattice["Hauteur"] = height(self.nodes)
         nb_arcs = sum(len(x.children) for x in self.nodes)
         nb_noeuds = len([x for x in self.nodes])
-        stats_lattice["Degré"] = nb_arcs / (nb_noeuds - 2)  # -2 car on ignore supremum et infimum
-        stats_lattice["Noeuds"] = nb_noeuds - 1  # -1 car on ignore infimum
+        stats_lattice = {"Microclasses": len(self.leaves),
+                         "Base": len(self.lattice.atoms),
+                         "Hauteur": height(self.nodes),
+                         "Degré": nb_arcs / (nb_noeuds - 2),  # -2 car on ignore supremum et infimum
+                         "Noeuds": nb_noeuds - 1  # -1 car on ignore infimum
+                         }
 
         if self.comp:
             left = 0
@@ -310,7 +309,7 @@ class ICLattice(object):
             print("Concepts définissant des propriétés des deux classifications:", both)
         return pd.Series(stats_lattice, index=["Microclasses", "Base", "Hauteur", "Degré", "Noeuds"])
 
-    def _draw_one(self, node, figsize=(24, 12), scale=False, colormap="Blues", point=False, **kwargs):
+    def _draw_one(self, node, figsize=(24, 12), scale=False, colormap="Blues", point=None, **kwargs):
         mini, maxi = self._pat_range()
         cm = matplotlib.cm.get_cmap(colormap)
         cnorm = matplotlib.colors.Normalize(vmin=mini, vmax=maxi)
@@ -328,9 +327,8 @@ class ICLattice(object):
             l = len(node.attributes["common"])
             default = {"color": colors[0],
                        "edgecolors": colors[0],
-                       "zorder": 3}
-
-            default["marker"] = matplotlib.markers.MarkerStyle(marker="o")
+                       "zorder": 3,
+                       "marker": matplotlib.markers.MarkerStyle(marker="o")}
 
             if self.comp:
                 cmp = sum(att.startswith(self.comp) for att in node.attributes["common"])
@@ -381,13 +379,14 @@ class ICLattice(object):
 
         Arguments:
             filename (str): filename of the exported html page.
+            node_formatter (func): custom function to format nodes
         """
         css = _load_external_text("table.css")
         fig, lines, ordered_nodes = self._draw_one(self.nodes,
                                                    figsize=(20, 9),
                                                    n=4,
                                                    scale=False,
-                                                   point={"s": 50},
+                                                   point={"s": 50}, # TODO: Something wrong here
                                                    interactive=True, **kwargs)
 
         paths = list(filter(lambda obj: type(obj) is matplotlib.collections.PathCollection,

@@ -4,27 +4,27 @@ entropy package
 Submodules
 ----------
 
-entropy\.distribution module
-----------------------------
+entropy.distribution module
+---------------------------
 
 .. automodule:: entropy.distribution
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-entropy\.utils module
----------------------
+entropy.utils module
+--------------------
 
 .. automodule:: entropy.utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Module contents
 ---------------
 
 .. automodule:: entropy
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

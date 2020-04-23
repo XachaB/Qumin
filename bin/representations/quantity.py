@@ -45,7 +45,7 @@ def quantity_sum(args):
 
 
 class Quantity(object):
-    """ Represents a quantifier as an interval.
+    r""" Represents a quantifier as an interval.
 
     This is a flyweight class and the presets are :
 
@@ -64,7 +64,7 @@ class Quantity(object):
     _named = {(0, 0): "<None>", (1, 1): "", (0, 1): "?", (1, np.inf): "+", (0, np.inf): "*"}
 
     def __new__(cls, mini, maxi):
-        mini, maxi = cls. _to_licit(mini, maxi)
+        mini, maxi = cls._to_licit(mini, maxi)
         obj = cls._pool.get((mini, maxi), None)
         if not obj:
             obj = object.__new__(cls)
@@ -82,7 +82,7 @@ class Quantity(object):
         if self.value in Quantity._named:
             self._str = Quantity._named[self.value]
         else:
-            self._str = "{{"+str(self.value[0])+"-"+str(self.value[1])+"}}"
+            self._str = "{{" + str(self.value[0]) + "-" + str(self.value[1]) + "}}"
 
     def __deepcopy__(self, memo):
         return self
@@ -93,9 +93,11 @@ class Quantity(object):
         maxi = np.inf if maxi > 1 else maxi
         return mini, maxi
 
-    def __str__(self): return self._str
+    def __str__(self):
+        return self._str
 
-    def __repr__(self): return "Quantity({},{})".format(*self.value)
+    def __repr__(self):
+        return "Quantity({},{})".format(*self.value)
 
     def __lt__(self, other):
         return self != other and self.value[0] >= other.value[0] and self.value[1] <= other.value[1]
@@ -105,6 +107,7 @@ class Quantity(object):
 
     def __add__(self, other):
         return Quantity(min(self.value[0], other.value[0]), self.value[1] + other.value[1])
+
 
 one = Quantity(1, 1)
 optional = Quantity(0, 1)

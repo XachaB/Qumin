@@ -49,7 +49,6 @@ def _get_pattern_matchtype(p, c1, c2):
                   (False, False): "any"}
     match_type1 = []
     match_type2 = []
-    i = 0
     for i, group in enumerate(p.context):
         match_type1.append([False, False])
         match_type2.append([False, False])
@@ -181,9 +180,9 @@ class Pattern(object):
 
         def parse_alternation(string, cells):
             simple_segs = "".join(Segment._simple_segments)
-            seg = "[{}]".format(simple_segs)
-            classes = "\[[{}\-]+\]".format(simple_segs)
-            regex = "({seg}|{classes})".format(seg=seg, classes=classes)
+            seg = r"[{}]".format(simple_segs)
+            classes = r"\[[{}\-]+\]".format(simple_segs)
+            regex = r"({seg}|{classes})".format(seg=seg, classes=classes)
             for c, alt in zip(cells, string.split(" ⇌ ")):
                 alts = []
                 for segs in alt.split("_"):
@@ -202,9 +201,9 @@ class Pattern(object):
 
         def parse_context(string):
             simple_segs = "".join(Segment._simple_segments)
-            seg = "[{}]".format(simple_segs)
-            classes = "\[[{}\-]+\]".format(simple_segs)
-            regex = "({seg}|{classes}|_)([+*?]?)".format(seg=seg, classes=classes)
+            seg = r"[{}]".format(simple_segs)
+            classes = r"\[[{}\-]+\]".format(simple_segs)
+            regex = r"({seg}|{classes}|_)([+*?]?)".format(seg=seg, classes=classes)
             for s, q in re.findall(regex, string):
                 if (s, q) == ("_", ""):
                     yield "{}"
@@ -223,7 +222,7 @@ class Pattern(object):
         new = cls.__new__(cls, cells)
 
         try:
-            alt_str, ctxt_str, score_str = re.match("(.*) / (.*) ?<([\d.e-]+)>", string).groups()
+            alt_str, ctxt_str, score_str = re.match(r"(.*) / (.*) ?<([\d.e-]+)>", string).groups()
         except AttributeError as e:
             message = "I can't create a pattern from this: {}. Maybe the pattern has been exported with str and not repr ?".format(
                 string)
@@ -268,7 +267,6 @@ class Pattern(object):
 
         """
         alternation = list(self._iter_alt(features=features))
-        context_filler = ["_"] * len(alternation[0]) if alternation else []
         if reverse:
             alternation = " ⇌ ".join("_".join(alt) for alt in alternation[::-1])
         else:
@@ -284,6 +282,7 @@ class Pattern(object):
         Arguments:
             exhaustive_blanks (bool): Whether initial and final contexts should be marked by a filler.
             use_gen (bool): Whether the alternation should be the generalized one.
+            filler (str): Alternative filler used to join alternation members.
 
         Returns:
             a list of str of alternating material, where the context is replaced by a filler.
@@ -468,9 +467,9 @@ class BinaryPattern(Pattern):
             for is_transform, group in groupby(alt, lambda x: type(x) is _CharClass):
                 if is_transform:
                     for x in group:
-                        yield (is_transform, x)
+                        yield is_transform, x
                 else:
-                    yield (is_transform, "".join(group))
+                    yield is_transform, "".join(group)
 
         # Build alternation as list of zipped segments / transformations
         alternances = []
@@ -562,6 +561,9 @@ class BinaryPattern(Pattern):
                 apply to a form of cell `names[0]`
                 to produce a form of cell `names[1]` (default:`self.cells`).
                 Patterns being non-oriented, it is better to use the names argument.
+            raiseOnFail (bool):
+                defaults to True. If true, raise an error when the pattern is not applicable to the form.
+                If False, return None instead.
 
         Returns:
             form belonging the opposite cell.
@@ -676,7 +678,6 @@ def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
 
     # Variable for fast access
     cols = paradigms.columns
-    n = len(cols)
 
     # Create tuples pairs
 
@@ -748,8 +749,8 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         sub_cost = Segment.sub_cost
     else:
         raise NotImplementedError("Alignment method {} is not implemented."
-                                  "Call find_patterns(paradigms, method) rather than this function.".format(
-            scoring_method))
+                                  "Call find_patterns(paradigms, method) "
+                                  "rather than this function.".format(scoring_method))
 
     cols = paradigms.columns
     pairs = list(combinations(cols, 2))
@@ -770,7 +771,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
             if a and b:
                 if a == b:
                     new_rule = Pattern(cells, zip(a, b), aligned=True)
-                    new_rule.lexemes = set([(row.name, a, b)])
+                    new_rule.lexemes = {(row.name, a, b)}
                     alt = new_rule.to_alt(exhaustive_blanks=False)
                     t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
                     collection[alt][t].append(new_rule)
@@ -780,7 +781,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                     for aligned in alignment.align_auto(a, b, insert_cost, sub_cost):
                         # print((aligned))
                         new_rule = Pattern(cells, aligned, aligned=True)
-                        new_rule.lexemes = set([(row.name, a, b)])
+                        new_rule.lexemes = {(row.name, a, b)}
                         if str(new_rule) not in done:
                             done.append(str(new_rule))
                             if new_rule._gen_alt:
@@ -1027,7 +1028,7 @@ def _global_alternations(paradigms, **kwargs):
         for cell, forms in zip(cells, row):
             for form in forms.split(";"):
                 if pd.notnull(forms) and forms != "":
-                    yield (cell, form)
+                    yield cell, form
 
     def segment(forms, cells):
         newcells, formlist = zip(*row_as_list(cells, forms))
@@ -1118,7 +1119,7 @@ def from_csv(filename, defective=True, overabundant=True):
 
     def format_header(item):
         splitted = item.strip("'() ").split(",")
-        return (splitted[0].strip("' "), splitted[1].strip("' "))
+        return splitted[0].strip("' "), splitted[1].strip("' ")
 
     def read_pattern(raw_value, names, collection):
         result = []

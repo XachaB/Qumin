@@ -17,6 +17,7 @@ from clustering.clusters import _BUClustersBuilder
 import warnings
 from tqdm import tqdm
 
+
 def hamming(x, y, table, *args, **kwargs):
     """Compute hamming distances between x and y in table.
 
@@ -162,15 +163,15 @@ class _DistanceClustersBuilder(_BUClustersBuilder):
         self.distances = dist_matrix(paradigms, microclasses, *args,
                                      labels=list(microclasses), distfun=distfun)
 
-    def update_distances(self, a, b):
+    def update_distances(self, *args):
         raise NotImplementedError("this is an abstract class. Daughters should implement update_distances")
 
     def merge(self, a, b):
         """Merge two Clusters, build a Node to represent the result, update the distances.
 
         Parameters:
-            a (str): the label of a cluster to merge.
-            b (str): the label of a cluster to merge."""
+            a (frozenset): the label of a cluster to merge.
+            b (frozenset): the label of a cluster to merge."""
         new = a | b
         d = self.distances[a][b]
 
@@ -292,8 +293,8 @@ class CompressionDistClustersBuilder(_DistanceClustersBuilder):
         """Merge two Clusters, build a new Node, update the distances, track system DL.
 
         Parameters:
-            a (str): the label of a cluster to merge.
-            b (str): the label of a cluster to merge."""
+            a (frozenset): the label of a cluster to merge.
+            b (frozenset): the label of a cluster to merge."""
         new = a | b
         super().merge(a, b)
         DL = sum(self.DL_dict[m] for m in self.nodes)

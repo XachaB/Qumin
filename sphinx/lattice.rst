@@ -4,19 +4,19 @@ lattice package
 Submodules
 ----------
 
-lattice\.lattice module
------------------------
+lattice.lattice module
+----------------------
 
 .. automodule:: lattice.lattice
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Module contents
 ---------------
 
 .. automodule:: lattice
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

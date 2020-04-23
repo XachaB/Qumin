@@ -169,7 +169,7 @@ class PatternDistribution(object):
             n (int): number of predictors.
         """
 
-        def check_zeros(columns, n):
+        def check_zeros(columns, n): #TODO: columns not used !
             zeros = defaultdict(set)
 
             if self.entropies[n - 1] is not None:
@@ -223,7 +223,6 @@ class PatternDistribution(object):
                                  columns=columns)
         iterations = len(indexes)
 
-
         for predictors in tqdm(indexes):
 
             # combinations gives us all x, y unordered unique pair for all of
@@ -254,7 +253,6 @@ class PatternDistribution(object):
                     # Prediction of H(A|B)
                     entropies.at[predictors, out] = cond_entropy(A, B, subset=selector)
                     effectifs.at[predictors, out] = sum(selector)
-
 
         print()
 
@@ -317,7 +315,8 @@ class PatternDistribution(object):
         Also writes the entropy of the distributions.
 
         Arguments:
-            logfile (:class:`io.TextIOWrapper`): Output flow on which to write.
+            logfile (:class:`io.TextIO`): Output flow on which to write.
+            sanity_check (bool): Use a slower calculation to check that the results are exact.
         """
 
         def count_with_examples(row, counter, examples, paradigms, cells):
@@ -487,6 +486,7 @@ class PatternDistribution(object):
         Arguments:
             logfile (:class:`io.TextIOWrapper`): Output flow on which to write.
             n (int): number of predictors.
+            sanity_check (bool): Use a slower calculation to check that the results are exact.
         """
 
         def count_with_examples(row, counter, examples, paradigms, pred, out):
@@ -500,7 +500,6 @@ class PatternDistribution(object):
 
         print("\n\nPrinting log of "
               "P( (c1, ..., c{!s}) → c{!s} ).".format(n, n + 1))
-
 
         print("Logging n preds probabilities, with n = {}".format(n), file=logfile)
         print(" P(x, y → z) = P(x~z, y~z | Class(x), Class(y), x~y)", file=logfile)
@@ -634,7 +633,6 @@ class PatternDistribution(object):
 
                     print(table.get_string(), file=logfile)
 
-
         if sanity_check:
             return entropies_check
 
@@ -645,8 +643,9 @@ class SplitPatternDistribution(PatternDistribution):
     Split system entropy is the joint entropy on both systems.
     """
 
-    def __init__(self, paradigms_list, patterns_list, pat_dic_list, names, logfile=None):
-
+    def __init__(self, paradigms_list, patterns_list, pat_dic_list, names, logfile=None, features=None):
+        if features is not None:
+            raise NotImplementedError("Split patterns with features is not implemented yet.")
         columns = [tuple(paradigms.columns) for paradigms in paradigms_list]
         assert len(set(columns)) == 1, "Split systems must share same paradigm cells"
 

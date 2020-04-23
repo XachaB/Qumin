@@ -15,6 +15,7 @@ def generalize_patterns(patterns, debug=False):
 
     Arguments:
         patterns: an iterable of :class:`Patterns.Pattern`
+        debug: whether to print debug strings.
 
     Return:
         a new :class:`Patterns.Pattern`.
@@ -31,7 +32,7 @@ def generalize_patterns(patterns, debug=False):
 
     # Generalize the alternation if there is a generalized formulation
     # And there are different surface alternations
-    if p0._gen_alt != None:
+    if p0._gen_alt is not None:
 
         alternations = set(x.to_alt(exhaustive_blanks=False) for x in patterns)
 

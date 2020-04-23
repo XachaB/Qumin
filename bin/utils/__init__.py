@@ -4,6 +4,7 @@ from collections import defaultdict
 import subprocess
 from tqdm import tqdm
 
+
 def get_repository_version():
     """Return an ID for the current git or svn revision.
 
