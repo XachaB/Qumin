@@ -7,7 +7,6 @@ This module is used to generalise patterns contexts.
 
 from copy import deepcopy
 from collections import Counter
-from representations.segments import Segment
 from representations.contexts import Context
 
 

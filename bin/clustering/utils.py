@@ -534,15 +534,6 @@ def find_microclasses(paradigms):
 
     return mc
 
-
-def label_function(labels, classes_size):
-    """Return labels in the form "lemma (size)"."""
-    template = "{} ({})"
-    names = ", ".join(labels)
-    size = str(sum(classes_size[label] for label in labels))
-    return template.format(names, size)
-
-
 def find_min_attribute(tree, attr):
     """Find the minimum value for an attribute in a tree.
 

@@ -37,26 +37,6 @@ def cond_P(A, B, subset=None):
         cond_events = A[subset].groupby(B[subset], sort=False)
     return P(cond_events)
 
-
-def slow_cond_entropy(A, B):
-    """Return the conditional probability distribution P(A|B) for elements in two :class:`pandas.core.series.Series`.
-
-    This function is slow.
-
-    Arguments:
-        A (:class:`pandas.core.series.Series`): A series of data.
-        B (:class:`pandas.core.series.Series`): A series of data.
-
-    Return:
-        A :class:`pandas.core.series.Series` whith two indexes.
-        The first index is from the elements of B, the second from the elements of A.
-        The values are the P(A|B).
-    """
-    cond_p = cond_P(A, B)
-    known_p = P(B)
-    return sum(known_p * cond_p.groupby(level=0, sort=False).apply(entropy))
-
-
 def cond_entropy(A, B, **kwargs):
     """Calculate the conditional entropy between two series of data points.
        Presupposes that values in the series are of the same type, typically tuples.

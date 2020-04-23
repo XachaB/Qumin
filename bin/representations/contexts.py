@@ -4,17 +4,9 @@
 
 This module implements patterns' contexts, which are series of phonological restrictions."""
 
-from representations.segments import Segment, restore
+from representations.segments import Segment, restore, restore_segment_shortest
 from representations.quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
 from representations.alignment import align_right, align_left, align_multi
-
-
-def restore_segment_shortest(segment):
-    """Restore segment to the shortest of either the original character or its feature list."""
-    if segment:
-        return min([restore(segment), Segment.get(segment).shorthand], key=len)
-    else:
-        return segment
 
 
 def _align_edges(*args, debug=False, **kwargs):
@@ -179,7 +171,7 @@ class _ContextMember(object):
 class Context(object):
     """Context for an alternation pattern"""
 
-    def __init__(self, segments, ortho=False):
+    def __init__(self, segments):
         if segments == []:
             self.elements = _ContextMember([], blank=True)
         elif type(segments[0]) is _ContextMember:

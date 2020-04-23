@@ -178,28 +178,3 @@ def normalize_dataframe(paradigms, aliases, normalization, verbose=False):
     if verbose:
         print(new_df[: 3])
     return new_df
-
-
-def restore_simplified_dataframe(df, verbose=True):
-    """Restore all dataframe cells to non simplified strings.
-
-    Arguments:
-        df (:class:`pandas:pandas.DataFrame`):
-            A dataframe containing strings
-            of simplified segments names in its cells.
-        verbose (bool): verbosity switch.
-
-    Returns:
-        new_df (:class:`pandas:pandas.DataFrame`):
-            The same dataframe, containing strings
-            of non simplified segments names in its cells
-
-    """
-    if verbose:
-        print(df[: 3])
-        print("\nRestoring simplified dataframe...\n")
-
-    new_df = df.applymap(restore)
-
-    if verbose:
-        print(new_df[: 3])

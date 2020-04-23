@@ -7,7 +7,7 @@ This module addresses the modeling of inflectional alternation patterns."""
 from os.path import commonprefix
 from itertools import combinations, product
 from representations import alignment, normalize_dataframe
-from representations.segments import Segment, _CharClass, restore, restore_string
+from representations.segments import Segment, _CharClass, restore, restore_string, restore_segment_shortest
 from representations.contexts import Context
 from representations.quantity import one, optional, some, kleenestar
 from representations.generalize import generalize_patterns, incremental_generalize_patterns
@@ -73,14 +73,6 @@ def _get_pattern_matchtype(p, c1, c2):
                 # print("is",alt2,"in the right context",ctxt2,"?",match_type1[i][1])
 
     return tuple(type_names[tuple(x)] for x in match_type1), tuple(type_names[tuple(x)] for x in match_type2)
-
-
-def restore_segment_shortest(segment):
-    """Restore segment to the shortest of either the original character or its feature list."""
-    if segment:
-        return min([restore(segment), Segment.get(segment).shorthand], key=len)
-    else:
-        return segment
 
 
 def _replace_alternation(m, r):
@@ -727,7 +719,7 @@ def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
         return pd.Series(results)
 
     tqdm.pandas()
-    patterns = patterns.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict, ))
+    patterns = patterns.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict,))
 
     return patterns, pat_dict
 
@@ -894,7 +886,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         return result
 
     tqdm.pandas()
-    patterns_df = patterns_df.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict, ))
+    patterns_df = patterns_df.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict,))
 
     return patterns_df, pat_dict
 
@@ -950,7 +942,6 @@ def find_applicable(paradigms, pat_dict):
                                              args=(local_patterns, a))
         classes[(b, a)] = paradigms[b].apply(applicable,
                                              args=(local_patterns, b))
-
 
     return classes
 

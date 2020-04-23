@@ -122,19 +122,14 @@ class Segment(object):
         cls._max = max(cls._pool, key=len)
 
     @classmethod
-    def less_than(cls, a, b):
-        """Class method to compare segment order from their alias.
-
-        Arguments:
-            a,b: two aliases"""
-        return cls.get(a) < cls.get(b)
-
-    @classmethod
     def _reinitialize(cls):
         cls._pool.clear()
         del cls._simple_segments[:]
         cls._normalization.clear()
         cls._aliases.clear()
+        cls._score_matrix.clear()
+        cls._lattice = None
+        cls._gap_score = None
 
     @classmethod
     def intersect(cls, *args):
@@ -161,19 +156,26 @@ class Segment(object):
                 raise KeyError("The segment {} isn't known".format(descriptor))
 
     @classmethod
-    def get_from_classes(cls, classes):
-        """Get a segment from its natural classes"""
-        if not classes:
-            return cls._pool[cls._max]
-        return cls._pool[_CharClass(min(classes, key=len))]
-
-    @classmethod
     def transformation(cls, a, b):
         """Find a transformation between aliases a and b.
 
-        The transformation is a pair of two natural classes across
-        which each segments are related two by two by the same relation relating a and b.
-        In the following example, the segments have been initialized with French segment definitions.
+        The transformation is a pair of two maximal sets of segments related by a bijective phonological function.
+
+        This function takes a pair of strings representing segments. It calculates the function which relates
+        these two segments. It then finds the two maximal sets of segments related by this function.
+
+        Example:
+            In French, t -> s can be expressed by a phonological function
+            which changes [-cont] and [-rel. ret] to [+cont] and [+rel. ret]
+
+            These other segments are related by the same change:
+            d -> z
+            b -> v
+            p -> f
+
+            >>> a,b = Segment.transformation("t","s")
+            >>> print(a,b)
+            [bdpt] [fsvz]
 
         Arguments:
             a,b (str): Segment aliases.
@@ -181,10 +183,6 @@ class Segment(object):
         Returns:
             two charclasses.
 
-        Example:
-            >>> a,b = Segment.transformation("t","s")
-            >>> print(a,b)
-            [bdpt] [fsvz]
         """
 
         def select_if_reciprocal(cls, segs, left, right):
@@ -230,18 +228,6 @@ class Segment(object):
         f1 = t1 - t2
         f2 = t2 - t1
         return cls.get((a - f1) | f2).alias
-
-    @classmethod
-    def pool_to_context(cls):
-        context = defaultdict(lambda: defaultdict(lambda: 0))
-        print(cls._simple_segments)
-        for segment in cls._simple_segments:
-            seg = cls._pool[segment].ipa
-            for feat in cls._pool[segment].features:
-                context[feat][seg] = 1
-        context = pd.DataFrame(context)
-        context.fillna(0, inplace=True)
-        return context
 
     @classmethod
     def show_pool(cls, only_single=False):
@@ -464,6 +450,13 @@ def restore_string(string):
     """Restore the original string from a string of aliases."""
     return "".join(restore(char) for char in string)
 
+
+def restore_segment_shortest(segment):
+    """Restore segment to the shortest of either the original character or its feature list."""
+    if segment:
+        return min([restore(segment), Segment.get(segment).shorthand], key=len)
+    else:
+        return segment
 
 def _merge_duplicate_cols(dataframe):
     """Merge any duplicate columns in the dataframe."""
