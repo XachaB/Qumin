@@ -650,7 +650,7 @@ def find_patterns(paradigms, method, **kwargs):
                                   "choose from suffix, prefix or baseline.".format(method))
 
 
-def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
+def _with_deterministic_alignment(paradigms, method="suffix", disable_tqdm=False, **kwargs):
     r"""Find Patterns in a DataFrame according to a deterministic alignment method.
 
     Methods can be suffix (align left), prefix (align right) or baseline (see Albright & Hayes 2002).
@@ -659,6 +659,7 @@ def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
         paradigms (:class:`pandas:pandas.DataFrame`):
             paradigms (columns are cells, index are lemmas).
         method (str): "suffix", "prefix" or "baseline"
+        disable_tqdm (bool): if true, do not show progressbar
 
     Returns:
         (tuple):
@@ -719,13 +720,13 @@ def _with_deterministic_alignment(paradigms, method="suffix", **kwargs):
 
         return pd.Series(results)
 
-    tqdm.pandas()
+    tqdm.pandas(leave=False, disable=disable_tqdm)
     patterns = patterns.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict,))
 
     return patterns, pat_dict
 
 
-def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, **kwargs):
+def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, disable_tqdm=False, **kwargs):
     """Find Patterns in a DataFrame with automatic alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -734,6 +735,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
     Arguments:
         paradigms: a DataFrame.
         scoring_method (str): method for scoring best pairwise alignments. Can be "levenshtein" or "similarity".
+        disable_tqdm (bool): if true, do not show progressbar
 
     Returns:
         a tuple of the DataFrame and a dict of pairs of cells
@@ -886,13 +888,13 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
         return result
 
-    tqdm.pandas()
+    tqdm.pandas(leave=False, disable=disable_tqdm)
     patterns_df = patterns_df.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict,))
 
     return patterns_df, pat_dict
 
 
-def find_applicable(paradigms, pat_dict):
+def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
     """Find all applicable rules for each form.
 
     We name sets of applicable rules *classes*. *Classes* are oriented:
@@ -903,6 +905,7 @@ def find_applicable(paradigms, pat_dict):
         paradigms (:class:`pandas:pandas.DataFrame`):
             paradigms (columns are cells, index are lemmas).
         pat_dict  (dict): a dict mapping a column name to a list of patterns.
+        disable_tqdm (bool): if true, do not show progressbar
 
     Returns:
         (:class:`pandas:pandas.DataFrame`):
@@ -934,7 +937,7 @@ def find_applicable(paradigms, pat_dict):
     classes = pd.DataFrame(index=paradigms.index,
                            columns=pairs)
 
-    for a, b in tqdm(pat_dict):
+    for a, b in tqdm(pat_dict, leave=False, disable=disable_tqdm):
         local_patterns = pat_dict[(a, b)]
 
         # Iterate on paradigms' rows of corresponding columns to fill with the
@@ -971,7 +974,7 @@ def find_alternations(paradigms, method, **kwargs):
         return _global_alternations(paradigms, **kwargs)
 
 
-def _local_alternations(paradigms, **kwargs):
+def _local_alternations(paradigms, disable_tqdm=False, **kwargs):
     # Variable for fast access
     cols = paradigms.columns
 
@@ -988,7 +991,7 @@ def _local_alternations(paradigms, **kwargs):
     # Create tuples pairs
     pairs = list(combinations(cols, 2))
     patterns = pd.DataFrame(index=paradigms.index, columns=pairs)
-    tqdm.pandas()
+    tqdm.pandas(leave=False, disable=disable_tqdm)
     patterns = patterns.progress_apply(segment_columns, axis=0)
 
     return patterns
@@ -1048,7 +1051,7 @@ def _global_alternations(paradigms, **kwargs):
     return df
 
 
-def find_endings(paradigms, *args, **kwargs):
+def find_endings(paradigms, *args, disable_tqdm=False, **kwargs):
     """Find suffixes in a paradigm.
 
     Return a DataFrame of endings where we remove in each row
@@ -1057,6 +1060,7 @@ def find_endings(paradigms, *args, **kwargs):
     Arguments:
         paradigms (pandas.DataFrame): a dataframe containing inflectional paradigms.
             Columns are cells, and rows are lemmas.
+        disable_tqdm (bool): if true, do not show progressbar
 
     Returns:
         pandas.DataFrame: a dataframe of the same shape filled with segmented endings.
@@ -1087,7 +1091,7 @@ def find_endings(paradigms, *args, **kwargs):
         l = len(commonprefix(row_as_list(row)))
         return row.apply(segment, args=(l,))
 
-    tqdm.pandas()
+    tqdm.pandas(leave=False, disable=disable_tqdm)
     return paradigms.progress_apply(row_ending, axis=1)
 
 

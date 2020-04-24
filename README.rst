@@ -14,7 +14,7 @@ For more detail, you can refer to my dissertation (in French):
 Requirements
 -------------
 
-The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas, scipy, matplotlib, prettytable, networkx and pygraphviz. To export lattices in html, you also need mpld3.
+The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas, scipy, matplotlib, prettytable, tabulate, tqdm, networkx and pygraphviz. To export lattices in html, you also need mpld3.
 
 Data
 ---------
