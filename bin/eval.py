@@ -10,12 +10,13 @@ from representations import segments, create_paradigms, patterns, create_feature
 import pandas as pd
 import argparse
 from utils import get_repository_version
-from itertools import combinations
+from itertools import combinations, chain
 from multiprocessing import Pool
 import time
 from pathlib import Path
 from tqdm import tqdm
-
+import seaborn as sns; sns.set()
+from matplotlib import pyplot as plt
 
 def prepare_arguments(paradigms, iterations, methods, features):
     """Generate argument tuples for each evaluation task.
@@ -55,8 +56,6 @@ def prepare_arguments(paradigms, iterations, methods, features):
         for a, b in combinations(cells, 2):
             train_items = get_set(paradigms, a, b, train_range)
             test_items = get_set(paradigms, a, b, test_range)
-            infos["cell_a"] = a
-            infos["cell_b"] = b
             for method in methods:
                 yield test_items, train_items, method, features, dict(infos)
 
@@ -94,13 +93,20 @@ def evaluate(task):
             ba_predictions &= pred_ba
         counts += count
 
-    row["correct_ab"] = ab_predictions.sum()
-    row["correct_ba"] = ba_predictions.sum()
+    a, b = test_items[id].columns # any of the previous values for table id would work
     row["count"] = counts
     row["total_train"] = train_items.shape[0]
     row["total_test"] = test_items.shape[0]
     row["method"] = method
-    return row
+    row_ab = dict(row)
+    row_ba = dict(row)
+    row_ab["correct"] = ab_predictions.sum()
+    row_ab["from"] = a
+    row_ab["to"] = b
+    row_ba["correct"] = ba_predictions.sum()
+    row_ba["from"] = b
+    row_ba["to"] = a
+    return (row_ab, row_ba)
 
 
 def predict_two_directions(test_items, train_items, method, features=None):
@@ -201,6 +207,38 @@ def prepare_data(args):
     return paradigms, features
 
 
+def print_summary(results, general_infos):
+    print("# Evaluation summary")
+    summary = results[["method",
+                       "correct",
+                       "count",
+                       "total_test",
+                       "total_train"]].groupby("method").agg({"correct": "sum",
+                                                              "total_test": "sum",
+                                                              "count": "mean"})
+    summary["average accuracy"] = (summary["correct"] / summary["total_test"]).apply(lambda x: "{:.2%}".format(x))
+    summary["average count of patterns"] = summary["count"]
+    print(summary[["average accuracy", "average count of patterns"]].to_markdown())
+    print()
+
+    for info in sorted(general_infos):
+        print('{}: {}'.format(info, general_infos[info]))
+
+
+def to_heatmap(results, cells):
+    cells = list(cells)
+    for method in results["method"].unique():
+        r = results[results["method"] == method]
+        per_cell = r[["from", "to", "correct", "total_test"]].groupby(["from", "to"], as_index=False).sum()
+        per_cell["avg"] = per_cell["correct"] / per_cell["total_test"]
+        matrix = per_cell.pivot_table(index="from", columns="to", values="avg", aggfunc=lambda x: sum(x) / len(x))
+        matrix = matrix.loc[cells, cells].fillna(1)
+        ax = sns.heatmap(matrix, cmap="Blues", vmin=0, vmax=1)
+        ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+        fig = ax.get_figure()
+        yield method, fig
+        plt.close(fig)
+
 def main(args):
     r"""Evaluate pattern's accuracy with 10 folds.
 
@@ -227,34 +265,22 @@ def main(args):
 
     tasks = prepare_arguments(paradigms, args.iterations, args.methods, features)
     if args.workers == 1:
-        results = [evaluate(t) for t in tqdm(tasks)]
+        results = list(chain(*(evaluate(t) for t in tqdm(tasks))))
     else:
         pool = Pool(args.workers)
-        results = list(tqdm(pool.imap_unordered(evaluate, tasks)))
+        results = list(chain(*tqdm(pool.imap_unordered(evaluate, tasks))))
         pool.close()
 
     results = pd.DataFrame(results)
-    print("# Evaluation summary")
-    summary = results[["method",
-                       "correct_ab",
-                       "correct_ba",
-                       "count",
-                       "total_test",
-                       "total_train"]].groupby("method").agg({"correct_ab": "sum",
-                                                              "correct_ba": "sum",
-                                                              "total_test": "sum",
-                                                              "count": "mean"})
-    summary["average accuracy"] = ((summary["correct_ab"] + summary["correct_ba"]) / (2 * summary["total_test"])).apply(
-        lambda x: "{:.2%}".format(x))
-    summary["average count of patterns"] = summary["count"]
-
-    print(summary[["average accuracy", "average count of patterns"]].to_markdown())
-    print()
-    for info in sorted(general_infos):
+    for info in general_infos:
         results[info] = general_infos[info]
-        print('{}: {}'.format(info, general_infos[info]))
-
     results.to_csv("../Results/Patterns/eval_patterns_{}_{}.csv".format(now, "_".join(files)))
+
+    print_summary(results, general_infos)
+    figs = to_heatmap(results, paradigms.columns.levels[1].tolist())
+    for name, fig in figs:
+        fig.savefig("../Results/Patterns/eval_patterns_heatmap_{}_{}_{}.png".format(now, name, "_".join(files)),
+                    dpi=300, bbox_inches='tight', pad_inches=0.5)
 
 
 if __name__ == '__main__':
