@@ -329,7 +329,7 @@ def make_aliases(ipa):
             return segment
         else:
             alt = []
-            if alias:
+            if alias and not pd.isna(alias):
                 alt = [alias]
             if code and str(code).isdigit():
                 i = int(code)
@@ -339,8 +339,11 @@ def make_aliases(ipa):
             #  Compose segments that are composable, normalize otherwise
             normalized = unicodedata.normalize("NFKC", segment)
             l = len(normalized)
+            s = normalized[0]
             if l == 1:
                 alt.append(normalized)
+            elif normalized[0] in "ˈˌˑ˘":
+                s = normalized[1]
 
             # Ressembling segment
             alt.extend(dict_confusables[segment.lower()])
@@ -349,20 +352,20 @@ def make_aliases(ipa):
                 alt.extend(list(normalized))
 
             # Segment ressembling  one similar to the first char
-            alt.extend(dict_confusables[segment[0].lower()])
+            alt.extend(dict_confusables[s.lower()])
 
             # Just the first char, lower or upper
-            alt.extend([segment[0], segment[0].upper()])
+            alt.extend([s.lower(), s.upper()])
 
             # Numeric fallback
-            alt.extend(str(i) for i in range(len(ipa.index)))
-
+            alt.extend(str(i) for i in range(9))
             for seg in alt:
                 if seg not in all_segments and seg not in reserved:
                     all_segments.add(seg)
                     alias_map[seg] = segment
                     # print("I chose ",seg," as alias for ",segment)
                     return seg
+            raise ValueError(f"I can not guess a good one-char alias for {segment}, please use an ALIAS column to provide one.")
 
     from representations import confusables
     from os.path import dirname
@@ -585,6 +588,7 @@ def initialize(filename, sep="\t", verbose=False):
     else:
         shorthands = {(): "X"}
     for extent, intent in lattice.lattice:
+
         if extent:
             alias = "".join(sorted(extent))
             shorthand = "[{}]".format(" ".join(intent))
