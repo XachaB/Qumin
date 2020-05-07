@@ -17,15 +17,15 @@ Quick Start
 Install
 --------
 
-First, open the terminal and navigate to the folder where you want the Qumin code. Clone the repository from github:
+First, open the terminal and navigate to the folder where you want the Qumin code. Clone the repository from github: ::
 
     git clone https://github.com/XachaB/Qumin.git
 
-Make sure to have all the python dependencies installed. The dependencies are listed in `environment.yml`. A simple solution is to use conda and create a new environment from the `environment.yml` file:
+Make sure to have all the python dependencies installed. The dependencies are listed in `environment.yml`. A simple solution is to use conda and create a new environment from the `environment.yml` file: ::
 
     conda env create -f environment.yml
 
-There is now a new conda environment named Qumin. It needs to be activated before using any Qumin script:
+There is now a new conda environment named Qumin. It needs to be activated before using any Qumin script: ::
 
     conda activate Qumin
 
