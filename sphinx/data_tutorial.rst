@@ -191,6 +191,32 @@ Values of distinctive features
 
 Most distinctive features are usually binary: they can be either positive ([+nasal]) or negative ([-nasal]). In the Segments file, positive values are written by the number ``1``, and negative values by the number ``0``. Some features do not apply at all to some phonemes, for example consonants are neither [+round] nor [-round]. This can be written either by ``-1``, or by leaving the cell empty. While the first is more explicit, leaving the cell empty makes the tables more readable at a glance. The same strategy is used for features which are privative, as for example [CORONAL]: there is no class of segments which are [-coronal], so we can write either ``1`` or ``-1`` in the corresponding column, not using ``0``.
 
+While `1`, `0` and `-1` (or nothing) are the values that make the most sense, you can use other numeric values if you wish to use features with two, three or more values, for example [-back], [+back] and [++back] could be expressed by writing `0`, `1`, and `2` in the "back" column. Note that this does not create a scale. If you need to express a scale, you can do so by using several features. For example, this is a possible implementation for tones:
+
+
+  ==== ======= ========== ========== =========== ============ 
+  Seg.  value   HighTone   MidTone    BottomTone    segmental   
+  ==== ======= ========== ========== =========== ============ 
+  ˥     High      1         0             0           0        
+  ˦     Mid       1         1             0           0 
+  ˧    low-mid    0         1             1           0
+  ˨     low       0         0             1           0
+  ==== ======= ========== ========== =========== ============ 
+
+This declares natural classes for [˥, ˦], [˦, ˧], and [˧, ˨], capturing scaled similarities. Tones are marked as [-segmental] to ensure that they share a class [˥, ˦, ˧, ˨]. Contrast this with using numbers in a single column:
+
+
+  ==== ======= ========== ============ 
+  Seg.  value   Tone        segmental   
+  ==== ======= ========== ============ 
+  ˥     High      3            0        
+  ˦     Mid       2            0 
+  ˧    low-mid    1            0
+  ˨     low       0            0
+  ==== ======= ========== ============ 
+
+This is allowed, but results in a class [˥, ˦, ˧, ˨] ([+segmental]), as well as four classes, each having a single tone: they are seen as having nothing in common besides being tones. If some morpho-phonological alternations select both high and mid tones, we will miss that generalization.
+
 When writing segments file, it is important to be careful of the naturality of natural classes, as Qumin will take them at face value. For example, using the same [±back] feature for both vowels and consonants will result in a natural class of all the [+back] segments, and one for all the [-back] segments. Sometimes, it is better to duplicate some columns to avoid generating unfounded classes.
 
-To create a new segments file, the best is usually to refer to an authative description, and adapt it to the needs of the specific dataset. In the absence of such a description, I suggest to make use of `Bruce Hayes’ spreadsheet <https://linguistics.ucla.edu/people/hayes/120a/index.htm#features>`__ as a starting point (he writes ``+``, ``-`` and ``0`` for our ``1``,\ ``0`` and ``-1``).
+To create a new segments file, the best is usually to refer to an authoritative description, and adapt it to the needs of the specific dataset. In the absence of such a description, I suggest to make use of `Bruce Hayes’ spreadsheet <https://linguistics.ucla.edu/people/hayes/120a/index.htm#features>`__ as a starting point (he writes ``+``, ``-`` and ``0`` for our ``1``,\ ``0`` and ``-1``).
