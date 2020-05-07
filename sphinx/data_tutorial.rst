@@ -173,7 +173,7 @@ Internally, the program will use arbitrary aliases which are 1 character long to
  ====== ======= ========== ======= ====== ============= ========== ============ ================= === 
 
 Shorthands
-^^^^^^^^^^
+~~~~~~~~~~~
 
 When writing phonological rules, linguists often use shorthands like “V” for the natural class of all vowels, and “C” for the natural class of all consonants. If you want, you can provide some extra rows in the table to define shorthand names for some natural classes. These names have to start and end by “#”. Here an example for the French segments file, giving shorthands for C (consonants), V (vowels) and G (glides):
 

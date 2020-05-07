@@ -9,6 +9,7 @@ Documentation index
    :maxdepth: 2
    :numbered:
 
+   Quick start <self>
    Data tutorial <data_tutorial>
    How to use the scripts <usages>
    API <modules>
