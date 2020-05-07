@@ -1,23 +1,37 @@
-
+********************************************
 Qumin: Quantitative modelling of inflection
-===========================================
+********************************************
 
 Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <xachab.github.io>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . 
 
 **The documentation has moved to ReadTheDocs** at: https://qumin.readthedocs.io/
-For now, it is quite minimal.
 
 For more detail, you can refer to my dissertation (in French):
 
 `Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français. <https://tel.archives-ouvertes.fr/tel-01840448>`_
 
-Requirements
--------------
 
-The python version expected is 3.4 or higher. Current python dependencies are : concepts, numpy, pandas, scipy, matplotlib, prettytable, tabulate, tqdm, seaborn, networkx and pygraphviz. To export lattices in html, you also need mpld3.
+Quick Start
+============
+
+Install
+--------
+
+First, open the terminal and navigate to the folder where you want the Qumin code. Clone the repository from github:
+
+    git clone https://github.com/XachaB/Qumin.git
+
+Make sure to have all the python dependencies installed. The dependencies are listed in `environment.yml`. A simple solution is to use conda and create a new environment from the `environment.yml` file:
+
+    conda env create -f environment.yml
+
+There is now a new conda environment named Qumin. It needs to be activated before using any Qumin script:
+
+    conda activate Qumin
+
 
 Data
----------
+-----
 
 The scripts expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
 
@@ -26,8 +40,12 @@ To provide a data sample in the correct format, Qumin includes a subset of the F
 For Russian nouns, see the `Inflected lexicon of Russian Nouns in IPA notation <https://zenodo.org/record/3428591>`_.
 
 
+Scripts
+--------
+
+
 Patterns
----------
+^^^^^^^^^
 
 Alternation patterns serve as a basis for all the other scripts. The algorithm to find the patterns was presented in: Sacha Beniamine. `Un algorithme universel pour l'abstraction automatique d'alternances morphophonologiques
 24e Conférence sur le Traitement Automatique des Langues Naturelles <https://halshs.archives-ouvertes.fr/hal-01615899>`_ (TALN), Jun 2017, Orléans, France. 2 (2017), 24e Conférence sur le Traitement Automatique des Langues Naturelles.
@@ -41,7 +59,8 @@ Alternation patterns serve as a basis for all the other scripts. The algorithm t
     bin/$ python3 find_patterns.py -d -o <paradigm.csv> <segments.csv>
 
 Paradigm entropy
-------------------
+^^^^^^^^^^^^^^^^^^
+
 
 This script was used in:
 
@@ -61,7 +80,7 @@ This script was used in:
     bin/$ python3 calc_paradigm_entropy.py -n 2 --features <features.csv> -- <patterns.csv> <paradigm.csv> <segments.csv>
 
 Macroclass inference
-----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 Our work on automatical inference of macroclasses was published in Beniamine, Sacha, Olivier Bonami, and Benoît Sagot. "`Inferring Inflection Classes with Description Length. <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_" Journal of Language Modelling (2018).
 
@@ -70,7 +89,7 @@ Our work on automatical inference of macroclasses was published in Beniamine, Sa
     bin/$ python3 find_macroclasses.py  <patterns.csv> <segments.csv>
 
 Lattices
----------
+^^^^^^^^^
 
 This script was used in:
 
