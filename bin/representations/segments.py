@@ -263,7 +263,7 @@ class Segment(object):
         Example:
 
             >>> a = [+syl, +rel.ret., -haut, +arr, -cons, +son, +vois,\
-            ...      -rond, -cor, +cont, +bas, -nas, -ant]
+            ...      -rond, +cont, +bas, -nas, -ant]
 
         """
         if str(self.ipa) != str(self.alias):
@@ -516,6 +516,13 @@ def initialize(filename, sep="\t", verbose=False):
                 short_features_names.append(names[0])
         table.columns = short_features_names
 
+    na_vals = {c:-1 for c in table.columns}
+    na_vals["Seg."] = ""
+    na_vals["UNICODE"] = ""
+    na_vals["ALIAS"] = ""
+    na_vals["value"] = ""
+    table = table.fillna(na_vals)
+    
     #  Checking segments names legality
     for col in table["Seg."]:
         if col == "":
@@ -587,6 +594,7 @@ def initialize(filename, sep="\t", verbose=False):
         shorthands[()] = "X"
     else:
         shorthands = {(): "X"}
+
     for extent, intent in lattice.lattice:
 
         if extent:
