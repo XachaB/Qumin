@@ -300,7 +300,7 @@ class Pattern(object):
 
         if use_gen and self._gen_alt:
             tmp_alt = self.alternation
-            self._generalize_alt()
+            self.alternation = self._gen_alt
 
         result = [add_ellipsis(alt, initial, final) for alt in self._iter_alt()]
 
