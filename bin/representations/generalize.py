@@ -2,7 +2,7 @@
 # !/usr/bin/env python
 """author: Sacha Beniamine.
 
-This module is used to generalise patterns contexts.
+This module is used to generalise pats contexts.
 """
 
 from copy import deepcopy
@@ -10,7 +10,7 @@ from collections import Counter
 from representations.contexts import Context
 
 
-def generalize_patterns(patterns, debug=False):
+def generalize_patterns(pats, debug=False):
     """Generalize these patterns' context.
 
     Arguments:
@@ -20,49 +20,30 @@ def generalize_patterns(patterns, debug=False):
     Return:
         a new :class:`Patterns.Pattern`.
     """
-    p0 = patterns[0]
-    if len(patterns) == 1:
+    p0 = pats[0]
+    if len(pats) == 1:
         return p0
 
     if debug:
-        print("generalizing:", patterns)
+        print("generalizing:", pats)
+
     new = deepcopy(p0)
-    cells = new.cells
-    contexts = [p.context for p in patterns]
 
-    # Generalize the alternation if there is a generalized formulation
-    # And there are different surface alternations
-    if p0._gen_alt is not None:
+    # Generalize the alternation if possible
+    if new._gen_alt is not None:
+            new._generalize_alt(*pats)
 
-        alternations = set(x.to_alt(exhaustive_blanks=False) for x in patterns)
-
-        if len(alternations) > 1:
-            gen_alt = [list(x) for x in p0._gen_alt]
-            partial = False
-            alts = list(zip(*(p.alternation[new.cells[0]] for p in patterns)))
-            for i, segs in enumerate(alts):
-                if len(set(segs)) == 1:
-                    gen_alt[0][i] = p0.alternation[new.cells[0]][i]
-                    gen_alt[1][i] = p0.alternation[new.cells[1]][i]
-                    partial = True
-
-            prev_gen_alt = new._gen_alt
-            new._gen_alt = tuple(tuple(x) for x in gen_alt)
-            new._generalize_alt()
-
-            # If we only did a partial generalization of the alternation
-            if partial:
-                new._gen_alt = prev_gen_alt
-
+    # Generalize the context if possible
     if not new._is_max_gen():
-        new.context = Context.merge(contexts, debug=debug)
+        new.context = Context.merge([p.context for p in pats], debug=debug)
         new._create_regex()
         new._repr = new._make_str_(features=False)
         new._feat_str = new._make_str_(features=True)
-        if debug:
-            print("New:", new)
 
-    new.lexemes = set().union(*(p.lexemes for p in patterns))
+    if debug:
+        print("Result:", new)
+
+    new.lexemes = set().union(*(p.lexemes for p in pats))
     return new
 
 
@@ -93,25 +74,16 @@ def incremental_generalize_patterns(*args):
     counts = Counter(exact_alternations)
     args = sorted(args, key=lambda x: counts[x.to_alt(exhaustive_blanks=True)], reverse=True)
     merged = [args[0]]
-    # print("INCREMENTAL GEN: starting with",args[0])
     for pat in args[1:]:
-        # print("\tAdding ...",pat)
         pat_is_merged = False
         for i in range(len(merged)):
             lexemes = merged[i].lexemes
             if not (lexemes.issubset(pat.lexemes) or lexemes.issuperset(pat.lexemes)):
-                # print("\t\t+",merged[i],"?")
                 new = generalize_patterns([merged[i], pat], debug=False)
                 if all(correct(new, a, b) for l, a, b in new.lexemes):
                     merged[i] = new
                     pat_is_merged = True
-                    # print("\t\tresult",new)
                     break
-            # else:
-            #     print("Couldn't merge: ",repr(merged[i]))
-            #     print("with:",repr(pat))
-            #     print("Not inferring wrong pattern ",repr(new))
-            #     print([(a,b) for l, a, b in new.lexemes if not correct(new, a, b)])
         if not pat_is_merged:
             merged.append(pat)
 

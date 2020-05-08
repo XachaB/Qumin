@@ -581,14 +581,52 @@ class BinaryPattern(Pattern):
                 return None
         return string
 
-    def _generalize_alt(self):
+    def _generalize_alt(self, *others):
         """Use the generalized alternation, using features when possible rather than segments."""
-        if self._gen_alt:
-            self.alternation = dict(zip(self.cells, self._gen_alt))
-            self._repr = self._make_str_(features=False)
-            self._feat_str = self._make_str_(features=True)
-        else:
-            raise ValueError("Warning : nothing to generalize in this pattern's alternation:" + str(self))
+        assert all([p._gen_alt == self._gen_alt for p in others]), \
+            "These pats do not have the same generalized alternation:{} {}".format(self, ", ".join(others))
+
+        c1, c2 = self.cells
+        # At first, alternations are {cell: parts},
+        # parts are tuple(positions)
+        # positions are tuples of phoneme positions
+        # The order of embedding is cell, then parts then positions
+        # Ex: {c1: (('a','b'),('c',)), c2: (('A','B'),('C',))}
+
+        # This gets us to parts, then cells, then positions
+        # [ (('a','b'), ('A','B')),
+        #   (('c',), ('C',)) ]
+        others += (self,)
+        generalized = list(zip(self._gen_alt[c1], self._gen_alt[c2]))
+        specific = list(zip(*(zip(p.alternation[c1], p.alternation[c2]) for p in others)))
+        minimal_generalization = []
+
+        # Iterate first over parts
+        for i, generalized_part in enumerate(generalized):  # Iterates on alternation parts, between blanks
+            # A part looks like: (('a','b'), ('A','B')),
+            # We now want positions, then cells: (('a','A'), ('b','B')),
+            generalized_part = list(zip(*generalized_part))
+
+            # Arrange by phoneme position, then cell, then patterns
+            specific_parts = list(zip(*(zip_longest(*p, fillvalue="")
+                                        for p in specific[i])))
+            minimal_gen_part = ([], [])
+            for j, generalized_pos in enumerate(generalized_part):  # Iterates on each change in the part
+                specific_pos = set(specific_parts[j])
+                if len(specific_pos) > 1:
+                    minimal_gen_part[0].append(generalized_pos[0])
+                    minimal_gen_part[1].append(generalized_pos[1])
+                else:
+                    change = specific_pos.pop()
+                    minimal_gen_part[0].append(change[0])
+                    minimal_gen_part[1].append(change[1])
+            minimal_generalization.append(minimal_gen_part)
+
+        minimal_generalization = zip(*minimal_generalization)
+        alternation = dict(zip([c1, c2], minimal_generalization))
+        self.alternation = alternation
+        self._repr = self._make_str_(features=False)
+        self._feat_str = self._make_str_(features=True)
 
     def _is_max_gen(self):
         maxi_seg = Segment._max
