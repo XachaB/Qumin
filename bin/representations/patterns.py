@@ -583,8 +583,6 @@ class BinaryPattern(Pattern):
 
     def _generalize_alt(self, *others):
         """Use the generalized alternation, using features when possible rather than segments."""
-        assert all([p._gen_alt == self._gen_alt for p in others]), \
-            "These pats do not have the same generalized alternation:{} {}".format(self, ", ".join(others))
 
         c1, c2 = self.cells
         # At first, alternations are {cell: parts},
