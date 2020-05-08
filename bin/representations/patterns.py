@@ -303,6 +303,7 @@ class Pattern(object):
             self.alternation = self._gen_alt
 
         result = [add_ellipsis(alt, initial, final) for alt in self._iter_alt()]
+        result = [add_ellipsis(alt, initial, final) for alt in self._iter_alt()]
 
         if use_gen and self._gen_alt:
             self.alternation = tmp_alt
@@ -315,36 +316,12 @@ class Pattern(object):
         """Join the alternating material obtained with alternation_list() in a str."""
         return " ⇌ ".join(self.alternation_list(exhaustive_blanks=exhaustive_blanks, use_gen=use_gen, **kwargs))
 
-    def _iter_alt(self, features=True):
+    def _iter_alt(self, *kwargs):
         """Generator of formatted alternating material for each cell."""
-
-        def format_segment_ipa(chars):
-            chars_restored = "-".join([restore(c) for c in sorted(chars)])
-            if len(chars) > 1:
-                chars_restored = "[{}]".format(chars_restored)
-            return chars_restored
-
-        def format_segment_shortest_notnode(chars):
-            feats = set.intersection(*[Segment.get(x).features for x in chars])
-            return min([format_segment_ipa(chars), "[{}]".format(" ".join(sorted(feats)))], key=len)
-
-        if ORTHO:
-            format_segment = str
-        elif features:
-            format_segment = format_segment_shortest_notnode
-        else:
-            format_segment = format_segment_ipa
-
         for cell in self.cells:
             formatted = []
             for segs in self.alternation[cell]:
-                temp = ""
-                for seg in segs:
-                    if seg == "":
-                        temp += seg
-                    else:
-                        temp += format_segment(seg)
-                formatted.append(temp)
+                formatted.append("".join(restore(seg) for seg in segs))
             yield formatted
 
     def _init_from_alignment(self, alignment):
@@ -629,6 +606,50 @@ class BinaryPattern(Pattern):
     def _is_max_gen(self):
         maxi_seg = Segment._max
         return all([x in [(maxi_seg, kleenestar), "{}"] for x in self.context])
+
+    def _iter_alt(self, features=True):
+        """Generator of formatted alternating material for each cell."""
+
+        def format_as_chars(left, right):
+            return ("[{}]".format("-".join([restore(c) for c in sorted(left)])),
+                    "[{}]".format("-".join([restore(c) for c in sorted(right)])))
+
+        def format_as_features(left, right):
+            feats_left, feats_right = Segment.get_transform_features(left, right)
+            feats_left = "[{}]".format(" ".join(sorted(feats_left)))
+            feats_right = "[{}]".format(" ".join(sorted(feats_right)))
+
+            chars_left, chars_right = format_as_chars(left, right)
+
+            if len(feats_left) +len(feats_right) <= len(chars_left) + len(chars_right):
+                return feats_left, feats_right
+            return chars_left, chars_right
+
+        if features:
+            format_regular_change = format_as_features
+        else:
+            format_regular_change = format_as_chars
+
+        c1, c2 = self.cells
+        alternation = zip(self.alternation[c1], self.alternation[c2])
+        c1_alt = []
+        c2_alt = []
+
+        for left, right in alternation:
+            formatted_left = ""
+            formatted_right = ""
+            for seg_left, seg_right in zip_longest(left, right, fillvalue=""):
+                if len(seg_left) <= 1 and len(seg_right) <= 1:
+                    formatted_left += restore(seg_left)
+                    formatted_right += restore(seg_right)
+                else:
+                    l, r = format_regular_change(seg_left, seg_right)
+                    formatted_left += l
+                    formatted_right += r
+            c1_alt.append(formatted_left)
+            c2_alt.append(formatted_right)
+        yield c1_alt
+        yield c2_alt
 
 
 class PatternCollection(object):

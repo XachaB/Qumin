@@ -209,6 +209,25 @@ class Segment(object):
         return A, B
 
     @classmethod
+    def get_transform_features(cls, left, right):
+        """ Get the features corresponding to a transformation.
+
+        Arguments:
+            left (tuple): string of segment aliases
+            right (tuple): string of segment aliases
+
+        Example:
+            >>> Segment.get_from_transform("bd", "pt")
+            {'+vois'}, {'-vois'}
+        """
+
+        t1 = set.intersection(*[cls.get(x).features for x in left])
+        t2 = set.intersection(*[cls.get(x).features for x in right])
+        f1 = t1 - t2
+        f2 = t2 - t1
+        return f1, f2
+
+    @classmethod
     def get_from_transform(cls, a, transform):
         """ Get a segment from another according to a transformation tuple.
 
@@ -223,10 +242,7 @@ class Segment(object):
             'z'
         """
         a = cls.get(a).features
-        t1 = set.intersection(*[cls.get(x).features for x in transform[0]])
-        t2 = set.intersection(*[cls.get(x).features for x in transform[1]])
-        f1 = t1 - t2
-        f2 = t2 - t1
+        f1, f2 = cls.get_transform_features(*transform)
         return cls.get((a - f1) | f2).alias
 
     @classmethod
