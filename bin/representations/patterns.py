@@ -619,7 +619,8 @@ class BinaryPattern(Pattern):
             feats_left = "[{}]".format(" ".join(sorted(feats_left)))
             feats_right = "[{}]".format(" ".join(sorted(feats_right)))
 
-            chars_left, chars_right = format_as_chars(left, right)
+            chars_left = "[{}]".format("-".join([restore(c) for c in left]))
+            chars_right = "[{}]".format("-".join([restore(Segment.get_from_transform(c, (left, right))) for c in left]))
 
             if len(feats_left) +len(feats_right) <= len(chars_left) + len(chars_right):
                 return feats_left, feats_right
