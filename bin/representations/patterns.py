@@ -529,7 +529,7 @@ class BinaryPattern(Pattern):
             this_alt[c1].append(tuple(gen_left))
             this_alt[c2].append(tuple(gen_right))
         if gen_any:
-            self._gen_alt = tuple(tuple(this_alt[x]) for x in self.cells)
+            self._gen_alt = dict(zip(self.cells, (tuple(this_alt[x]) for x in self.cells)))
             self._create_regex()
         else:
             self._gen_alt = None
