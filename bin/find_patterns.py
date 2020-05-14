@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--gap_proportion",
                         help="Proportion of the median similarity cost assigned to the insertion cost.",
-                        type=float, default=1 / 3)
+                        type=float, default=.49)
 
     parser.add_argument("--optim_mem",
                         help="Attempt to optimize RAM usage",
