@@ -478,33 +478,6 @@ def restore_segment_shortest(segment):
         return min([restore(segment), Segment.get(segment).shorthand], key=len)
     else:
         return segment
-
-def _merge_duplicate_cols(dataframe):
-    """Merge any duplicate columns in the dataframe."""
-
-    def complementaire(values):
-        a, b = values
-        return (a == b == -1) or (a == (not b))
-
-    agenda = set([c for c in dataframe.columns if c not in ["Seg.", "UNICODE", "ALIAS"]])
-    changed = defaultdict(set)
-    while agenda:
-        col = agenda.pop()
-        agenda -= {col}
-        for col2 in agenda:
-            identical = (dataframe[col] == dataframe[col2]).all()
-            compl = dataframe[[col, col2]].apply(complementaire, axis=1).all()
-            if identical or compl:
-                changed[col].add(col2)
-                dataframe.drop(col2, axis=1, inplace=True)
-
-        agenda -= changed[col]
-
-    for col in dataframe.columns:
-        if changed[col]:
-            print("Merged: ", col, changed[col])
-
-
 def initialize(filename, sep="\t", verbose=False):
     Segment._reinitialize()
     print("Reading table")
@@ -514,7 +487,7 @@ def initialize(filename, sep="\t", verbose=False):
             sep = ","
         elif "Seg.\t" in first_line or '"Seg."\t' in first_line:
             sep = "\t"
-    table = pd.read_table(filename, header=0,
+    table = pd.read_table(filename, header=0,dtype=str,
                           index_col=False, sep=sep, encoding="utf-8")
 
     if "Seg." in list(table.iloc[0]):
@@ -532,7 +505,8 @@ def initialize(filename, sep="\t", verbose=False):
                 short_features_names.append(names[0])
         table.columns = short_features_names
 
-    na_vals = {c:-1 for c in table.columns}
+    table["Seg."] = table["Seg."].astype(str)
+    na_vals = {c:"-1" for c in table.columns}
     na_vals["Seg."] = ""
     na_vals["UNICODE"] = ""
     na_vals["ALIAS"] = ""
@@ -549,8 +523,6 @@ def initialize(filename, sep="\t", verbose=False):
 
     if "value" in table.columns:
         table.drop("value", axis=1, inplace=True)
-
-    _merge_duplicate_cols(table)
 
     shorthand_selection = (table["Seg."].str.endswith("#") & table["Seg."].str.startswith("#"))
 
@@ -587,7 +559,7 @@ def initialize(filename, sep="\t", verbose=False):
         signs = ["-", "+"] + [str(x) for x in range(2, 11)]
         for c in columns:
             key, val = c.split("=")
-            yield signs[int(val)] + key.replace(" ", "_")
+            yield signs[int(float(val))] + key.replace(" ", "_")
 
     leaves = {t: [] for t in table.index}
     table = table.applymap(lambda x: str(x))
@@ -598,7 +570,7 @@ def initialize(filename, sep="\t", verbose=False):
                         verbose=False)
 
     Segment.lattice = lattice.lattice
-
+    
     if shorthands is not None:
         shorthand_lattice = ICLattice(shorthands, {t: [] for t in shorthands.index},
                                       na_value="-1",
@@ -660,3 +632,4 @@ def initialize(filename, sep="\t", verbose=False):
         raise Exception("Warning, some of the segments aren't actual leaves :" + alert)
 
     Segment.set_max()
+    return lattice
