@@ -10,6 +10,7 @@ Documentation index
    :numbered:
 
    Quick start <self>
-   Data tutorial <data_tutorial>
+   The paradigms file <paradigms>
+   The segments file <segments>
    How to use the scripts <usages>
    API <modules>
