@@ -1,4 +1,4 @@
-This tutorial describes how to use Qumin to analyze inflectional paradigms.
+This tutorial describes how to prepare data for use in Qumin.
 
 Preparing the data
 ==================
