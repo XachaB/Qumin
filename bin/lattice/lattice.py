@@ -228,7 +228,7 @@ class ICLattice(object):
 
         return nodes[AOC[0].extent]
 
-    def _lattice_to_node(self):
+    def _lattice_to_node(self, keep_infimum=False):
         def make_nodes(concepts, prb):
             nodes = {}
             for concept in concepts:
@@ -243,7 +243,7 @@ class ICLattice(object):
                 prb.update(1)
             return nodes
 
-        concepts = sorted([v for v in self.lattice if v.extent != ()], key=lambda x: len(x.extent), reverse=True)
+        concepts = sorted([v for v in self.lattice if keep_infimum or v.extent != ()], key=lambda x: len(x.extent), reverse=True)
 
         with tqdm(total=len(concepts) * 2) as prb:
             # Creating nodes
@@ -252,7 +252,7 @@ class ICLattice(object):
             # Creating arcs
             for vertice in concepts:
                 for daughter in vertice.lower_neighbors:
-                    if daughter.extent != ():
+                    if keep_infimum or daughter.extent != ():
                         nodes[vertice.extent].children.append(nodes[daughter.extent])
                 prb.update(1)
         return nodes[concepts[0].extent]
@@ -341,7 +341,7 @@ class ICLattice(object):
                         default["facecolor"] = colors[1]
                         default["edgecolor"] = colors[1]
                         del default["color"]
-            default["s"] = 20 + ((node.attributes.get("size", 0) / self.nodes.attributes.get("size", 0)) * 100)
+            default["s"] = 20 + ((node.attributes.get("size", 0)+1) / (self.nodes.attributes.get("size", 0)+1)) * 100
             node.attributes["point_settings"] = default
             return default
 
