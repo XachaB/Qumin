@@ -18,7 +18,6 @@ except:
 from concepts import Context
 import pandas as pd
 from utils import merge_duplicate_columns
-import tempfile
 from tqdm import tqdm
 
 axes = {'facecolor': 'None', 'edgecolor': 'None', 'linewidth': 0}
@@ -156,13 +155,10 @@ class ICLattice(object):
             dummies = dummies.applymap(lambda x: "X" if x == 1 else "")
         if col_formatter:
             dummies.columns = col_formatter(dummies.columns)
-        dummyfile = tempfile.NamedTemporaryFile(mode="w", delete=False)
-        dummyname = dummyfile.name
-        dummies.to_csv(dummyfile)
-        dummyfile.close()
         if verbose:
             print("Reading the context and building the lattice...")
-        c1 = Context.fromfile(dummyname, frmat='csv')
+        context_str = dummies.to_csv()
+        c1 = Context.fromstring(context_str, frmat='csv')
         self.context = c1
         self.lattice = c1.lattice
         if annotate:
