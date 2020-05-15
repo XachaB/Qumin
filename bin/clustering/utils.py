@@ -250,10 +250,9 @@ class Node(object):
 
     def draw(self, horizontal=False, square=False,
              leavesfunc=lambda n: n.labels[0],
-             nodefunc=None,
-             keep_above_macroclass=True, #TODO: This argument is not used anymore.
+             nodefunc=None,label_rotation=None,
              annotateOnlyMacroclasses=False, point=None,
-             edge_attributes=None, interactive=False, lattice=False, pos=None):
+             edge_attributes=None, interactive=False, lattice=False, pos=None, **kwargs):
         """Draw the tree as a dendrogram-style pyplot graph.
 
         Example::
@@ -350,6 +349,8 @@ class Node(object):
 
                 def coords(node):
                     return node.attributes["_x"], node.attributes["_y"]
+            if label_rotation is not None:
+                r = label_rotation
 
             ax = plt.gca()
             # bg = ax.patch.get_facecolor()
@@ -359,12 +360,6 @@ class Node(object):
 
             for node in self:
                 this_x, this_y = coords(node)
-
-                #  Write the text
-                if tree_placement:
-                    microclass = node.labels if not node.children else None
-                else:
-                    microclass = node.attributes.get("objects", None)
 
                 # Plot the arcs
                 for child in node.children:
@@ -385,9 +380,9 @@ class Node(object):
                     lines.append(coll)
 
                 # Write annotations
-                if microclass:
+                if node.labels:
                     tmp = node.labels
-                    node.labels = list(microclass)
+                    #node.labels = list(microclass)
                     plt.annotate(leavesfunc(node), xy=(this_x, this_y), xycoords='data', va=lva, ha=lha, rotation=r)
                     node.labels = tmp
                 else:
