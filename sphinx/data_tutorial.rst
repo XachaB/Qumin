@@ -89,6 +89,8 @@ The phonological segments file
 
 Qumin works from the assumption that your paradigms are written in phonemic notation. The phonological segments file provides a list of phonemes and their decomposition into distinctive features. This file is first used to segment the paradigms into sequences of phonemes (rather than sequences of characters). Then, the distinctive features are used to recognize phonological similarity and natural classes when creating and handling alternation patterns.
 
+To create a new segments file, the best is usually to refer to an authoritative description, and adapt it to the needs of the specific dataset. In the absence of such a description, I suggest to make use of `Bruce Hayes’ spreadsheet <https://linguistics.ucla.edu/people/hayes/120a/index.htm#features>`__ as a starting point (he writes ``+``, ``-`` and ``0`` for our ``1``,\ ``0`` and ``-1``).
+
 Format
 ~~~~~~
 
@@ -172,6 +174,16 @@ Internally, the program will use arbitrary aliases which are 1 character long to
   …      …       …          …       …      …             …          …            …                 …  
  ====== ======= ========== ======= ====== ============= ========== ============ ================= === 
 
+If you have many multi-character phonemes, you may get the following error:
+
+::
+
+    ValueError: ('I can not guess a good one-char alias for ã, please use an ALIAS column to provide one.', 
+                'occurred at index 41')
+
+The solution is to add an alias for this character, and maybe a few others. To find aliases which vaguely resemble the proper symbols, this `table of unicode characters organized by letter <https://www.unicode.org/charts/collation/index.html>`__ are often useful.
+
+
 Shorthands
 ~~~~~~~~~~~
 
@@ -189,34 +201,188 @@ When writing phonological rules, linguists often use shorthands like “V” for
 Values of distinctive features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Most distinctive features are usually binary: they can be either positive ([+nasal]) or negative ([-nasal]). In the Segments file, positive values are written by the number ``1``, and negative values by the number ``0``. Some features do not apply at all to some phonemes, for example consonants are neither [+round] nor [-round]. This can be written either by ``-1``, or by leaving the cell empty. While the first is more explicit, leaving the cell empty makes the tables more readable at a glance. The same strategy is used for features which are privative, as for example [CORONAL]: there is no class of segments which are [-coronal], so we can write either ``1`` or ``-1`` in the corresponding column, not using ``0``.
+Distinctive features are usually considered to be bivalent: they can be either positive ([+nasal]) or negative ([-nasal]). In the Segments file, positive values are written by the number ``1``, and negative values by the number ``0``. Some features do not apply at all to some phonemes, for example consonants are neither [+round] nor [-round]. This can be written either by ``-1``, or by leaving the cell empty. While the first is more explicit, leaving the cell empty makes the tables more readable at a glance. The same strategy is used for features which are privative, as for example [CORONAL]: there is no class of segments which are [-coronal], so we can write either ``1`` or ``-1`` in the corresponding column, not using ``0``. 
 
-While `1`, `0` and `-1` (or nothing) are the values that make the most sense, you can use other numeric values if you wish to use features with two, three or more values, for example [-back], [+back] and [++back] could be expressed by writing `0`, `1`, and `2` in the "back" column. Note that this does not create a scale. If you need to express a scale, you can do so by using several features. For example, this is a possible implementation for tones:
+While ``1``, ``0`` and ``-1`` (or nothing) are the values that make the most sense, any numeric values are technically allowed, for example [-back], [+back] and [++back] could be expressed by writing ``0``, ``1``, and ``2`` in the "back" column. I do not recommend doing this.
 
-
-  ==== ======= ========== ========== =========== ============ 
-  Seg.  value   HighTone   MidTone    BottomTone    segmental   
-  ==== ======= ========== ========== =========== ============ 
-  ˥     High      1         0             0           0        
-  ˦     Mid       1         1             0           0 
-  ˧    low-mid    0         1             1           0
-  ˨     low       0         0             1           0
-  ==== ======= ========== ========== =========== ============ 
-
-This declares natural classes for [˥, ˦], [˦, ˧], and [˧, ˨], capturing scaled similarities. Tones are marked as [-segmental] to ensure that they share a class [˥, ˦, ˧, ˨]. Contrast this with using numbers in a single column:
+When writing segments file, it is important to be careful of the naturality of natural classes, as Qumin will take them at face value. For example, using the same [±high] feature for both vowels and consonants will result in a natural class of all the [+high] segments, and one for all the [-high] segments. Sometimes, it is better to duplicate some columns to avoid generating unfounded classes. 
 
 
-  ==== ======= ========== ============ 
-  Seg.  value   Tone        segmental   
-  ==== ======= ========== ============ 
-  ˥     High      3            0        
-  ˦     Mid       2            0 
-  ˧    low-mid    1            0
-  ˨     low       0            0
-  ==== ======= ========== ============ 
+Monovalent or bivalent features
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-This is allowed, but results in a class [˥, ˦, ˧, ˨] ([+segmental]), as well as four classes, each having a single tone: they are seen as having nothing in common besides being tones. If some morpho-phonological alternations select both high and mid tones, we will miss that generalization.
+`Frisch (1996) <https://www.cas.usf.edu/~frisch/publications.html>`__ argues that monovalent features (using only ``-1`` and ``1``) are to be preferred to bivalent features, as the latter implicitly generate natural classes for the complement features ([-coronal]), which is not always desirable. In Qumin, both monovalent and bivalent features are accepted. Internally, the program will expand all ``1`` and ``0``  into + and - values. As an example, take this table which classifies the three vowels /a/, /i/ and /u/:
 
-When writing segments file, it is important to be careful of the naturality of natural classes, as Qumin will take them at face value. For example, using the same [±back] feature for both vowels and consonants will result in a natural class of all the [+back] segments, and one for all the [-back] segments. Sometimes, it is better to duplicate some columns to avoid generating unfounded classes.
+.. csv-table::
+   :file: segment_examples/V_monovalent.csv
 
-To create a new segments file, the best is usually to refer to an authoritative description, and adapt it to the needs of the specific dataset. In the absence of such a description, I suggest to make use of `Bruce Hayes’ spreadsheet <https://linguistics.ucla.edu/people/hayes/120a/index.htm#features>`__ as a starting point (he writes ``+``, ``-`` and ``0`` for our ``1``,\ ``0`` and ``-1``).
+Internally, Qumin will construct the following table, which looks almost identical because we used monovalued features:
+
+===== ======= ===== ====== ======= ======= ===========
+Seg.   +high  +low  +front  +back  +round   +Non-round
+===== ======= ===== ====== ======= ======= ===========
+a               x            x                x
+i        x             x                      x
+u        x                   x       x         
+===== ======= ===== ====== ======= ======= ===========
+
+This will then result in the following natural class hierarchy:
+
+.. image:: segment_examples/V_monovalent.png
+   :alt: Natural classes for three vowels
+
+The same thing can be achieved with less columns using binary features:
+
+
+.. csv-table::
+   :file: segment_examples/V_binary.csv
+
+Internally, these will be expanded to:
+
+===== ======= ===== ====== ======= ======= ===========
+Seg.   +high  -high +front  -front  +round   -round
+===== ======= ===== ====== ======= ======= ===========
+a               x            x                x
+i        x             x                      x
+u        x                   x       x         
+===== ======= ===== ====== ======= ======= ===========
+
+Which is the same thing as previously, with different names. The class hierarchy is also very similar:
+
+.. image:: segment_examples/V_binary.png
+   :alt: Natural classes for three vowels
+
+
+Warning, some of the segments aren't actual leaves 
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+The following error occurs when the table is well formed, but specifies a natural class hierarchy which is not usable by Qumin:
+
+::
+
+     Exception: Warning, some of the segments aren't actual leaves :
+        p is the same node as [p-kʷ]
+            [p-kʷ] ([pĸ]) = [+cons -son -syll +lab -round -voice -cg -cont -strid -lat -del.rel -nas -long]
+            kʷ (ĸ) = [+cons -son -syll +lab -round +dor +highC -lowC +back -tense -voice -cg -cont -strid -lat -del.rel -nas -long]
+        k is the same node as [k-kʷ]
+            [k-kʷ] ([kĸ]) = [+cons -son -syll +dor +highC -lowC +back -tense -voice -cg -cont -strid -lat -del.rel -nas -long]
+            kʷ (ĸ) = [+cons -son -syll +lab -round +dor +highC -lowC +back -tense -voice -cg -cont -strid -lat -del.rel -nas -long]
+
+
+What happened here is that the natural class [p-kʷ] has the exact same definition as just /p/. Similarly, the natural class [k-kʷ] has the same definition as /k/. The result is the following structure, in which /p/ and /k/ are superclasses of /kʷ/:
+
+
+.. image:: segment_examples/error_C.png
+   :alt: erroneous structure
+
+
+In this structure, it is impossible to distinguish the natural classes [p-kʷ] and [k-kʷ] from the respective ponemes /p/ and /k/. Instead, we want them to be one level lower. If we ignore the bottom node, this means that they should be leaves of the hierarchy.
+
+The solution is to ensure that both /p/ and /k/ have at least one feature divergent from [kʷ]. Usually, kʷ is marked as [+round], but in the above it is mistakenly written [-round]. Correcting this definitions yields the following structure, and solves the error:
+
+.. image:: segment_examples/error_C_corrected.png
+   :alt: erroneous structure
+
+
+
+Neutralizations
+>>>>>>>>>>>>>>>>
+
+While having a segment be higher than another in the hierarchy is forbidden, it is possible to declare two segments with the exact same features. This is useful if you want to neutralize some oppositions, and ignore some details in the data.
+
+For example, this set of French vowels display height oppositions using the [±low] feature:
+
+.. csv-table::
+   :file: segment_examples/french_no_neutralizations.csv
+
+Leading to this complex hierarchy:
+
+.. image:: segment_examples/french_no_neutralizations.png
+
+Due to regional variations, the French Vlexique sometimes neutralizes this oppositions, and writes E, Ø and O to underspecify the value of the vowels. The solution is to neutralize entirely the [±low] distinction for these vowels, writing repeated rows for E, e, ɛ, etc:
+
+
+.. csv-table::
+   :file: segment_examples/french_neutralizations.csv
+
+Internally, Qumin will replace all of these identical characters by a single unified one (the first in the file). The simplified structure becomes:
+
+.. image:: segment_examples/french_neutralizations.png
+
+
+Creating scales 
+>>>>>>>>>>>>>>>>>
+
+Rather than using many-valued features, it is often preferrable to use a few monovalent or bivalent features to create a scale. As an example, here is a possible (bad) implementation for tones, which uses a single feature "Tone". 
+
+
+.. csv-table::
+   :file: segment_examples/T_single_feature.csv
+
+It results in this natural class hierarchy:
+
+.. image:: segment_examples/T_single_feature.png
+   :alt: four tone coded on a single feature
+
+While such a file is allowed, it results in the tones having nothing in common. If some morpho-phonological alternations selects both high and mid tones, we will miss that generalization.
+
+To express a scale, a simple solution is to create one less feature than there are segments (here four tones lead to three scale features), then fill in the upper diagonal with ``1`` and the lower diagonal with ``0`` (or the opposite). For example:
+
+
+.. csv-table::
+   :file: segment_examples/T_scale1.csv
+
+It will result in the natural classes below:
+
+.. image:: segment_examples/T_scale1.png
+   :alt: tone scale 
+
+Since this is not very readable, we can re-write the same thing in a more readable way using a combination of binary and monovalent features:
+
+.. csv-table::
+   :file: segment_examples/T_scale2.csv
+
+Which leads to the same structure:
+
+.. image:: segment_examples/T_scale2.png
+   :alt: tone scale (more readable)
+
+When implementing tones, I recommend to mark them all as [-segmental] to ensure that they share a common class, and to write all other features as [+segmental].
+
+
+Diphthongs
+>>>>>>>>>>>>
+
+Diphthongs are not usually decomposed using distinctive features, as they are complex sequences (see `this question on the Linguist List <https://linguistlist.org/ask-ling/message-details1.cfm?asklingid=200408211>`__). However, if diphthongs alternate with simple vowels in your data, adding diphthongs in the list of phonological segments can allow Qumin to capture better generalizations. The strategy I have employed so far is the following:
+
+- Write diphthongs in a non-ambiguous way in the data (either 'aj' or 'aˑi', but not 'ai' when the same sequence can sometimes be two vowels)
+- Copy the features from the initial vowel
+- Add a monovalent feature [DIPHTHONG]
+- Add monovalent features [DIPHTHONG_J],  [DIPHTHONG_W], etc, as needed.
+
+This is a small example for a few English diphthongs:
+
+.. csv-table::
+   :file: segment_examples/en_V.csv
+
+Which leads to the following classes:
+
+.. image:: segment_examples/en_V.png
+   :alt: Small sample from English diphthongs
+
+This example describes a few European Portuguese diphthongs:
+
+.. csv-table::
+   :file: segment_examples/por_V_diph.csv 
+
+with the following resulting classes:
+
+.. image:: segment_examples/por_V_diph.png
+   :alt: Small sample from Portuguese diphthongs
+
+Others
+>>>>>>>>>>>>
+
+- Stress: I recommend to mark it directly on vowels, and duplicate the vowel inventory to have both stressed and unstressed counterpart. A simple binary [±stress] feature is enough to distinguish them.
+- Length: Similarly, I recommend to mark length, when possible, on vowels, rather than duplicating them.
+- Neutralizations: It i

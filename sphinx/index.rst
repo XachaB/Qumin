@@ -6,7 +6,7 @@ Documentation index
 --------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 5
    :numbered:
 
    Quick start <self>

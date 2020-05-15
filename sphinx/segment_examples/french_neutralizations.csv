@@ -1,0 +1,11 @@
+Seg.,sonant,syllabique,consonantique,continu,nasal,haut,bas,arrière,arrondi,antérieur,coronal,voisé,rel.ret.
+Seg.,son,syl,cons,cont,nas,haut,bas,arr,rond,ant,cor,vois,rel.ret.
+E,1,1,0,1,0,0,-1,0,0,-1,-1,1,1
+e,1,1,0,1,0,0,-1,0,0,-1,-1,1,1
+ɛ,1,1,0,1,0,0,-1,0,0,-1,-1,1,1
+Ø,1,1,0,1,0,0,-1,0,1,-1,-1,1,1
+ø,1,1,0,1,0,0,-1,0,1,-1,-1,1,1
+œ,1,1,0,1,0,0,-1,0,1,-1,-1,1,1
+O,1,1,0,1,0,0,-1,1,1,-1,-1,1,1
+o,1,1,0,1,0,0,-1,1,1,-1,-1,1,1
+ɔ,1,1,0,1,0,0,-1,1,1,-1,-1,1,1
