@@ -58,6 +58,23 @@ Alternation patterns serve as a basis for all the other scripts. The algorithm t
 
     bin/$ python3 find_patterns.py -d -o <paradigm.csv> <segments.csv>
 
+
+Microclasses
+^^^^^^^^^^^^^
+
+To visualize the microclasses and their similarities, you can use the new script `microclass_heatmap.py`:
+
+**Computing a microclass heatmap**::
+
+    bin/$ python3 microclass_heatmap.py <paradigm.csv> <output_path>
+
+**Computing a microclass heatmap, comparing with class labels**::
+
+    bin/$ python3 microclass_heatmap.py -l  <labels.csv> -- <paradigm.csv> <output_path>
+
+The labels file is a csv file. The first column give lexemes names, the second column provides inflection class labels. This allows to visually compare a manual classification with pattern-based similarity. This script relies heavily on `seaborn's clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ function.
+
+
 Paradigm entropy
 ^^^^^^^^^^^^^^^^^^
 
