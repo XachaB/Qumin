@@ -107,7 +107,7 @@ if __name__ == '__main__':
     parser.add_argument("-e", "--exhaustive_labels",
                         help="by default, seaborn shows only some labels on the heatmap for readability."
                              " This forces seaborn to print all labels.",
-                        type="store_true")
+                        action="store_true")
 
     parser.add_argument("output",
                         help="output_path",
