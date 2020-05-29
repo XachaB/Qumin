@@ -6,7 +6,7 @@ This module addresses the modeling of inflectional alternation patterns."""
 
 from os.path import commonprefix
 from itertools import combinations, product
-from representations import alignment, normalize_dataframe
+from representations import alignment
 from representations.segments import Segment, _CharClass, restore, restore_string, restore_segment_shortest
 from representations.contexts import Context
 from representations.quantity import one, optional, some, kleenestar
@@ -178,7 +178,15 @@ class Pattern(object):
         """
         quantities = {"": one, "?": optional, "+": some, "*": kleenestar}
 
+        def segment_and_normalize(string):
+            if string:
+                for key in sorted(Segment._aliases, key=lambda x: len(x), reverse=True):
+                    string = string.replace(key, Segment._aliases[key])
+                return string.translate(Segment._normalization)
+            return string
+
         def parse_alternation(string, cells):
+            string = segment_and_normalize(string)
             simple_segs = "".join(Segment._simple_segments)
             seg = r"[{}]".format(simple_segs)
             classes = r"\[[{}\-]+\]".format(simple_segs)
@@ -200,6 +208,7 @@ class Pattern(object):
                 yield c, [tuple(x) for x in alts]
 
         def parse_context(string):
+            string = segment_and_normalize(string)
             simple_segs = "".join(Segment._simple_segments)
             seg = r"[{}]".format(simple_segs)
             classes = r"\[[{}\-]+\]".format(simple_segs)
@@ -1207,14 +1216,12 @@ def from_csv(filename, defective=True, overabundant=True):
         collection[names] = {}
         return col.apply(read_pattern, args=(names, collection))
 
+
+
     collection = {}
     table = pd.read_csv(filename, sep=",", header=0, index_col=0)
     table.columns = [format_header(item) for item in table.columns]
     table = table.applymap(lambda x: None if x == "None" else x)
-    table = normalize_dataframe(table,
-                                Segment._aliases,
-                                Segment._normalization,
-                                verbose=False)
 
     is_alt_str = table.applymap(lambda x: x and "/" not in x).all().all()
     if is_alt_str:
