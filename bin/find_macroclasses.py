@@ -46,7 +46,13 @@ def main(args):
     data_file_name = path.basename(data_file_path).rstrip("_")
     version = get_repository_version()
     print(data_file_name)
-    kind = re.match(r".+_(.+)\.csv", data_file_name).groups()[0]
+
+    pattern_type_match = re.match(r".+_(.+)\.csv", data_file_name)
+    if pattern_type_match is None:
+        print("Did you rename the patterns file ? As a result, I do not know which type of pattern you used..")
+        kind = "unknown"
+    else:
+        kind = pattern_type_match.groups()[0]
 
     # Setting up the output path.
     result_dir = "../Results/{}/{}".format(args.folder, day)
