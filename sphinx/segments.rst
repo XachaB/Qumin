@@ -146,6 +146,8 @@ This will then result in the following natural class hierarchy:
 .. image:: segment_examples/V_monovalent.png
    :alt: Natural classes for three vowels
 
+To visualize natural class hierarchies declared by segment files, you can use [FeatureViz](https://gitlab.com/sbeniamine/featureviz).
+
 The same thing can be achieved with less columns using binary features:
 
 
@@ -285,19 +287,8 @@ Which leads to the following classes:
 .. image:: segment_examples/en_V.png
    :alt: Small sample from English diphthongs
 
-This example describes a few European Portuguese diphthongs:
-
-.. csv-table::
-   :file: segment_examples/por_V_diph.csv 
-
-with the following resulting classes:
-
-.. image:: segment_examples/por_V_diph.png
-   :alt: Small sample from Portuguese diphthongs
-
 Others
 >>>>>>>>>>>>
 
 - Stress: I recommend to mark it directly on vowels, and duplicate the vowel inventory to have both stressed and unstressed counterpart. A simple binary [±stress] feature is enough to distinguish them.
 - Length: Similarly, I recommend to mark length, when possible, on vowels, rather than duplicating them.
-- Neutralizations: It i
