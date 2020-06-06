@@ -211,6 +211,8 @@ For example, this set of French vowels display height oppositions using the [±l
 
 .. csv-table::
    :file: segment_examples/french_no_neutralizations.csv
+   :header-rows: 2
+   :stub-columns: 1 
 
 Leading to this complex hierarchy:
 
@@ -221,6 +223,8 @@ Due to regional variations, the French Vlexique sometimes neutralizes this oppos
 
 .. csv-table::
    :file: segment_examples/french_neutralizations.csv
+   :header-rows: 2
+   :stub-columns: 1 
 
 Internally, Qumin will replace all of these identical characters by a single unified one (the first in the file). The simplified structure becomes:
 
@@ -235,6 +239,8 @@ Rather than using many-valued features, it is often preferrable to use a few mon
 
 .. csv-table::
    :file: segment_examples/T_single_feature.csv
+   :header-rows: 2
+   :stub-columns: 1 
 
 It results in this natural class hierarchy:
 
@@ -248,6 +254,8 @@ To express a scale, a simple solution is to create one less feature than there a
 
 .. csv-table::
    :file: segment_examples/T_scale1.csv
+   :header-rows: 2
+   :stub-columns: 1 
 
 It will result in the natural classes below:
 
@@ -258,6 +266,8 @@ Since this is not very readable, we can re-write the same thing in a more readab
 
 .. csv-table::
    :file: segment_examples/T_scale2.csv
+   :header-rows: 2
+   :stub-columns: 1 
 
 Which leads to the same structure:
 
@@ -281,6 +291,8 @@ This is a small example for a few English diphthongs:
 
 .. csv-table::
    :file: segment_examples/en_V.csv
+   :header-rows: 2
+   :stub-columns: 1 
 
 Which leads to the following classes:
 
