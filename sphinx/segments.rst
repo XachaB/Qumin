@@ -146,7 +146,7 @@ This will then result in the following natural class hierarchy:
 .. image:: segment_examples/V_monovalent.png
    :alt: Natural classes for three vowels
 
-To visualize natural class hierarchies declared by segment files, you can use [FeatureViz](https://gitlab.com/sbeniamine/featureviz).
+To visualize natural class hierarchies declared by segment files, you can use `FeatureViz <https://gitlab.com/sbeniamine/featureviz>`_.
 
 The same thing can be achieved with less columns using binary features:
 
