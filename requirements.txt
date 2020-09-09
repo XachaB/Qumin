@@ -3,7 +3,7 @@ numpy
 scipy
 matplotlib
 networkx
-libcgraph
+pygraphviz
 tqdm 
 seaborn
 tabulate 
