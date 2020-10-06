@@ -123,7 +123,7 @@ def dist_matrix(table, *args, labels=None, distfun=hamming, half=False, default=
     if labels is None:
         labels = table.index
 
-    distances = {frozenset([x]): {frozenset([y]): default for y in labels} for x in labels}
+    distances = {frozenset([x]): {frozenset([y]): default if y != x else 0 for y in labels} for x in labels}
 
     for a, b in tqdm(combinations(labels, 2)):
         d = distfun(a, b, table, *args, **kwargs)
