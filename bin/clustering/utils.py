@@ -381,10 +381,11 @@ class Node(object):
 
                 # Write annotations
                 if node.labels:
-                    tmp = node.labels
+                    # tmp = node.labels
                     #node.labels = list(microclass)
-                    plt.annotate(leavesfunc(node), xy=(this_x, this_y), xycoords='data', va=lva, ha=lha, rotation=r)
-                    node.labels = tmp
+                    f = nodefunc if node.children else leavesfunc
+                    plt.annotate(f(node), xy=(this_x, this_y), xycoords='data', va=lva, ha=lha, rotation=r)
+                    # node.labels = tmp
                 else:
                     text = annotate(node)
                     if text is not None:
@@ -520,7 +521,7 @@ def find_microclasses(paradigms):
             {"a":["a","A","aa"], "b":["b","B","BBB"]}
 
     """
-    grouped = paradigms.groupby(list(paradigms.columns))
+    grouped = paradigms.fillna(0).groupby(list(paradigms.columns))
     mc = {}
 
     for name, group in grouped:
