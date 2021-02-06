@@ -5,6 +5,15 @@ import subprocess
 from tqdm import tqdm
 
 
+def snif_separator(filename):
+    with open(filename, "r", encoding="utf-8") as f:
+        first_line = f.readline()
+        if "\t" in first_line:
+            return "\t"
+        elif "," in first_line:
+            return ","
+        raise ValueError("File {} should be comma or tab separated".format(filename))
+
 def get_repository_version():
     """Return an ID for the current git or svn revision.
 

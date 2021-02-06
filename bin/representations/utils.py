@@ -7,9 +7,8 @@ Utility functions for representations.
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from representations.segments import Segment, restore, restore_string
 from utils import merge_duplicate_columns
-
+from representations.segments import  Segment, Form
 
 def unique_lexemes(series):
     """Rename duplicates in a serie of strings.
@@ -33,7 +32,7 @@ def unique_lexemes(series):
 def create_features(data_file_name):
     """Read feature and preprocess to be coindexed with paradigms."""
     features = pd.read_csv(data_file_name)
-    #  First column has to be lexemes
+    # First column has to be lexemes
     lexemes = features.columns[0]
     features[lexemes] = unique_lexemes(features[lexemes])
     features.set_index(lexemes, inplace=True)
@@ -69,7 +68,7 @@ def create_paradigms(data_file_name,
                 Segment.get(char)
             except KeyError:
                 if char != ";":
-                    unknowns[char].append(restore_string(form) + " " + name)
+                    unknowns[char].append(form + " " + name)
 
     # Reading the paradigms.
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False)
@@ -82,13 +81,12 @@ def create_paradigms(data_file_name,
         print("Dropping variants")
         paradigms.drop("variants", axis=1, inplace=True)
 
-    #  First column has to be lexemes
+    # First column has to be lexemes
     lexemes = paradigms.columns[0]
 
     if cols:
         cols.append(lexemes)
         try:
-
             paradigms = paradigms[cols]
         except KeyError:
             print("The paradigm's columns are: {}".format(paradigms.columns))
@@ -114,12 +112,17 @@ def create_paradigms(data_file_name,
                     paradigms.drop([a, b], inplace=True, axis=1)
                     break
 
-    paradigms = normalize_dataframe(paradigms, Segment._aliases, Segment._normalization, verbose=verbose)
+    def parse_cell(cell):
+        if cell is None:
+            return cell
+        forms = cell.split(";")
+        if overabundant:
+            forms = forms[0]
+        else:
+            forms = sorted(forms)
+        return {Form(f) for f in forms}
 
-    if overabundant:  # sorting the overabundant forms.
-        paradigms = paradigms.applymap(lambda x: ";".join(sorted(x.split(";"))))
-    if not overabundant:  # if ignore overabundance, take first elt everywhere.
-        paradigms = paradigms.applymap(lambda x: x.split(";")[0])
+    paradigms = paradigms.applymap(parse_cell)
 
     print("Merging identical columns...")
     if merge_cols:
@@ -140,47 +143,3 @@ def create_paradigms(data_file_name,
     return paradigms
 
 
-def normalize_dataframe(paradigms, aliases, normalization, verbose=False):
-    """Normalize and Simplify a dataframe.
-
-    **aliases**:
-        For all sequence of n characters representing a segment,
-        replace with a unique character representing this segment.
-    **Normalization**:
-        for all groups of characters representing the same feature set,
-        translate to one unique character.
-
-    **Note**:
-        a .translate strategy works for normalization
-        but not for aliases,
-        since it only maps single characters to single characters.
-        The order of operations is important,
-        since .translate assumes mapping of 1: 1 chars.
-
-    Arguments:
-        paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
-        aliases (dict): dictionnary of segments (as found in the paradigms) to their aliased versions (one char length)
-        normalization (dict): dictionnary of 1 aliased character to another, to replace segments which have the same feature set.
-        verbose (bool): verbosity switch.
-
-    Returns:
-        new_df (:class:`pandas:pandas.DataFrame`):
-            The same dataframe, normalized and simplified.
-    """
-
-    def _norm(cell):
-        if cell:
-            for key in sorted(aliases, key=lambda x: len(x), reverse=True):
-                cell = cell.replace(key, aliases[key])
-            return cell.translate(normalization)
-        return cell
-
-    if verbose:
-        print(paradigms[: 3])
-    print("\nNormalizing dataframe's segments...\n")
-
-    new_df = paradigms.applymap(_norm)
-
-    if verbose:
-        print(new_df[: 3])
-    return new_df

@@ -4,10 +4,9 @@
 
 This module implements patterns' contexts, which are series of phonological restrictions."""
 
-from representations.segments import Segment, restore, restore_segment_shortest
 from representations.quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
 from representations.alignment import align_right, align_left, align_multi
-
+from representations.segments import  Segment
 
 def _align_edges(*args, debug=False, **kwargs):
     """Align at both edges.
@@ -70,17 +69,18 @@ class _ContextMember(object):
         return self.to_str(mode=0)
 
     def to_str(self, mode=2):
-        # Format modes:
-        # str (0):      ([Ei]...) - with parenthesis, regex
-        # restored and separated  (1):  [e-i]...
-        # display (2): shortest(restored,[+syll, -open])
-        # features (3): [+syll, -open]
-        def to_features(segment):
-            if segment:
-                return Segment.get(segment).shorthand
-            return segment
+        def to_features(s):
+            s = Segment.get(s)
+            if s:
+                if len(s) == 1: return s.pretty
+                return s.shorthand
+            return s
 
-        format_modes = [str, restore, restore_segment_shortest, to_features]
+        # Format modes:
+        format_modes = [lambda x:Segment.get(x).REGEX,  # str (0):      ([Ei]...) - with parenthesis, regex
+                        lambda x:Segment.get(x).pretty, # pretty  (1):  {e, i}
+                        lambda x:Segment.get(x).shortest, # display (2): shortest possible string
+                        to_features]         # features: [+syll, -open]
         format_blanks = ["{}", "_", "_", "_"]
         format_segment = format_modes[mode]
         blankchar = format_blanks[mode]
@@ -89,10 +89,10 @@ class _ContextMember(object):
             formatted += "("
 
         for segment, quantifier in self.restrictions:
+
             if segment != "":
                 formatted += format_segment(segment)
-            formatted += str(quantifier)
-
+                formatted += str(quantifier)
         if self.opt and not self.empty:
             formatted += ")" + str(optional)
         elif mode == 0:
@@ -234,7 +234,7 @@ class Context(object):
             leftblank = rightblank
 
     @classmethod
-    def merge(cls, contexts, debug=False):
+    def merge(cls, contexts, debug=True):
         """ Merge contexts to generalize them.
 
         Merge contexts and combine their restrictions into a new context.
@@ -269,7 +269,9 @@ class Context(object):
                 # Use buffer
                 else:
                     if buffer_segments:
+                        # TODO: intersect re-parses the segments...
                         s1, q1 = Segment.intersect(*buffer_segments), quantity_sum(buffer_quantities)
+
                         if debug:
                             print(buffer_sources, "->", s1, q1)
                         context_members.append((s1, q1))

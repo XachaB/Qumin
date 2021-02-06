@@ -7,7 +7,7 @@ This module addresses the modeling of inflectional alternation patterns."""
 from os.path import commonprefix
 from itertools import combinations, product
 from representations import alignment
-from representations.segments import Segment, _CharClass, restore, restore_string, restore_segment_shortest
+from representations.segments import Segment
 from representations.contexts import Context
 from representations.quantity import one, optional, some, kleenestar
 from representations.generalize import generalize_patterns, incremental_generalize_patterns
@@ -180,8 +180,8 @@ class Pattern(object):
 
         def segment_and_normalize(string):
             if string:
-                for key in sorted(Segment._aliases, key=lambda x: len(x), reverse=True):
-                    string = string.replace(key, Segment._aliases[key])
+                for key in sorted(Segment.aliases, key=lambda x: len(x), reverse=True):
+                    string = string.replace(key, Segment.aliases[key])
                 return string.translate(Segment._normalization)
             return string
 
@@ -198,12 +198,12 @@ class Pattern(object):
                     for s in re.findall(regex, segs):
                         if (len(s) > 2 or "-" in s) and (s[0], s[-1]) == ("[", "]"):
                             if "-" in s:
-                                raw_segments = s[1:-1].split("-")
-                                aliases = [Segment.get(s).alias for s in raw_segments]
-                                s = _CharClass("".join(aliases))
+                                # TODO: this should be {x,y} not [x-y]
+                                segments = s[1:-1].split("-")
+                                s = "|".join(sorted(segments))
                             else:
                                 # Legacy parser
-                                s = _CharClass(s[1:-1])
+                                s = "|".join(sorted(s[1:-1]))
                         alts[-1].append(s)
                 yield c, [tuple(x) for x in alts]
 
@@ -219,12 +219,11 @@ class Pattern(object):
                 elif (len(s) > 2 or "-" in s) and (s[0], s[-1]) == ("[", "]"):
                     if "-" in s:
                         raw_segments = s[1:-1].split("-")
-                        aliases = [Segment.get(s).alias for s in raw_segments]
-                        s = _CharClass("".join(aliases))
+                        s = "|".join(sorted(raw_segments))
                         yield s, quantities[q]
                     else:
                         # Legacy parser
-                        yield _CharClass(s[1:-1]), quantities[q]
+                        yield "|".join(sorted(s[1:-1])), quantities[q]
                 else:
                     yield s, quantities[q]
 
@@ -330,7 +329,7 @@ class Pattern(object):
         for cell in self.cells:
             formatted = []
             for segs in self.alternation[cell]:
-                formatted.append("".join(restore(seg) for seg in segs))
+                formatted.append("".join(segs)) #TODO: used restore
             yield formatted
 
     def _init_from_alignment(self, alignment):
@@ -339,18 +338,17 @@ class Pattern(object):
         comparables = iter(alignment)
         elements = next(comparables, None)
         while elements is not None:
-            if elements and are_all_identical(elements):
+            while elements and are_all_identical(elements):
                 context.append(elements[0])
                 elements = next(comparables, None)
-                while elements and are_all_identical(elements):
-                    context.append(elements[0])
-                    elements = next(comparables, None)
             if elements and not are_all_identical(elements):
-                altbuffer = elements
+                altbuffer = [[x] for x in elements]
                 context.append("{}")
                 elements = next(comparables, None)
                 while elements and not are_all_identical(elements):
-                    altbuffer = tuple(b + elt for b, elt in zip(altbuffer, elements))
+                    for buffer, new in zip(altbuffer, elements):
+                        if not (buffer == [""] and new == ""):
+                            buffer.append(new)
                     elements = next(comparables, None)
                 alternation.append(altbuffer)
 
@@ -441,7 +439,7 @@ class BinaryPattern(Pattern):
         c1, c2 = self.cells
 
         def make_transform_repl(a, b):
-            return lambda x: Segment.get_from_transform(x, (a, b))
+            return lambda x: Segment.get_from_transform(x, (a, b)).REGEX
 
         def make_sub_repl(chars):
             return lambda x: chars
@@ -450,12 +448,12 @@ class BinaryPattern(Pattern):
             return x
 
         def iter_alternation(alt):
-            for is_transform, group in groupby(alt, lambda x: type(x) is _CharClass):
+            for is_transform, group in groupby(alt, lambda x: not Segment.is_simple_sound(x)): #TODO: used Charclass
                 if is_transform:
                     for x in group:
                         yield is_transform, x
                 else:
-                    yield is_transform, "".join(group)
+                    yield is_transform, "".join(Segment.get(x).REGEX if x else "" for x in group)
 
         # Build alternation as list of zipped segments / transformations
         alternances = []
@@ -475,16 +473,16 @@ class BinaryPattern(Pattern):
             repl[c2].append(identity)
 
             if group.blank:
-                #  alternation
-                #  We build one regex group for each continuous sequence of segments and each transformation
+                # alternation
+                # We build one regex group for each continuous sequence of segments and each transformation
                 for (is_transform, chars_1), (is_transform, chars_2) in alternances[i]:
                     # Replacements
                     if is_transform:
-                        #  Transformation replacement make_transform_repl with two segments in argument
+                        # Transformation replacement make_transform_repl with two segments in argument
                         repl[c1].append(make_transform_repl(chars_2, chars_1))
                         repl[c2].append(make_transform_repl(chars_1, chars_2))
                     else:
-                        #  Substitution replacement make_subl_repl with target segment as argument
+                        # Substitution replacement make_subl_repl with target segment as argument
                         repl[c1].append(make_sub_repl(chars_1))
                         repl[c2].append(make_sub_repl(chars_2))
                     # Regex matches these segments as one group
@@ -504,13 +502,17 @@ class BinaryPattern(Pattern):
             gen_left = []
             gen_right = []
             for a, b in zip_longest(left, right, fillvalue=""):
-                if a != "" and b != "":
+                if a != "" and b != "" :
                     A, B = Segment.transformation(a, b)
-                    if (len(A) > 1 or len(B) > 1):
-                        gen_any = True
-                        a, b = A, B
-                gen_left.append(a)
-                gen_right.append(b)
+                else:
+                    A, B = "", ""
+                if (len(A) > 1 or len(B) > 1):
+                    gen_any = True
+                    gen_left.append(A)
+                    gen_right.append(B)
+                else:
+                    gen_left.append(a)
+                    gen_right.append(b)
             this_alt[c1].append(tuple(gen_left))
             this_alt[c2].append(tuple(gen_right))
         if gen_any:
@@ -531,7 +533,7 @@ class BinaryPattern(Pattern):
         """
         try:
             regex = self._regex[cell]
-            return bool(regex.match(form))
+            return bool(regex.match(str(form)))
         except KeyError as err:
             raise KeyError("Unknown cell {}."
                            " This pattern's cells are {}."
@@ -555,13 +557,14 @@ class BinaryPattern(Pattern):
 
         """
         from_cell, to_cell = names if names else self.cells
-        string, nb_subs = re.subn(self._regex[from_cell], lambda x: _replace_alternation(x, self._repl[to_cell]), form)
+        reg = self._regex[from_cell]
+        string, nb_subs = reg.subn(lambda x: _replace_alternation(x, self._repl[to_cell]), str(form))
         if nb_subs == 0 and (not self.applicable(form, from_cell)):
             if raiseOnFail:
                 raise NotApplicable("The context {} from the pattern {} and cells {} -> {}"
                                     "doesn't match the form \"{}\""
-                                    "".format(restore_string(self._regex[from_cell].pattern), self, from_cell, to_cell,
-                                              form))
+                                    "".format(self._regex[from_cell].pattern, self, from_cell, to_cell,
+                                              form))#TODO: used restore
             else:
                 return None
         return string
@@ -617,21 +620,16 @@ class BinaryPattern(Pattern):
 
     def _iter_alt(self, features=True):
         """Generator of formatted alternating material for each cell."""
-
         def format_as_chars(left, right):
-            return ("[{}]".format("-".join([restore(c) for c in sorted(left)])),
-                    "[{}]".format("-".join([restore(c) for c in sorted(right)])))
+            return ("[{}]".format("-".join(sorted(left))),#TODO: used restore
+                    "[{}]".format("-".join(sorted(right))))#TODO: used restore
 
         def format_as_features(left, right):
             feats_left, feats_right = Segment.get_transform_features(left, right)
             feats_left = "[{}]".format(" ".join(sorted(feats_left)))
             feats_right = "[{}]".format(" ".join(sorted(feats_right)))
-
-
-            chars_left = "[{}]".format("-".join([restore(c) for c in left]))
-            chars_right = "[{}]".format("-".join([restore(Segment.get_from_transform(c, (left, right))) for c in left]))
-
-
+            chars_left = Segment.get(left).pretty
+            chars_right = Segment.get(right).pretty
             if len(feats_left) +len(feats_right) <= len(chars_left) + len(chars_right):
                 return feats_left, feats_right
             return chars_left, chars_right
@@ -650,9 +648,10 @@ class BinaryPattern(Pattern):
             formatted_left = ""
             formatted_right = ""
             for seg_left, seg_right in zip_longest(left, right, fillvalue=""):
-                if len(seg_left) <= 1 and len(seg_right) <= 1:
-                    formatted_left += restore(seg_left)
-                    formatted_right += restore(seg_right)
+                #TODO: faire attention à tous les "len(x) <= 1"
+                if Segment.is_simple_sound(seg_left) and Segment.is_simple_sound(seg_right) :
+                    formatted_left += seg_left
+                    formatted_right += seg_right
                 else:
                     l, r = format_regular_change(seg_left, seg_right)
                     formatted_left += l
@@ -756,7 +755,6 @@ def _with_deterministic_alignment(paradigms, method="suffix", disable_tqdm=False
                             columns=pairs)
 
     pat_dict = {}
-    paradigms_sets = paradigms.applymap(lambda x: set(x.split(";")))
 
     def generate_rules(row, cells, collection):
         if row[0] == row[1]:  # If the lists are identical, do not compute product
@@ -776,7 +774,7 @@ def _with_deterministic_alignment(paradigms, method="suffix", disable_tqdm=False
         pattern_collection = defaultdict(list)
         a, b = column.name
 
-        paradigms_sets[[a, b]].apply(generate_rules, axis=1, args=((a, b), pattern_collection))
+        paradigms[[a, b]].apply(generate_rules, axis=1, args=((a, b), pattern_collection))
         results = {}
         pat_dict[(a, b)] = []
 
@@ -828,7 +826,6 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                                columns=pairs)
 
     pat_dict = {}
-    paradigms_sets = paradigms.applymap(lambda x: set(x.split(";")))
 
     def generate_rules(row, cells, collection):
         if row[0] == row[1]:  # If the lists are identical, do not compute product
@@ -892,7 +889,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
     def find_patterns_in_col(column, pat_dict):
         collection = defaultdict(lambda: defaultdict(list))
         c1, c2 = column.name
-        col = paradigms_sets[[c1, c2]]
+        col = paradigms[[c1, c2]]
         index = col.index
         forms = col.reset_index().values
 
@@ -902,7 +899,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
         for alt in collection:
             # print("\n\n####Considering alt:",alt)
-            #  Attempt to generalize
+            # Attempt to generalize
             types = list(collection[alt])
             pats = []
             # print("1.Generalizing in each type")
@@ -923,12 +920,12 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                 # print("\tlooking at incompatible:",pats)
                 collection[alt] = incremental_generalize_patterns(*pats)
             # print("Result:",collection[alt])
-            #  Score
+            # Score
             for p in collection[alt]:
                 p.score = _score(p, (c1, c2), forms, index)
                 sorted_collection.append(p)
 
-        #  Sort by score and choose best patterns
+        # Sort by score and choose best patterns
         sorted_collection = sorted(sorted_collection, key=lambda x: x.score, reverse=True)
         best = defaultdict(set)
 
@@ -938,7 +935,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
             row = col.at[l, c1], col.at[l, c2]
 
             if row != (nullset, nullset):
-                if row[0] == row[1]:  #  If the lists are identical, do not compute product
+                if row[0] == row[1]:  # If the lists are identical, do not compute product
                     pairs = [(x, x) for x in row[0]]
                 else:
                     pairs = product(*row)
@@ -1168,8 +1165,6 @@ def make_pairs(paradigms):
 
     The output has one column for each pairs on the paradigm's columns.
     """
-    print("Making pairs from", paradigms)
-
     def pair_columns(column, paradigms):
         cell1, cell2 = column.name
         return paradigms[cell1] + " ⇌ " + paradigms[cell2]
