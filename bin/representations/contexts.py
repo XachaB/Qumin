@@ -267,7 +267,6 @@ class Context(object):
                 # Use buffer
                 else:
                     if buffer_segments:
-                        # TODO: intersect re-parses the segments...
                         s1, q1 = Inventory.meet(*buffer_segments), quantity_sum(buffer_quantities)
 
                         log.debug(buffer_sources, "->", s1, q1)

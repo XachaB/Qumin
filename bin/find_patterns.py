@@ -110,7 +110,7 @@ def main(args):
 
     microclasses = find_microclasses(patterns_df.applymap(str))
     filename = result_prefix + "_microclasses.txt"
-    log.info("Found % microclasses.\nPrinting microclasses to %s", len(microclasses), filename)
+    log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
