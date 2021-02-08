@@ -57,20 +57,20 @@ def align_multi(*strings, **kwargs):
     if len(strings) == 1:
         return [(elem,) for elem in strings[0]]
 
-    fillvalue = kwargs.get("fillvalue", "")
+    kwargs["fillvalue"] = kwargs.get("fillvalue", "")
     kwargs["insert_cost"] = levenshtein_ins_cost
     kwargs["sub_cost"] = multi_sub_cost
 
     def flatten_alignment(alignment):
         for a, b in alignment:
-            if a == fillvalue:
-                a = multi_fillvalue
-            yield a + (b,)
+            try:
+                yield a | {b}
+            except TypeError: # a is the fillvalue
+                yield {a, b}
+    first_seq = [{s} for s in strings[0]]
+    aligned = first_seq
 
-    aligned = align_auto(strings[0], strings[1], **kwargs)[0]
-
-    for i in range(2, len(strings)):
-        multi_fillvalue = tuple(fillvalue for _ in range(i))
+    for i in range(1, len(strings)):
         aligned = list(flatten_alignment(align_auto(aligned, strings[i], **kwargs)[0]))
     return aligned
 
