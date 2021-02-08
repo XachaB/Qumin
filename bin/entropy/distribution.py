@@ -168,7 +168,7 @@ class PatternDistribution(object):
             n (int): number of predictors.
         """
 
-        def check_zeros(columns, n): #TODO: columns not used !
+        def check_zeros(n):
             zeros = defaultdict(set)
 
             if self.entropies[n - 1] is not None:
@@ -204,7 +204,7 @@ class PatternDistribution(object):
         if any((self.entropies[i] is not None for i in range(1, n))):
             print("Saving time by listing already known 0 entropies...",
                   end="")
-            zeros = check_zeros(columns, n)
+            zeros = check_zeros(n)
             print("listing done")
         else:
             zeros = None
