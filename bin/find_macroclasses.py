@@ -57,7 +57,7 @@ def main(args):
     # Setting up the output path.
     result_dir = "../Results/{}/{}".format(args.folder, day)
     makedirs(result_dir, exist_ok=True)
-    result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
+    result_prefix = "{}/{}_{}_{}_{}_BU_DL".format(result_dir, data_file_name, version, day, now)
 
     # Initializing segments
 
@@ -68,36 +68,20 @@ def main(args):
     else:
         pat_table = pd.read_csv(data_file_path, index_col=0)
 
-    result_prefix += args.algorithm + "_" + args.measure
-
-    measures = {"BU": {"DL": descriptionlength.BUDLClustersBuilder,
-                       "CD": distances.CompressionDistClustersBuilder,
-                       "UPGMA": distances.UPGMAClustersBuilder},
-                "TD": {"DL": descriptionlength.TDDLClustersBuilder}}
-
-    algorithm_choice = {"BU": algorithms.bottom_up_clustering,
-                        "TD": algorithms.top_down_clustering}
-
     preferences = {"prefix": result_prefix,
-                   "clustering_algorithm": algorithm_choice[args.algorithm],
                    "verbose": args.verbose,
                    "debug": args.debug}
 
-    attr = {"DL": "DL", "CD": "dist", "UPGMA": "dist"}
 
     # if args.randomised:
     #     func = preferences["clustering_algorithm"]
     #     randomised_algo = partial(algorithms.randomised, func, n=args.randomised)
     #     preferences["clustering_algorithm"] = randomised_algo
 
-    node = algorithms.hierarchical_clustering(pat_table, measures[args.algorithm][args.measure], **preferences)
+    node = algorithms.hierarchical_clustering(pat_table, descriptionlength.BUDLClustersBuilder, **preferences)
 
-    if args.measure == "DL":
-        DL = "Min :" + str(find_min_attribute(node, "DL"))
-    else:
-        DL = ""
-
-    experiment_id = " ".join([args.algorithm, args.measure, " on ", kind, DL, "(", version, day, now, ")", ])
+    DL = "Min :" + str(find_min_attribute(node, "DL"))
+    experiment_id = " ".join(["Bottom-up DL clustering on ", kind, DL, "(", version, day, now, ")", ])
 
     # Saving png figure
     if MATPLOTLIB_LOADED:
@@ -107,7 +91,7 @@ def main(args):
         node.draw(horizontal=True,
                   square=True,
                   leavesfunc=lambda x: x.labels[0] + " (" + str(x.attributes["size"]) + ")",
-                  nodefunc=lambda x: "{0:.3f}".format(x.attributes[attr[args.measure]]),
+                  nodefunc=lambda x: "{0:.3f}".format(x.attributes["DL"]),
                   keep_above_macroclass=True)
 
         fig.suptitle(experiment_id)
@@ -141,23 +125,6 @@ if __name__ == '__main__':
                              " (csv separated by '\\t')"
                              " enter ORTHO if using endings on orthographic forms.",
                         type=str)
-
-    parser.add_argument('-m', '--measure',
-                        help="Cluster with measure: "
-                             " Description length (DL)"
-                             " Hamming distances (UPGMA, experimental)"
-                        # " Compression distances (CD, experimental)"
-                             "Defaults to DL. "
-                             "UPGMA is experimental and not in development. It is only available for Bottom up algorithm",
-                        choices=['UPGMA', 'DL'],  # 'CD'],
-                        default='DL')
-
-    parser.add_argument('-a', '--algorithm',
-                        help="Cluster with algorithm: "
-                             "Top down (TD, experimental) "
-                             "Bottom up (BU) ",
-                        choices=['TD', 'BU'],
-                        default='BU')
 
     options = parser.add_argument_group('Options')
 

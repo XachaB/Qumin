@@ -6,7 +6,6 @@ Author: Sacha Beniamine
 """
 import numpy as np
 from clustering import find_microclasses
-import warnings
 
 
 def choose(iterable):
@@ -15,87 +14,16 @@ def choose(iterable):
     return iterable[int(i)]
 
 
-def top_down_clustering(patterns, microclasses, Clusters, **kwargs):
-    """Cluster microclasses in a top-down recursive fashion.
-
-    The algorithm is the following::
-
-        Begin with one unique cluster containing all microclasses, and one empty cluster.
-        While we are seeing an improvement:
-            Find the best possible shift of a microclass from one cluster to another.
-            Perform this shift.
-        Build a binary node with the two clusters.
-        Recursively apply the same algorithm to each.
-
-    The algorithm stops when it reaches leaves, or when no shift improves the score.
-
-    Scoring, finding the best shits, updating the nodes depends on the Clusters class.
-
-    Arguments:
-        patterns (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
-        microclasses (dict of str:list): mapping of microclasses exemplars to microclasses inventories.
-        Clusters : a cluster class to use in clustering.
-        kwargs: any keywords arguments to pass to Clusters.
-    """
-    warnings.warn("Top down clustering is experimental and development is not active. Use at your own risks !")
-    print("Top down clustering")
-    clusters = Clusters(microclasses, paradigms=patterns, **kwargs)
-
-    stack = [clusters.rootnode()]
-    while stack:
-        node = stack.pop(-1)
-        clusters.initialize_subpartition(node)
-
-        possible_shifts = clusters.find_ordered_shifts()
-        if possible_shifts:
-            while possible_shifts:
-                leaf, DL = choose(possible_shifts)
-                clusters.shift(leaf)
-                possible_shifts = clusters.find_ordered_shifts()
-            clusters.split_leaves()
-            stack.extend(node.children)
-
-    return clusters.rootnode()
-
-
-def bottom_up_clustering(patterns, microclasses, Clusters, **kwargs):
-    """Cluster microclasses in a top-down recursive fashion.
-
-    The algorithm is the following::
-
-        Begin with one cluster per microclasses.
-        While there is more than one cluster :
-            Find the best possible merge of two clusters, among all possible pairs.
-            Perform this merge
-
-    Scoring, finding the best merges, merging nodes depends on the Clusters class.
-
-    Arguments:
-        patterns (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
-        microclasses (dict of str:list): mapping of microclasses exemplars to microclasses inventories.
-        Clusters : a cluster class to use in clustering.
-        kwargs: any keywords arguments to pass to Clusters.
-    """
-    print(kwargs)
-    clusters = Clusters(microclasses, paradigms=patterns, **kwargs)
-    print("Bottom up clustering")
-    while len(clusters.nodes) > 1:
-        print("N =", len(clusters.nodes))
-        possible_merges = clusters.find_ordered_merges()
-        a, b, score = choose(possible_merges)
-        clusters.merge(a, b)
-    return clusters.rootnode()
-
-
 def log_classes(classes, prefix, suffix):
     filename = prefix + "_" + suffix + ".txt"
     print("\nFound ", len(classes), suffix, ".\nPrinting log to ", filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(classes, key=lambda x: len(classes[x])):
-            flow.write("\n\n{} ({}) \n\t".format(m, len(classes[m])) + ", ".join(classes[m]))
+            flow.write(
+                "\n\n{} ({}) \n\t".format(m, len(classes[m])) + ", ".join(classes[m]))
 
 
-def hierarchical_clustering(patterns, Clusters, clustering_algorithm=bottom_up_clustering, **kwargs):
+def hierarchical_clustering(patterns, Clusters, **kwargs):
     """Perform hierarchical clustering on patterns according to a clustering algorithm and a measure.
 
     This function ::
@@ -103,6 +31,13 @@ def hierarchical_clustering(patterns, Clusters, clustering_algorithm=bottom_up_c
         Performs the clustering,
         Finds the macroclasses (and exports them),
         Returns the inflection class tree.
+
+    The clustering algorithm is the following::
+
+        Begin with one cluster per microclasses.
+        While there is more than one cluster :
+            Find the best possible merge of two clusters, among all possible pairs.
+            Perform this merge
 
     Scoring, finding the best merges, merging nodes depends on the Clusters class.
 
@@ -116,7 +51,14 @@ def hierarchical_clustering(patterns, Clusters, clustering_algorithm=bottom_up_c
 
     # Clustering
     microclasses = find_microclasses(patterns)
-    node = clustering_algorithm(patterns, microclasses, Clusters, **kwargs)
+
+    clusters = Clusters(microclasses, paradigms=patterns, **kwargs)
+    while len(clusters.nodes) > 1:
+        print("N =", len(clusters.nodes))
+        possible_merges = clusters.find_ordered_merges()
+        a, b, score = choose(possible_merges)
+        clusters.merge(a, b)
+    node = clusters.rootnode()
 
     # Export macroclasses
     macroclasses = node.macroclasses()

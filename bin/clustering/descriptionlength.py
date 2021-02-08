@@ -6,10 +6,14 @@ Author: Sacha Beniamine
 """
 import numpy as np
 from collections import defaultdict, Counter
-from itertools import combinations, chain
+from itertools import combinations
 from clustering import Node
-from clustering.clusters import _ClustersBuilder, _BUClustersBuilder
 from tqdm import tqdm
+
+
+def _do_nothing(*args, **kwargs):
+    """Place holder function for disabled verbosity"""
+    pass
 
 
 class Cluster(object):
@@ -122,10 +126,8 @@ class Cluster(object):
         return self
 
 
-class _DLClustersBuilder(_ClustersBuilder):
+class _DLClustersBuilder(object):
     """Builder for hierarchical clusters of inflection classes with description length based decisions.
-
-    This is an abstract class.
 
     This class holds two representations of the clusters it builds. On one hand, the class
     Cluster represents the informations needed to compute the description length of a cluster.
@@ -134,7 +136,9 @@ class _DLClustersBuilder(_ClustersBuilder):
 
     This class inherits attributes.
 
-    Attributes:
+    Attributes:microclasses (dict of str:list): Inherited. mapping of microclasses exemplars to microclasses inventories.
+        nodes (dict of frozenset :Node): Inherited. Maps frozensets of microclass exemplars to Nodes representing clusters.
+        preferences (dict): Inherited. Configuration parameters.
         attr (str): (class attribute) always have the value "DL", as the nodes of the Inflection class tree have a "DL" attribute.
         DL (float): A description length DL, with DL(system) = DL(M) + DL(C) + DL(P) + DL(R)
         M (float): DL(M), the cost in bits to express the mapping between lexemes and microclasses.
@@ -151,7 +155,6 @@ class _DLClustersBuilder(_ClustersBuilder):
          Note that the Counter's length is written on a .length attribute, to avoid calling len() repeatedly.
          Remark that the count is not the same as in the class Cluster.
         size (int): The size of the whole system in microclasses.
-
     """
 
     attr = "DL"
@@ -164,15 +167,31 @@ class _DLClustersBuilder(_ClustersBuilder):
             paradigms (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
             kwargs : keyword arguments to be used as configuration.
         """
-        super().__init__(microclasses, **kwargs)
+        self.preferences = kwargs
+        self.microclasses = microclasses
+        self.nodes = {
+            frozenset([m]): Node([m], size=len(self.microclasses[m]), macroclass=False)
+            for m in
+            self.microclasses}
+
+        if "verbose" not in kwargs or not kwargs["verbose"]:
+            self.printv = _do_nothing
+        if "debug" in kwargs and kwargs["debug"] and kwargs["prefix"]:
+            self.preferences["filename"] = self.preferences["prefix"] + "_{}.log"
+            print("Writing logs to : ", self.preferences["filename"].format("<...>"))
+        else:
+            self.log = _do_nothing
+
         self.P = self.M = self.C = self.R = self.DL = 0
         self.initialize_clusters(paradigms)
         self.initialize_patterns()
         self.compute_DL(M=True)
         current_partition = " - ".join(", ".join(c) for c in self.clusters)
-        self.log("\t".join(["Partition", "M", "C", "P", "R", "DL"]) + "\n", name="clusters")
+        self.log("\t".join(["Partition", "M", "C", "P", "R", "DL"]) + "\n",
+                 name="clusters")
         self.log(" ".join(
-            [current_partition, ":\t", "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
+            [current_partition, ":\t", "\t".join(
+                (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
              "\n"]), name="clusters")
 
     def initialize_clusters(self, paradigms):
@@ -204,10 +223,12 @@ class _DLClustersBuilder(_ClustersBuilder):
 
             # This is P_p
             for pattern in self.patterns[cell]:
-                self.P += weighted_log(self.patterns[cell][pattern], self.patterns[cell].length)
+                self.P += weighted_log(self.patterns[cell][pattern],
+                                       self.patterns[cell].length)
 
             # This is P_c
-            cluster_patterns = [len(self.clusters[cluster][cell]) for cluster in self.nodes]
+            cluster_patterns = [len(self.clusters[cluster][cell]) for cluster in
+                                self.nodes]
             total = sum(cluster_patterns)
             self.P += sum(weighted_log(a, total) for a in cluster_patterns)
 
@@ -216,277 +237,6 @@ class _DLClustersBuilder(_ClustersBuilder):
             self.R += self.clusters[label].R
 
         self.DL = (self.M + self.C + self.P + self.R)
-
-
-class TDDLClustersBuilder(_DLClustersBuilder):
-    """Top down builder for hierarchical clusters of inflection classes with description length based decisions.
-
-    This class holds two representations of the clusters it builds. On one hand, the class
-    Cluster represents the informations needed to compute the description length of a cluster.
-    On the other hand, the class Node represents the inflection classes being built.
-    A Node can have children and a parent, a Cluster can be splitted or merged.
-
-    This class inherits attributes.
-
-    Attributes:
-        microclasses (dict of str:list): Inherited. mapping of microclasses exemplars to microclasses inventories.
-        nodes (dict of frozenset :Node): Inherited. Maps frozensets of microclass exemplars to Nodes representing clusters.
-        preferences (dict): Inherited. Configuration parameters.
-        attr (str): Inherited. (class attribute) always have the value "DL", as the nodes of the Inflection class tree have a "DL" attribute.
-        DL (float): Inherited. A description length DL, with DL(system) = DL(M) + DL(C) + DL(P) + DL(R)
-        M (float): Inherited. DL(M), the cost in bits to express the mapping between lexemes and microclasses.
-        C (float): Inherited. DL(C), the cost in bits to express the mapping between microclasses and clusters.
-        P (float): Inherited.  DL(P), the cost in bits to express the relation between clusters and patterns.
-        R (float): Inherited.  DL(R), the cost in bits to disambiguiate which pattern to use in each cluster for each microclasses.
-        clusters (dict of frozenset: :class:`Cluster`): Inherited. Clusters, indexed by a frozenset of microclass examplars.
-        patterns (dict of str : Counter): Inherited. A dict of pairs of cells to a count of patterns
-         to the number of clusters presenting this pattern for this cell.::
-
-                { str: Counter({Pattern: int }) }
-                pairs of cells -> pattern -> number of clusters with this pattern for this cell
-
-         Note that the Counter's length is written on a .length attribute, to avoid calling len() repeatedly.
-         Remark that the count is not the same as in the class Cluster.
-        size (int): Inherited. The size of the whole system in microclasses.
-        minDL (float): The minimum description length yet encountered.
-        history (dict of frozenset:tuples): dict associating partitions with (M, C, P, R, DL) tuples.
-        left (Cluster): left and right are temporary clusters used to divide a current cluster in two.
-        right (Cluster): see left.
-        to_split (Node): the node that we are currently trying to split.
-    """
-
-    def __init__(self, microclasses, paradigms, **kwargs):
-        """Constructor.
-
-        Arguments:
-            microclasses (dict of str:list): mapping of microclasses exemplars to microclasses inventories.
-            paradigms (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
-            kwargs : keyword arguments to be used as configuration.
-        """
-        super().__init__(microclasses, paradigms, **kwargs)
-        self.minDL = self.DL
-        self.printv("Initial cluster has DL : ", self.DL)
-        self.nodes[frozenset(list(self.microclasses))].attributes["DL"] = self.DL
-
-    def initialize_nodes(self):
-        """Initialize nodes with only one root node which children are all microclasses."""
-        root = Node(list(self.microclasses),
-                    children=[Node([m],
-                                   size=len(self.microclasses[m]),
-                                   macroclass=False,
-                                   color="c") for m in self.microclasses],
-                    size=sum(len(self.microclasses[m]) for m in self.microclasses),
-                    color="r",
-                    macroclass=False)
-        self.nodes = {frozenset(self.microclasses): root}
-
-    def initialize_clusters(self, paradigms):
-        """Initialize clusters with one cluster per microclass plus one for the whole.
-
-        Arguments:
-            paradigms (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
-        """
-        super().initialize_clusters(paradigms)
-        # self.atomic_clusters = self.clusters.copy()
-        root = frozenset(self.microclasses)
-        self.clusters[root] = sum(self.clusters[cluster] for cluster in self.clusters)
-
-    def _partial_DL(self):
-        """Compute the description length of the two clusters right and left."""
-        C = self.right.C + self.left.C
-        R = self.right.R + self.left.R
-        P = 0
-        patterns = defaultdict(Counter)
-
-        for cell in self.right:
-            #  This is P_p
-            patterns[cell] = Counter(list(self.right[cell])) + Counter(list(self.left[cell]))
-            patterns[cell].length = sum(patterns[cell].values())
-            for pattern in patterns[cell]:
-                P += weighted_log(patterns[cell][pattern], patterns[cell].length)
-
-            # This is P_c
-            right_patterns = self.right[cell].length
-            left_patterns = self.left[cell].length
-            total_patterns = right_patterns + left_patterns
-            P += weighted_log(right_patterns, total_patterns) + \
-                 weighted_log(left_patterns, total_patterns)
-
-        return R, C, P, patterns
-
-    def _shift_auxiliary(self, label):
-        """Shift one microclass from left to right or vice-versa
-
-        Parameters:
-            label (str): the label of the microclass to shift."""
-        cluster_to_shift = self.clusters[frozenset([label])]
-        if label in self.right.labels:
-            self.right -= cluster_to_shift
-            self.left += cluster_to_shift
-        elif label in self.left.labels:
-            self.left -= cluster_to_shift
-            self.right += cluster_to_shift
-
-    def _simulate_shift(self, label):
-        """Simulate shifting one microclass, return parameters for the DL.
-
-        Parameters:
-            label (str): the label of the microclass to shift."""
-        self._shift_auxiliary(label)
-        R, C, P, patterns = self._partial_DL()
-        self._shift_auxiliary(label)
-        return R, C, P, patterns
-
-    def shift(self, label):
-        """Shift one microclass rom left to right or vice-versa
-
-        Parameters:
-            label (str): the label of the microclass to shift.
-        """
-        self._shift_auxiliary(label)
-
-    def split_leaves(self):
-        """Split a cluster by replacing it with the two clusters left and right.
-
-        Recompute the description length when left and right are separated.
-        Build two nodes corresponding to left and right, children of to_split.
-        """
-        leaves = self.to_split.children
-
-        if len(self.left.labels) > 0 and len(self.right.labels) > 0:
-            left_leaves = []
-            right_leaves = []
-            left_labels = self.left.labels
-            right_labels = self.right.labels
-
-            for leaf in leaves:
-                if leaf.labels[0] in self.left.labels:
-                    left_leaves.append(leaf)
-                else:
-                    right_leaves.append(leaf)
-
-            # del self.clusters[frozenset(self.to_split.labels)]
-            self.right.totalsize = self.left.totalsize = self.size
-            self.right.C = weighted_log(self.right.size, self.size)
-            self.left.C = weighted_log(self.left.size, self.size)
-            self.clusters[frozenset(right_labels)] = self.right
-            self.clusters[frozenset(left_labels)] = self.left
-
-            self.compute_DL()
-            current_partition = " - ".join(", ".join(c) for c in self.nodes)
-            self.log(" ".join([current_partition, ":\t",
-                               "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))), "\n"]),
-                     name="clusters")
-
-            color = "r"
-            if self.DL >= self.minDL:
-                color = "c"
-            else:
-                self.minDL = self.DL
-            kwargs = {"macroclass": False, "DL": self.DL, "color": color}
-            if len(left_leaves) > 1:
-                left = Node(left_labels, size=sum(leaf.attributes["size"] for leaf in left_leaves),
-                            children=left_leaves, **kwargs)
-            else:
-                left = left_leaves[0]
-                left.attributes["DL"] = self.DL
-            if len(right_leaves) > 1:
-                right = Node(right_labels, size=sum(leaf.attributes["size"] for leaf in right_leaves),
-                             children=right_leaves, **kwargs)
-            else:
-                right = right_leaves[0]
-                right.attributes["DL"] = self.DL
-
-            self.printv("Splitted:", ", ".join(right.labels), "\n\t", ", ".join(left.labels))
-            self.to_split.children = [left, right]
-
-    def initialize_subpartition(self, node):
-        """Initialize left and right as a subpartition of a node we want to split.
-
-        Arguments:
-            node (Node): The node to be splitted.
-        """
-        self.to_split = node
-
-        self.left = sum(self.clusters[frozenset([leaf])] for leaf in node.labels)
-        self.left.C = 0
-        self.right = Cluster()
-        self.left.totalsize = self.right.totalsize = self.left.size
-
-        current_partition = frozenset(list(self.nodes))
-        self.history = {current_partition: (self.M, self.C, self.P, self.R, self.DL)}
-
-        microclasses = [len(self.microclasses[m]) for m in self.left.labels | self.right.labels]
-        total = sum(microclasses)
-        M = sum(weighted_log(val, total) for val in microclasses)
-        R, C, P, *_ = self._partial_DL()
-        DL = M + C + P + R
-        leftlabels = frozenset(self.left.labels)
-        rightlabels = frozenset(self.right.labels)
-        self.history[frozenset([leftlabels, rightlabels])] = (M, C, P, R, DL)
-
-    def find_ordered_shifts(self):
-        """Find the list of all best shifts of a microclass between right and left.
-
-        The list is a list of tuples of length 2 containing the label of a node to shift
-        and the description length of the node to be splitted if we perform the shift.
-        """
-        best_shifts = []
-
-        leftlabels = frozenset(self.left.labels)
-        rightlabels = frozenset(self.right.labels)
-        M, C, P, R, best = self.history[frozenset([leftlabels, rightlabels])]
-
-        for leaf in sorted(chain(self.right.labels, self.left.labels)):
-            new = frozenset([leftlabels - {leaf}, rightlabels | {leaf}])
-
-            if new not in self.history:
-                R, C, P, *_ = self._simulate_shift(leaf)
-                DL = M + R + C + P
-                self.history[new] = (M, C, P, R, DL)
-                if DL < best:
-                    best_shifts = [(leaf, DL)]
-                    best = DL
-                elif DL == best:
-                    best_shifts.append((leaf, DL))
-                str_partition = " - ".join(", ".join(p) for p in new)
-                self.log(" ".join([str_partition, ":\t", "\t".join((str(M), str(C), str(P), str(R), str(DL))), "\n"]),
-                         name="clusters")
-
-        return best_shifts
-
-
-class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
-    """Bottom up Builder for hierarchical clusters of inflection classes with description length based decisions.
-
-    This class holds two representations of the clusters it builds. On one hand, the class
-    Cluster represents the informations needed to compute the description length of a cluster.
-    On the other hand, the class Node represents the inflection classes being built.
-    A Node can have children and a parent, a Cluster can be splitted or merged.
-
-    This class inherits attributes.
-
-    Attributes:
-        microclasses (dict of str:list): Inherited. mapping of microclasses exemplars to microclasses inventories.
-        nodes (dict of frozenset :Node): Inherited. Maps frozensets of microclass exemplars to Nodes representing clusters.
-        preferences (dict): Inherited. Configuration parameters.
-        attr (str): Inherited. (class attribute) always have the value "DL", as the nodes of the Inflection class tree have a "DL" attribute.
-        DL (float): Inherited. A description length DL, with DL(system) = DL(M) + DL(C) + DL(P) + DL(R)
-        M (float): Inherited. DL(M), the cost in bits to express the mapping between lexemes and microclasses.
-        C (float): Inherited. DL(C), the cost in bits to express the mapping between microclasses and clusters.
-        P (float): Inherited.  DL(P), the cost in bits to express the relation between clusters and patterns.
-        R (float): Inherited.  DL(R), the cost in bits to disambiguiate which pattern to use in each cluster for each microclasses.
-        clusters (dict of frozenset: :class:`Cluster`): Inherited. Clusters, indexed by a frozenset of microclass examplars.
-        patterns (dict of str : Counter): Inherited. A dict of pairs of cells to a count of patterns
-         to the number of clusters presenting this pattern for this cell.::
-
-                { str: Counter({Pattern: int }) }
-                pairs of cells -> pattern -> number of clusters with this pattern for this cell
-
-         Note that the Counter's length is written on a .length attribute, to avoid calling len() repeatedly.
-         Remark that the count is not the same as in the class Cluster.
-        size (int): Inherited. The size of the whole system in microclasses.
-    """
 
     def _simulate_merge(self, a, b):
         """Simulate merging two clusters, return parameters for the DL.
@@ -508,7 +258,8 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
                              Counter(list(g1[cell])) - \
                              Counter(list(g2[cell]))
 
-            patterns[cell].length = self.patterns[cell].length + new[cell].length - g1[cell].length - g2[cell].length
+            patterns[cell].length = self.patterns[cell].length + new[cell].length - g1[
+                cell].length - g2[cell].length
 
             for pattern in patterns[cell]:
                 P += weighted_log(patterns[cell][pattern], patterns[cell].length)
@@ -532,7 +283,8 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
             a (str): the label of a cluster to merge.
             b (str): the label of a cluster to merge."""
         labels = a | b
-        self.R, self.C, self.P, self.patterns, self.clusters[labels] = self._simulate_merge(a, b)
+        self.R, self.C, self.P, self.patterns, self.clusters[
+            labels] = self._simulate_merge(a, b)
         # del self.clusters[b]
         # del self.clusters[a]
 
@@ -545,17 +297,22 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
         size = left.attributes["size"] + right.attributes["size"]
         color = "c"
         if self.DL >= prev_DL:
-            self.printv("\nDL stopped improving: prev = {}, current best = {}".format(prev_DL, self.DL))
+            self.printv(
+                "\nDL stopped improving: prev = {}, current best = {}".format(prev_DL,
+                                                                              self.DL))
             color = "r"
 
         self.nodes[labels] = Node(leaves, size=size, children=[left, right],
                                   DL=self.DL, color=color, macroclass=color != "r")
 
-        self.printv("\nMerging ", ", ".join(a), " and ", ", ".join(b), "with DL ", self.DL)
+        self.printv("\nMerging ", ", ".join(a), " and ", ", ".join(b), "with DL ",
+                    self.DL)
 
-        current_partition = " - ".join([", ".join(self.nodes[c].labels) for c in self.nodes])
+        current_partition = " - ".join(
+            [", ".join(self.nodes[c].labels) for c in self.nodes])
         self.log(" ".join(
-            [current_partition, ":\t", "\t".join((str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
+            [current_partition, ":\t", "\t".join(
+                (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
              "\n"]), name="clusters")
 
     def find_ordered_merges(self):
@@ -578,10 +335,25 @@ class BUDLClustersBuilder(_DLClustersBuilder, _BUClustersBuilder):
                 best_merges.append((g1, g2, DL))
 
         if len(best_merges) > 1:
-            choices = ", ".join(["({}, {})".format("-".join(a), "-".join(b)) for a, b, _ in best_merges])
-            self.printv("\nWarning, {} equivalent choices: ".format(len(best_merges)), choices)
+            choices = ", ".join(
+                ["({}, {})".format("-".join(a), "-".join(b)) for a, b, _ in best_merges])
+            self.printv("\nWarning, {} equivalent choices: ".format(len(best_merges)),
+                        choices)
 
         return best_merges
+
+    def rootnode(self):
+        """Return the root of the Inflection Class tree, if it exists."""
+        assert len(self.nodes) == 1
+        return next(iter(self.nodes.values()))
+
+    def log(self, *args, name="clusters", **kwargs):
+        filename = self.preferences["filename"].format(name)
+        with open(filename, "a", encoding="utf-8") as flow:
+            flow.write(*args, **kwargs)
+
+    def printv(self, *args, **kwargs):
+        print(*args, **kwargs)
 
 
 def weighted_log(symbol_count, message_length):
