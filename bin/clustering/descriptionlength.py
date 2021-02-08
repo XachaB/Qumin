@@ -126,7 +126,7 @@ class Cluster(object):
         return self
 
 
-class _DLClustersBuilder(object):
+class BUDLClustersBuilder(object):
     """Builder for hierarchical clusters of inflection classes with description length based decisions.
 
     This class holds two representations of the clusters it builds. On one hand, the class

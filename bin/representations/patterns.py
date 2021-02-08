@@ -19,7 +19,6 @@ import pandas as pd
 import re
 from tqdm import tqdm
 
-ORTHO = False
 len = len
 sorted = sorted
 all = all

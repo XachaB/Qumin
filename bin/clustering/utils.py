@@ -328,7 +328,6 @@ class Node(object):
                 return attributes
 
             if horizontal:
-                leafoffset = (-5, 0) #TODO: this is not used anymore
                 textoffset = (5, 0)
                 lva = "center"
                 lha = "right"
@@ -343,7 +342,6 @@ class Node(object):
                 lha = "right"
                 va = "bottom"
                 ha = "center"
-                leafoffset = (0, -3) #TODO: This is not used anymore
                 textoffset = (0, 5)
                 r = 45
 

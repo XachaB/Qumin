@@ -52,7 +52,6 @@ def main(args):
         raise argparse.ArgumentTypeError("You can't find patterns on orthographic material.")
     else:
         segcheck = False
-        patterns.ORTHO = True
 
     method = {'globalAlt': 'global',
               'localAlt': 'local',

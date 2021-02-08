@@ -62,31 +62,6 @@ def _node_to_label_IC(node, comp=None, **kwargs):
         return header + common + "</table>"
     return ""
 
-
-def _node_to_label_phon(node, **kwargs):
-    header = "<table><thead><th colspan=2> [" + "".join(node.labels) + "] </th></thead>"
-    if "common" in node.attributes:
-        line = "<tr><th>{}</th><td>{}</td></tr>"
-        line_no_head = "<tr><td colspan=2>{}</td></tr>"
-        common = ""
-        for attributes in node.attributes["common"]:
-            for attr in attributes.split(";"):
-                if "=" in attr:
-                    common += line.format(*attr.split("="))
-                else:
-                    common += line_no_head.format(attr)
-        if not common:
-            for attributes in node.attributes["intent"]:
-                for attr in attributes.split(";"):
-                    if "=" in attr:
-                        common += line.format(*attr.split("="))
-                    else:
-                        common += line_no_head.format(attr)
-
-        return header + common + "</table>"
-    return ""
-
-
 def to_dummies(table, **kwargs):
     """Make a context table from a dataframe.
 
