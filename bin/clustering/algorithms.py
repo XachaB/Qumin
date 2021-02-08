@@ -6,7 +6,8 @@ Author: Sacha Beniamine
 """
 import numpy as np
 from clustering import find_microclasses
-
+import logging
+log = logging.getLogger(__name__)
 
 def choose(iterable):
     """Choose a random element in an iterable of iterable."""
@@ -16,11 +17,13 @@ def choose(iterable):
 
 def log_classes(classes, prefix, suffix):
     filename = prefix + "_" + suffix + ".txt"
-    print("\nFound ", len(classes), suffix, ".\nPrinting log to ", filename)
+    log.info("Found %s %s", len(classes), suffix)
+    log.info("Printing log to %s", filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(classes, key=lambda x: len(classes[x])):
-            flow.write(
-                "\n\n{} ({}) \n\t".format(m, len(classes[m])) + ", ".join(classes[m]))
+            flow.write("\n\n{} ({}) \n\t".format(m,
+                                                 len(classes[m]))
+                       + ", ".join(classes[m]))
 
 
 def hierarchical_clustering(patterns, Clusters, **kwargs):
@@ -54,7 +57,7 @@ def hierarchical_clustering(patterns, Clusters, **kwargs):
 
     clusters = Clusters(microclasses, paradigms=patterns, **kwargs)
     while len(clusters.nodes) > 1:
-        print("N =", len(clusters.nodes))
+        log.info("N = %s", len(clusters.nodes))
         possible_merges = clusters.find_ordered_merges()
         a, b, score = choose(possible_merges)
         clusters.merge(a, b)
@@ -65,8 +68,7 @@ def hierarchical_clustering(patterns, Clusters, **kwargs):
     if macroclasses:
         log_classes(macroclasses, kwargs["prefix"], "macroclasses")
     else:
-        print("No macroclasses could be found "
-              "(this is normal for Top Down and distances based clustering,"
-              " but an edge case for Bottom up clustering with description length)")
+        log.warning("No macroclasses could be found "
+                    " this is not necessarily a bug, but it is surprising !")
 
     return node

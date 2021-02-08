@@ -1,7 +1,6 @@
 # !usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import warnings
 import matplotlib
 
 matplotlib.use("agg", force=True)
@@ -9,12 +8,13 @@ from matplotlib import pyplot as plt
 from collections import defaultdict
 from clustering import Node
 from os.path import join, dirname
-
+import logging
+log = logging.getLogger(__name__)
 try:
     import mpld3
 except:
     mpld3 = None
-    warnings.warn("Warning: mpld3 could not be imported. No html export possible.")
+    log.warning("Warning: mpld3 could not be imported. No html export possible.")
 from concepts import Context
 import pandas as pd
 from utils import merge_duplicate_columns
@@ -71,7 +71,7 @@ def to_dummies(table, **kwargs):
     Returns:
         dummies (:class:`pandas:pandas.DataFrame`): A context table.
     """
-    print("Preparing the context...")
+    log.info("Preparing the context...")
     dic_dummies = defaultdict(dict)
 
     for l in table.index:
@@ -131,8 +131,7 @@ class ICLattice(object):
     This is a wrapper around (:class:`concepts.Context`).
     """
 
-    def __init__(self, dataframe, leaves, annotate=None, comp_prefix=None, aoc=False,
-                 verbose=True, **kwargs):
+    def __init__(self, dataframe, leaves, annotate=None, comp_prefix=None, aoc=False, **kwargs):
         """
         Arguments:
             dataframe (:class:`pandas:pandas.DataFrame`): A dataframe
@@ -153,8 +152,7 @@ class ICLattice(object):
                     self.lattice[[label]]._extra_qumin_annotation = annotate[label]
 
         self.leaves = leaves
-        if verbose:
-            print("Converting to qumin node...")
+        log.debug("Converting to qumin node...")
         if aoc:
             self.nodes = self._lattice_to_nodeAOC()
         else:
@@ -296,12 +294,12 @@ class ICLattice(object):
                         left += 1
                 else:
                     right += 1
-            print(
-                "Concepts définissant des propriétés de la classification de gauche (-b):",
-                left)
-            print("Concepts définissant des propriétés de la classification de droite:",
-                  right)
-            print("Concepts définissant des propriétés des deux classifications:", both)
+            log.info("Concepts définissant des propriétés "
+                     "de la classification de gauche (-b): %s",left)
+            log.info("Concepts définissant des propriétés "
+                  "de la classification de droite: %s",right)
+            log.info("Concepts définissant des propriétés "
+                  "des deux classifications: %s", both)
         return pd.Series(stats_lattice,
                          index=["Microclasses", "Base", "Hauteur", "Degré", "Noeuds"])
 
@@ -363,7 +361,7 @@ class ICLattice(object):
         fig, lines, ordered_nodes = self._draw_one(self.nodes, **kwargs)
         if title is not None:
             fig.suptitle(title)
-        print("Drawing figure to: {}".format(filename))
+        log.info("Drawing figure to: {}".format(filename))
         axis = plt.gca()
         axis.set_axis_off()
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0,
@@ -429,7 +427,7 @@ class ICLattice(object):
 
 if not mpld3:
     def to_html_disabled(*args, **kwargs):
-        print("Warning: mpld3 could not be imported. No html export possible.")
+        log.warning("mpld3 could not be imported. No html export possible.")
 
 
     ICLattice.to_html = to_html_disabled

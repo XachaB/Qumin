@@ -7,8 +7,10 @@ This module implements patterns' contexts, which are series of phonological rest
 from representations.quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
 from representations.alignment import align_right, align_left, align_multi
 from representations.segments import  Inventory
+import logging
+log = logging.getLogger(__name__)
 
-def _align_edges(*args, debug=False, **kwargs):
+def _align_edges(*args, **kwargs):
     """Align at both edges.
 
     Aligns an equal number of characters left and right, and all the rest in the center.
@@ -36,8 +38,9 @@ def _align_edges(*args, debug=False, **kwargs):
     if center:
         center.add(("", Quantity(min(center_lens), max(center_lens))))
 
-    if debug:
-        print("Aligned center:", list(zip(*left)), "\n\t", [tuple(center)], "\n\t", list(zip(*right)))
+    log.debug("Aligned center: %s", list(zip(*left)))
+    log.debug("\t%s", [tuple(center)])
+    log.debug("\t%s", list(zip(*right)))
     return list(zip(*left)) + [tuple(center)] + list(zip(*right))
 
 
@@ -202,7 +205,7 @@ class Context(object):
         return "".join(member.to_str(mode=mode, last=i == l) for i, member in enumerate(self.elements))
 
     @classmethod
-    def _align(cls, contexts, debug=False):
+    def _align(cls, contexts):
         """ Align contexts segment by segment in order to merge (generator)."""
         l = max(len(c) for c in contexts)
 
@@ -231,22 +234,20 @@ class Context(object):
             leftblank = rightblank
 
     @classmethod
-    def merge(cls, contexts, debug=True):
+    def merge(cls, contexts):
         """ Merge contexts to generalize them.
 
         Merge contexts and combine their restrictions into a new context.
 
         Arguments:
             contexts: iterable of Contexts.
-            debug: whether to print debug strings.
 
         Returns:
             a merged context
         """
         new_context = []
-        if debug:
-            print("Alignigning", contexts)
-            print(list(cls._align(contexts)))
+        log.debug("Alignigning %s", contexts)
+        log.debug("result: %s", list(cls._align(contexts)))
         for group, opt, blank in cls._align(contexts):
             context_members = []
 
@@ -269,8 +270,7 @@ class Context(object):
                         # TODO: intersect re-parses the segments...
                         s1, q1 = Inventory.meet(*buffer_segments), quantity_sum(buffer_quantities)
 
-                        if debug:
-                            print(buffer_sources, "->", s1, q1)
+                        log.debug(buffer_sources, "->", s1, q1)
                         context_members.append((s1, q1))
                         # re-init buffer
                         buffer_segments = []
@@ -280,8 +280,7 @@ class Context(object):
                     segments, quantities = zip(*aligned_segments)
                     segment = Inventory.meet(*[s for s in segments if s])
                     quantity = quantity_largest(quantities)
-                    if debug:
-                        print(aligned_segments, "->", (segment, quantity))
+                    log.debug(aligned_segments, "->", (segment, quantity))
                     context_members.append((segment, quantity))
             if buffer_segments:
                 context_members.append((Inventory.meet(*buffer_segments),

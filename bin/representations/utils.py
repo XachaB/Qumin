@@ -9,6 +9,9 @@ import numpy as np
 from collections import defaultdict
 from utils import merge_duplicate_columns
 from representations.segments import  Inventory, Form
+import logging
+log = logging.getLogger(__name__)
+
 
 def unique_lexemes(series):
     """Rename duplicates in a serie of strings.
@@ -76,7 +79,7 @@ def create_paradigms(data_file_name,
 
     # If the original file has two identical lexeme rows.
     if "variants" in paradigms.columns:
-        print("Dropping variants")
+        log.info("Dropping the columns named 'variants'")
         paradigms.drop("variants", axis=1, inplace=True)
 
     # First column has to be lexemes
@@ -86,9 +89,8 @@ def create_paradigms(data_file_name,
         cols.append(lexemes)
         try:
             paradigms = paradigms[cols]
-        except KeyError:
-            print("The paradigm's columns are: {}".format(paradigms.columns))
-            raise
+        except KeyError as e:
+            raise ValueError("The paradigm's columns are: {}".format(paradigms.columns)) from e
 
     # Lexemes must be unique identifiers
     paradigms[lexemes] = unique_lexemes(paradigms[lexemes])
@@ -102,7 +104,7 @@ def create_paradigms(data_file_name,
             a = agenda.pop(0)
             for i, b in enumerate(agenda):
                 if (paradigms[a] == paradigms[b]).all():
-                    print("Identical columns ", a, " and ", b)
+                    log.debug("Identical columns %s and %s ", a, b)
                     new = a + " & " + b
                     agenda.pop(i)
                     agenda.append(new)
@@ -122,12 +124,12 @@ def create_paradigms(data_file_name,
 
     paradigms = paradigms.applymap(parse_cell)
 
-    print("Merging identical columns...")
+    log.info("Merging identical columns...")
     if merge_cols:
         merge_duplicate_columns(paradigms, sep="#")
 
     if segcheck:
-        print("Checking we have definitions for all the phonological segments in this data...")
+        log.info("Checking we have definitions for all the phonological segments in this data...")
         unknowns = defaultdict(list)
         paradigms.apply(lambda x: x.apply(get_unknown_segments, args=(unknowns, x.name)), axis=1)
 

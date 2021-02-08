@@ -15,6 +15,9 @@ from functools import reduce
 from entropy import cond_entropy, entropy, P
 import representations.patterns
 from tqdm import tqdm
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def merge_split_df(dfs):
@@ -56,12 +59,17 @@ class PatternDistribution(object):
         """Constructor for PatternDistribution.
 
         Arguments:
+            paradigms (:class:`pandas:pandas.DataFrame`):
+                containing forms.
             patterns (:class:`pandas:pandas.DataFrame`):
                 patterns (columns are pairs of cells, index are lemmas).
-            logfile (TextIOWrapper): Flow on which to write a log.
+            patterns (dict):
+                dictionnary of pairs of cells to patterns
+            features:
+                optional table of features
         """
 
-        print("\n\nLooking for patterns for each pair of cell")
+        log.info("\n\nLooking for patterns for each pair of cell")
         self.paradigms = paradigms
         self.patterns = patterns
         self.pat_dict = pat_dic
@@ -77,10 +85,9 @@ class PatternDistribution(object):
         else:
             self.features_len = 0
             self.features = None
-            print("Add feature is identity func")
             self.add_features = lambda x: x
 
-        print("\n\nLooking for classes of applicable patterns")
+        log.info("\n\nLooking for classes of applicable patterns")
         self.classes = representations.patterns.find_applicable(self.paradigms,
                                                                 self.pat_dict)
 
@@ -187,8 +194,7 @@ class PatternDistribution(object):
         if n == 1:
             return self.entropy_matrix()
 
-        print("\n\nComputing (c1, ..., c{!s}) "
-              "→ c{!s} entropies".format(n, n + 1))
+        log.info("\n\nComputing (c1, ..., c{!s}) → c{!s} entropies".format(n, n + 1))
 
         # For faster access
         patterns = self.patterns
@@ -202,10 +208,8 @@ class PatternDistribution(object):
             return False
 
         if any((self.entropies[i] is not None for i in range(1, n))):
-            print("Saving time by listing already known 0 entropies...",
-                  end="")
+            log.info("Saving time by listing already known 0 entropies...")
             zeros = check_zeros(n)
-            print("listing done")
         else:
             zeros = None
 
@@ -229,7 +233,8 @@ class PatternDistribution(object):
             pairs_of_predictors = list(combinations(predictors, 2))
             known_patterns = patterns[pairs_of_predictors]
             set_predictors = set(predictors)
-            predsselector = reduce(lambda x, y: x & y, (self.hasforms[x] for x in predictors))
+            predsselector = reduce(lambda x, y: x & y,
+                                   (self.hasforms[x] for x in predictors))
 
             for out in (x for x in columns if x not in predictors):
                 if zeros is not None and already_zero(set_predictors, out, zeros):
@@ -244,7 +249,8 @@ class PatternDistribution(object):
 
                     # Known classes Class(x), Class(y) and known patterns x~y
                     # plus all features
-                    known_classes = classes.loc[selector, [(pred, out) for pred in predictors]]
+                    known_classes = classes.loc[
+                        selector, [(pred, out) for pred in predictors]]
                     known = known_classes.join(known_patterns[selector])
 
                     B = self.add_features(dfsum(known))
@@ -253,12 +259,11 @@ class PatternDistribution(object):
                     entropies.at[predictors, out] = cond_entropy(A, B, subset=selector)
                     effectifs.at[predictors, out] = sum(selector)
 
-        print()
 
         self._register_entropy(n, entropies, effectifs)
         return entropies, effectifs
 
-    def entropy_matrix(self, silent=False):
+    def entropy_matrix(self):
         r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies, and one with counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
@@ -277,8 +282,7 @@ class PatternDistribution(object):
 
                 H( patterns_{c1, c2} | classes_{c1, c2} )
         """
-        if not silent:
-            print("\n\nComputing c1 → c2 entropies")
+        log.info("\n\nComputing c1 → c2 entropies")
 
         # For faster access
         patterns = self.patterns
@@ -304,7 +308,7 @@ class PatternDistribution(object):
         self._register_entropy(1, entropies, effectifs)
         return entropies, effectifs
 
-    def one_pred_distrib_log(self, logfile, sanity_check=False):
+    def one_pred_distrib_log(self, sanity_check=False):
         """Print a log of the probability distribution for one predictor.
 
         Writes down the distributions
@@ -314,7 +318,6 @@ class PatternDistribution(object):
         Also writes the entropy of the distributions.
 
         Arguments:
-            logfile (:class:`io.TextIO`): Output flow on which to write.
             sanity_check (bool): Use a slower calculation to check that the results are exact.
         """
 
@@ -327,7 +330,7 @@ class PatternDistribution(object):
             counter[pattern] += 1
             examples[pattern] = example
 
-        print("\n\nPrinting log for P(c1 → c2).")
+        log.info("\n\nPrinting log for P(c1 → c2).")
 
         if sanity_check:
             rows = list(self.paradigms.columns)
@@ -335,8 +338,8 @@ class PatternDistribution(object):
                                            columns=rows,
                                            dtype="float16")
 
-        print("Logging one predictor probabilities", file=logfile)
-        print(" P(x → y) = P(x~y | Class(x))", file=logfile)
+        log.debug("Logging one predictor probabilities")
+        log.debug(" P(x → y) = P(x~y | Class(x))")
 
         patterns = self.patterns.applymap(lambda x: x[0])
 
@@ -345,7 +348,7 @@ class PatternDistribution(object):
             for pred, out in [column, column[::-1]]:
 
                 selector = self.hasforms[pred] & self.hasforms[out]
-                print("\n# Distribution of {}→{} \n".format(pred, out), file=logfile)
+                log.debug("\n# Distribution of {}→{} \n".format(pred, out))
 
                 A = patterns.loc[selector, :][column]
                 B = self.add_features(self.classes.loc[selector, :][(pred, out)])
@@ -358,30 +361,34 @@ class PatternDistribution(object):
                     surprisal = cond_p.groupby(level=0).apply(entropy)
                     slow_ent = min(0, np.float16(sum(classes_p * surprisal)))
                     entropies_check.at[pred, out] = slow_ent
-                    print("Entropy from this distribution: ",
-                          slow_ent, file=logfile)
+                    log.debug("Entropy from this distribution: %s", slow_ent)
 
                     if self.entropies[1] is not None:
                         ent = self.entropies[1].at[pred, out]
-                        print("Entropy from the score_matrix: ", ent, file=logfile)
+                        log.debug("Entropy from the score_matrix: %s", ent)
 
                         if ent != slow_ent and abs(ent - slow_ent) > 1e-5:
-                            print("\n# Distribution of {}→{}".format(pred, out))
-                            print("WARNING: Something is wrong"
-                                  " in the entropy's calculation. "
-                                  "Slow and fast methods produce "
-                                  "different results: slow {}, fast {}"
-                                  "".format(slow_ent, ent))
+                            log.warning("\n# Distribution of {}→{}".format(pred, out))
+                            log.warning("Something is wrong"
+                                        " in the entropy's calculation. "
+                                        "Slow and fast methods produce "
+                                        "different results: slow {}, fast {}"
+                                        "".format(slow_ent, ent))
 
-                print("Showing distributions for ", len(cond_events), " classes", sep="", file=logfile)
+                log.debug("Showing distributions for "
+                          + str(len(cond_events))
+                          + " classes")
 
-                for i, (classe, members) in enumerate(sorted(cond_events, key=lambda x: len(x[1]), reverse=True)):
+                for i, (classe, members) in enumerate(sorted(cond_events,
+                                                             key=lambda x: len(x[1]),
+                                                             reverse=True)):
                     headers = ("Pattern", "Example",
                                "Size", "P(Pattern|class)")
-                    table = PrettyTable(headers, hrules=ALL) # TODO: change to remove prettytable
+                    table = PrettyTable(headers,
+                                        hrules=ALL)  # TODO: change to remove prettytable
                     # table.set_style(PLAIN_COLUMNS)
 
-                    print("\n## Class n°", i, " (", str(len(members)), " members).", sep="", file=logfile)
+                    log.debug("\n## Class n°%s (%s members).", i, len(members))
                     counter = Counter()
                     examples = defaultdict()
                     members.reset_index().apply(count_with_examples,
@@ -392,7 +399,9 @@ class PatternDistribution(object):
                                                 axis=1)
                     total = sum(list(counter.values()))
                     if self.features is not None:
-                        print("Features:", *classe[-self.features_len:], file=logfile)
+                        log.debug("Features:"
+                                  + " ".join(str(x)
+                                             for x in classe[-self.features_len:]))
                         classe = classe[:-self.features_len]
 
                     for my_pattern in classe:
@@ -405,12 +414,12 @@ class PatternDistribution(object):
                             row = (str(my_pattern), "-", 0, 0)
                         table.add_row(row)
 
-                    print(table.get_string(), file=logfile)
+                    log.debug(table.get_string())
 
         if sanity_check:
             return entropies_check
 
-    def value_check(self, n, logfile=None):
+    def value_check(self, n):
         """Check that predicting from n predictors isn't harder than with less.
 
         Check that the value of entropy from n predictors c1, ....cn
@@ -419,15 +428,12 @@ class PatternDistribution(object):
 
         Arguments:
             n: number of predictors.
-            logfile (:class:`io.TextIOWrapper`):
-                Output flow on which to write
-                the detail of the result (optional).
         """
         if self.entropies[1] is None or self.entropies[n] is None:
             return None
 
-        print("Now checking if all entropies with n predictors "
-              "are lower than their counterparts with n-1 predictors.")
+        log.info("Now checking if all entropies with n predictors "
+                 "are lower than their counterparts with n-1 predictors.")
 
         found_wrong = False
 
@@ -444,11 +450,9 @@ class PatternDistribution(object):
 
                     if value_n > value_one and \
                             abs(value_n - value_one) > 1e-5:
-
                         found_wrong = True
-                        if logfile:
-                            print("Found error: H({} → {}) = {}"
-                                  " (type = {}) "
+                        log.debug("Found error: H({} → {}) = {}"
+                                  "(type = {}) "
                                   " higher than H({} → {}) = {} "
                                   " (type= {})"
                                   "".format(", ".join(predictors),
@@ -457,18 +461,16 @@ class PatternDistribution(object):
                                             type(value_n),
                                             predictor, out,
                                             value_one,
-                                            type(value_one)),
-                                  file=logfile)
+                                            type(value_one)))
 
         if found_wrong:
-            print("WARNING: Found errors ! Check logfile "
-                  "(or re-run with -v) for details.")
+            log.warning("Found errors ! Check logfile or re-run with -d for details.")
         else:
-            print("Everything is right !")
+            log.info("Everything is right !")
 
         return found_wrong
 
-    def n_preds_distrib_log(self, logfile, n, sanity_check=False):
+    def n_preds_distrib_log(self, n, sanity_check=False):
         r"""Print a log of the probability distribution for two predictors.
 
         Writes down the distributions:
@@ -483,7 +485,6 @@ class PatternDistribution(object):
         in :attr:`PatternDistribution.paradigms`.
 
         Arguments:
-            logfile (:class:`io.TextIOWrapper`): Output flow on which to write.
             n (int): number of predictors.
             sanity_check (bool): Use a slower calculation to check that the results are exact.
         """
@@ -497,11 +498,11 @@ class PatternDistribution(object):
             counter[pattern] += 1
             examples[pattern] = example
 
-        print("\n\nPrinting log of "
-              "P( (c1, ..., c{!s}) → c{!s} ).".format(n, n + 1))
+        log.info("\n\nPrinting log of "
+                 "P( (c1, ..., c{!s}) → c{!s} ).".format(n, n + 1))
 
-        print("Logging n preds probabilities, with n = {}".format(n), file=logfile)
-        print(" P(x, y → z) = P(x~z, y~z | Class(x), Class(y), x~y)", file=logfile)
+        log.debug("Logging n preds probabilities, with n = {}".format(n))
+        log.debug(" P(x, y → z) = P(x~z, y~z | Class(x), Class(y), x~y)")
 
         # For faster access
         patterns = self.patterns
@@ -551,25 +552,30 @@ class PatternDistribution(object):
             return format_patterns(x, known_pat_string)
 
         for predictors in tqdm(indexes):
-            #   combinations gives us all x, y unordered unique pair for all of
+            #  combinations gives us all x, y unordered unique pair for all of
             # the n predictors.
             pairs_of_predictors = list(combinations(predictors, 2))
 
-            predsselector = reduce(lambda x, y: x & y, (self.hasforms[x] for x in predictors))
+            predsselector = reduce(lambda x, y: x & y,
+                                   (self.hasforms[x] for x in predictors))
 
             for out in (x for x in columns if x not in predictors):
 
-                print("\n# Distribution of ({}) → {z} \n".format(", ".join(predictors), z=out), file=logfile)
+                log.debug(
+                    "\n# Distribution of ({}) → {z} \n".format(", ".join(predictors),
+                                                               z=out))
 
                 selector = predsselector & self.hasforms[out]
 
                 # Getting intersection of patterns events for each predictor:
                 # x~z, y~z
-                local_patterns = patterns.loc[selector, [pat_order[(pred, out)] for pred in predictors]]
+                local_patterns = patterns.loc[
+                    selector, [pat_order[(pred, out)] for pred in predictors]]
                 A = local_patterns.apply(formatting_local_patterns, axis=1)
 
                 # Known classes Class(x), Class(y) and known patterns x~y
-                known_classes = classes.loc[selector, [(pred, out) for pred in predictors]]
+                known_classes = classes.loc[
+                    selector, [(pred, out) for pred in predictors]]
                 known_classes = known_classes.apply(formatting_known_classes,
                                                     axis=1)
 
@@ -590,30 +596,29 @@ class PatternDistribution(object):
                     surprisal = cond_p.groupby(level=0).apply(entropy)
                     slow_ent = min(0, np.float16(sum(classes_p * surprisal)))
                     entropies_check.at[predictors, out] = slow_ent
-                    print("Entropy from this distribution: ",
-                          slow_ent, file=logfile)
+                    log.debug("Entropy from this distribution: %s", slow_ent)
 
                     if n < len(self.entropies) and self.entropies[n] is not None:
                         ent = self.entropies[n].at[predictors, out]
-                        print("Entropy from the score_matrix: ", ent, file=logfile)
+                        log.debug("Entropy from the score_matrix: %s", ent)
                         if ent != slow_ent and abs(ent - slow_ent) > 1e-5:
-                            print("\n# Distribution of ({}, {}) → {z} \n".format(*predictors,
-                                                                                 z=out))
-                            print("WARNING: Something is wrong"
-                                  " in the entropy's calculation."
-                                  " Slow and fast methods produce"
-                                  " different results:"
-                                  " slow {}, fast {} "
-                                  "".format(slow_ent, ent))
+                            log.warning("\n# Distribution of ({}, {}) → {z} \n"
+                                      .format(*predictors, z=out))
+                            log.warning("Something is wrong"
+                                        " in the entropy's calculation."
+                                        " Slow and fast methods produce"
+                                        " different results:"
+                                        " slow {}, fast {} "
+                                        "".format(slow_ent, ent))
 
-                for i, (classe, members) in enumerate(sorted(cond_events, key=lambda x: len(x[1]), reverse=True)):
+                for i, (classe, members) in enumerate(
+                        sorted(cond_events, key=lambda x: len(x[1]), reverse=True)):
                     headers = ("Patterns", "Example",
                                "Size", "P(Pattern|class)")
                     table = PrettyTable(headers, hrules=ALL)
                     # table.set_style(PLAIN_COLUMNS)
 
-                    print("\n## Class n°", i, " (", str(len(members)), " members).\n\n* Class members :",
-                          classe, sep="", file=logfile)
+                    log.debug("\n## Class n°%s (%s members).", i, len(members))
                     counter = Counter()
                     examples = defaultdict()
                     members.reset_index().apply(count_with_examples,
@@ -621,7 +626,7 @@ class PatternDistribution(object):
                                                       self.paradigms,
                                                       predictors, out), axis=1)
                     total = sum(list(counter.values()))
-                    print("* Total: ", total, file=logfile)
+                    log.debug("* Total: %s", total)
 
                     for my_pattern in counter:
                         row = (my_pattern,
@@ -630,7 +635,7 @@ class PatternDistribution(object):
                                counter[my_pattern] / total)
                         table.add_row(row)
 
-                    print(table.get_string(), file=logfile)
+                    log.debug(table.get_string())
 
         if sanity_check:
             return entropies_check
@@ -642,22 +647,25 @@ class SplitPatternDistribution(PatternDistribution):
     Split system entropy is the joint entropy on both systems.
     """
 
-    def __init__(self, paradigms_list, patterns_list, pat_dic_list, names, logfile=None, features=None):
+    def __init__(self, paradigms_list, patterns_list, pat_dic_list, names,
+                 features=None):
         if features is not None:
-            raise NotImplementedError("Split patterns with features is not implemented yet.")
+            raise NotImplementedError(
+                "Split patterns with features is not implemented yet.")
         columns = [tuple(paradigms.columns) for paradigms in paradigms_list]
         assert len(set(columns)) == 1, "Split systems must share same paradigm cells"
 
         self.distribs = [PatternDistribution(paradigms_list[i],
                                              patterns_list[i],
-                                             pat_dic_list[i]) for i in range(len(paradigms_list))]
+                                             pat_dic_list[i]) for i in
+                         range(len(paradigms_list))]
 
         self.names = names
         self.paradigms = merge_split_df(paradigms_list)
 
         patterns_list = [p.applymap(lambda x: (str(x),)) for p in patterns_list]
         self.patterns = merge_split_df(patterns_list)
-        print("Looking for classes of applicable patterns")
+        log.info("Looking for classes of applicable patterns")
         classes_list = [d.classes for d in self.distribs]
 
         self.classes = merge_split_df(classes_list)
@@ -693,7 +701,8 @@ class SplitPatternDistribution(PatternDistribution):
         """ Entropie conditionnelle entre les deux systèmes, H(c1->c2\|c1'->c2') ou H(c1'->c2'\|c1->c2)
         """
         # For faster access
-        print("Computing implicative H({}|{})".format(self.names[target], self.names[known]))
+        log.info("Computing implicative H({}|{})".format(self.names[target],
+                                                      self.names[known]))
         pats = self.patterns_list[target]
 
         predpats = self.patterns_list[known]
@@ -704,9 +713,11 @@ class SplitPatternDistribution(PatternDistribution):
 
         for a, b in pats.columns:
             selector = self.hasforms[a] & self.hasforms[b]
-            entropies.at[a, b] = cond_entropy(pats[(a, b)], self.add_features(self.classes[(a, b)] + predpats[(a, b)]),
+            entropies.at[a, b] = cond_entropy(pats[(a, b)], self.add_features(
+                self.classes[(a, b)] + predpats[(a, b)]),
                                               subset=selector)
-            entropies.at[b, a] = cond_entropy(pats[(a, b)], self.add_features(self.classes[(b, a)] + predpats[(a, b)]),
+            entropies.at[b, a] = cond_entropy(pats[(a, b)], self.add_features(
+                self.classes[(b, a)] + predpats[(a, b)]),
                                               subset=selector)
 
         return entropies

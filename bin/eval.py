@@ -17,6 +17,9 @@ from pathlib import Path
 from tqdm import tqdm
 import seaborn as sns; sns.set()
 from matplotlib import pyplot as plt
+import logging
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 def prepare_arguments(paradigms, iterations, methods, features):
     """Generate argument tuples for each evaluation task.
@@ -80,8 +83,6 @@ def evaluate(task):
     ba_predictions = None
     counts = 0
     for id in table_ids:
-        # print("id:", id)
-        # print("test items:", test_items)
         test = test_items[id]
         train = train_items[id]
         pred_ab, pred_ba, count = predict_two_directions(test, train, method, features=features)
@@ -208,7 +209,7 @@ def prepare_data(args):
 
 
 def print_summary(results, general_infos):
-    print("# Evaluation summary")
+    log.info("# Evaluation summary")
     summary = results[["method",
                        "correct",
                        "count",
@@ -218,11 +219,10 @@ def print_summary(results, general_infos):
                                                               "count": "mean"})
     summary["average accuracy"] = (summary["correct"] / summary["total_test"]).apply(lambda x: "{:.2%}".format(x))
     summary["average count of patterns"] = summary["count"]
-    print(summary[["average accuracy", "average count of patterns"]].to_markdown())
-    print()
+    log.info(summary[["average accuracy", "average count of patterns"]].to_markdown())
 
     for info in sorted(general_infos):
-        print('{}: {}'.format(info, general_infos[info]))
+        log.info('{}: {}'.format(info, general_infos[info]))
 
 
 def to_heatmap(results, cells):
@@ -252,6 +252,7 @@ def main(args):
       Quantitative modeling of inflection
 
     """
+    log.info(args)
     np.random.seed(0)  # make random generator determinist
     now = time.strftime("%Hh%M_%Y%m%d")
 

@@ -3,7 +3,8 @@
 from collections import defaultdict
 import subprocess
 from tqdm import tqdm
-
+import logging
+log = logging.getLogger(__name__)
 
 def snif_separator(filename):
     with open(filename, "r", encoding="utf-8") as f:
@@ -51,5 +52,5 @@ def merge_duplicate_columns(df, sep=";", keep_names=True):
     if keep_names:
         new_df.columns = [sep.join(names[i]) for i in names]
 
-    print("Reduced from", l, "to", len(new_df.columns), "columns")
+    log.info("Reduced from %s to %s columns", l, len(new_df.columns))
     return new_df

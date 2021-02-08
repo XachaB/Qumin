@@ -10,7 +10,8 @@ from clustering import find_microclasses
 import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
-
+import logging
+log = logging.getLogger(__name__)
 
 def microclass_heatmap(distances, path, labels=None, cmap_name="BuPu", exhaustive_labels=False):
     """Make a heatmap of microclasses distances"""
@@ -37,7 +38,7 @@ def microclass_heatmap(distances, path, labels=None, cmap_name="BuPu", exhaustiv
                        linewidths=0, cmap=plt.get_cmap(cmap_name), rasterized=True)
 
     name = path + "_microclassHeatmap.pdf"
-    print("Saving file to: ", name)
+    log.info("Saving file to: "+ name)
     plt.savefig(name, bbox_inches='tight', pad_inches=0, transparent=True)
 
 
@@ -66,16 +67,18 @@ def main(args):
       Quantitative modeling of inflection
 
     """
-    print("Reading files")
+    logging.basicConfig(level=logging.INFO)
+    log.info(args)
+    log.info("Reading files")
     categories = None
     if args.labels:
         categories = pd.read_csv(args.labels, index_col=0, squeeze=True)
     pat_table = pd.read_csv(args.patterns, index_col=0)
-    print("Looking for microclasses")
+    log.info("Looking for microclasses")
     microclasses = find_microclasses(pat_table)
-    print("Computing distances")
+    log.info("Computing distances")
     distances = distance_matrix(pat_table, microclasses)
-    print("Drawing")
+    log.info("Drawing")
     microclass_heatmap(distances, args.output, labels=categories,
                        cmap_name=args.cmap,
                        exhaustive_labels=args.exhaustive_labels)
@@ -115,5 +118,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print(args)
     main(args)

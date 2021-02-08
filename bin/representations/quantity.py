@@ -8,6 +8,7 @@ This module provides Quantity objects to represent quantifiers.
 import numpy as np
 
 
+
 def quantity_largest(args):
     """Reduce on the "&" operator of quantities.
 

@@ -9,11 +9,8 @@ from collections import defaultdict, Counter
 from itertools import combinations
 from clustering import Node
 from tqdm import tqdm
-
-
-def _do_nothing(*args, **kwargs):
-    """Place holder function for disabled verbosity"""
-    pass
+import logging
+log = logging.getLogger(__name__)
 
 
 class Cluster(object):
@@ -174,25 +171,15 @@ class BUDLClustersBuilder(object):
             for m in
             self.microclasses}
 
-        if "verbose" not in kwargs or not kwargs["verbose"]:
-            self.printv = _do_nothing
-        if "debug" in kwargs and kwargs["debug"] and kwargs["prefix"]:
-            self.preferences["filename"] = self.preferences["prefix"] + "_{}.log"
-            print("Writing logs to : ", self.preferences["filename"].format("<...>"))
-        else:
-            self.log = _do_nothing
-
         self.P = self.M = self.C = self.R = self.DL = 0
         self.initialize_clusters(paradigms)
         self.initialize_patterns()
         self.compute_DL(M=True)
         current_partition = " - ".join(", ".join(c) for c in self.clusters)
-        self.log("\t".join(["Partition", "M", "C", "P", "R", "DL"]) + "\n",
-                 name="clusters")
-        self.log(" ".join(
-            [current_partition, ":\t", "\t".join(
+        log.debug("\t".join(["Partition", "M", "C", "P", "R", "DL"]) + "\n")
+        log.debug(" ".join([current_partition, ":\t", "\t".join(
                 (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
-             "\n"]), name="clusters")
+             "\n"]))
 
     def initialize_clusters(self, paradigms):
         self.clusters = {}
@@ -297,23 +284,21 @@ class BUDLClustersBuilder(object):
         size = left.attributes["size"] + right.attributes["size"]
         color = "c"
         if self.DL >= prev_DL:
-            self.printv(
-                "\nDL stopped improving: prev = {}, current best = {}".format(prev_DL,
+            log.info("\nDL stopped improving: prev = {}, current best = {}".format(prev_DL,
                                                                               self.DL))
             color = "r"
 
         self.nodes[labels] = Node(leaves, size=size, children=[left, right],
                                   DL=self.DL, color=color, macroclass=color != "r")
 
-        self.printv("\nMerging ", ", ".join(a), " and ", ", ".join(b), "with DL ",
-                    self.DL)
+        log.debug("\nMerging %s and %s with DL %s", ", ".join(a), ", ".join(b), self.DL)
 
         current_partition = " - ".join(
             [", ".join(self.nodes[c].labels) for c in self.nodes])
-        self.log(" ".join(
+        log.debug(" ".join(
             [current_partition, ":\t", "\t".join(
                 (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
-             "\n"]), name="clusters")
+             "\n"]))
 
     def find_ordered_merges(self):
         """Find the list of all best merges of two clusters.
@@ -337,8 +322,8 @@ class BUDLClustersBuilder(object):
         if len(best_merges) > 1:
             choices = ", ".join(
                 ["({}, {})".format("-".join(a), "-".join(b)) for a, b, _ in best_merges])
-            self.printv("\nWarning, {} equivalent choices: ".format(len(best_merges)),
-                        choices)
+            log.warning("\nThere were {} equivalent choices: %s"
+                        .format(len(best_merges)), choices)
 
         return best_merges
 
@@ -346,15 +331,6 @@ class BUDLClustersBuilder(object):
         """Return the root of the Inflection Class tree, if it exists."""
         assert len(self.nodes) == 1
         return next(iter(self.nodes.values()))
-
-    def log(self, *args, name="clusters", **kwargs):
-        filename = self.preferences["filename"].format(name)
-        with open(filename, "a", encoding="utf-8") as flow:
-            flow.write(*args, **kwargs)
-
-    def printv(self, *args, **kwargs):
-        print(*args, **kwargs)
-
 
 def weighted_log(symbol_count, message_length):
     r"""Compute :math:`-log_{2}(symbol_count/message_length) * message_length`.

@@ -8,7 +8,7 @@ from utils import get_repository_version
 from representations import patterns, segments, create_paradigms
 from clustering import find_microclasses
 from itertools import combinations
-
+import logging
 
 def main(args):
     r"""Find pairwise alternation patterns from paradigms.
@@ -23,6 +23,9 @@ def main(args):
       Quantitative modeling of inflection
 
     """
+    logging.basicConfig(level=logging.INFO)
+    log = logging.getLogger(__name__)
+    log.info(args)
     from os import path, makedirs
     import time
     now = time.strftime("%Hh%M")
@@ -68,12 +71,12 @@ def main(args):
     paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols,
                                  segcheck=segcheck)
 
-    print("Looking for patterns...")
+    log.info("Looking for patterns...")
     if kind.startswith("endings"):
         patterns_df = patterns.find_endings(paradigms)
         if kind.endswith("Pairs"):
             patterns_df = patterns.make_pairs(patterns_df)
-            print(patterns_df)
+            log.info(patterns_df)
     elif is_of_pattern_type:
         patterns_df, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=args.optim_mem,
                                                   gap_prop=args.gap_proportion)
@@ -100,26 +103,28 @@ def main(args):
                     patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
 
     if patterns_df.isnull().values.any():
-        print("Warning: error, some patterns are None")
-        print(patterns_df[patterns_df.isnull().values])
+        log.warning("Some words don't have any patterns "
+                    "-- This means something went wrong."
+                    "Please report this as a bug !")
+        log.warning(patterns_df[patterns_df.isnull().values])
 
     microclasses = find_microclasses(patterns_df.applymap(str))
     filename = result_prefix + "_microclasses.txt"
-    print("\nFound ", len(microclasses), " microclasses.\nPrinting microclasses to ", filename)
+    log.info("\nFound ", len(microclasses), " microclasses.\nPrinting microclasses to ", filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
     patfilename = result_prefix + "_" + kind + ".csv"
-    print("Printing patterns (importable by other scripts) to " + patfilename)
+    log.info("Writing patterns (importable by other scripts) to " + patfilename)
     if is_of_pattern_type:
         if args.optim_mem:
             patterns.to_csv(patterns_df, patfilename, pretty=True)  # uses str because optim_mem already used repr
-            print("Since you asked for args.optim_mem, I will not export the human_readable file ")
+            log.warning("Since you asked for args.optim_mem, I will not export the human_readable file ")
         else:
             patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
             pathumanfilename = result_prefix + "_human_readable_" + kind + ".csv"
-            print("Printing pretty patterns (for manual examination) to " + pathumanfilename)
+            log.info("Writing pretty patterns (for manual examination) to " + pathumanfilename)
             patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
     else:
         patterns_df.to_csv(patfilename, sep=",")
@@ -180,5 +185,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print(args)
     main(args)

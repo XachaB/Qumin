@@ -12,6 +12,9 @@ from itertools import combinations
 import re
 from utils import snif_separator
 import functools
+import logging
+log = logging.getLogger(__name__)
+
 
 inventory = None
 
@@ -231,7 +234,7 @@ class Inventory(object):
             filename: path to a csv or tsv file with distinctive features
             sep: separator in the file
         """
-        print("Reading table ",filename)
+        log.info("Reading table %s",filename)
 
         table = pd.read_table(filename, header=0, dtype=str,
                               index_col=False, sep=sep or snif_separator(filename),
@@ -271,16 +274,13 @@ class Inventory(object):
             shorthands = shorthands.applymap(str)  # Why is this necessary ?
         table.set_index("Seg.", inplace=True)
 
-        print("Normalizing identical rows")
+        log.info("Normalizing identical rows")
         attributes = list(table.columns)
         cls._normalization = normalize(table, attributes)
         table.set_index("Normalized", inplace=True)
         table.drop_duplicates(inplace=True)
 
-        # if verbose:
-        #     print("Normalization map: ",
-        #           {chr(x): normalization[x] for x in normalization})
-        # TODO: replace w logging
+        log.debug("Normalization map: %s", cls._normalization)
 
         def feature_formatter(columns):
             signs = ["-", "+"] + [str(x) for x in range(2, 11)]

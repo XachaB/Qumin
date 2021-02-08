@@ -21,6 +21,8 @@ except:
 
 import numpy as np
 import re
+import logging
+log = logging.getLogger(__name__)
 
 class Node(object):
     """Represent an inflection class tree.
@@ -98,7 +100,7 @@ class Node(object):
         if "_y" in self.attributes and self.attributes["_y"] is not None:
             self._erase_xy()
 
-        if tree_placement:  #  For trees
+        if tree_placement:  # For trees
             leaves = self.leaves()
             x = 0
             step = 10
@@ -474,13 +476,13 @@ def string_to_node(string, legacy_annotation_name=None):
                 try:
                     attributes[annotation_name] = float(attributes[annotation_name])
                 except ValueError:
-                    pass  #  only convert numbers
+                    pass  # only convert numbers
 
             stack.append(Node(labels, **attributes))
 
         if item[0] == ")":
             if len(item) > 1:
-                print("Warning, bad format ! #{}#".format(item))
+                log.warning("Warning, bad format ! #{}#".format(item))
             if len(stack) > 1:
                 child = stack.pop(-1)
                 parent = stack[-1]
@@ -492,9 +494,9 @@ def string_to_node(string, legacy_annotation_name=None):
                 return stack[0]
 
     if len(stack) > 1:
-        print("Warning, unmatched parenthesis or no root ! ", stack)
+        log.warning("unmatched parenthesis or no root ! "+ str(stack))
 
-    print(stack[0])
+    log.info(stack[0])
     return stack[0]
 
 

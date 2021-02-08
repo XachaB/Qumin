@@ -8,14 +8,16 @@ This module is used to generalise pats contexts.
 from copy import deepcopy
 from collections import Counter
 from representations.contexts import Context
+import logging
+log = logging.getLogger(__name__)
 
 
-def generalize_patterns(pats, debug=False):
+
+def generalize_patterns(pats):
     """Generalize these patterns' context.
 
     Arguments:
         patterns: an iterable of :class:`Patterns.Pattern`
-        debug: whether to print debug strings.
 
     Return:
         a new :class:`Patterns.Pattern`.
@@ -24,9 +26,7 @@ def generalize_patterns(pats, debug=False):
     if len(pats) == 1:
         return p0
 
-    if debug:
-        print("generalizing:", pats)
-
+    log.debug("generalizing: %s", pats)
     new = deepcopy(p0)
 
     # Generalize the alternation if possible
@@ -35,13 +35,12 @@ def generalize_patterns(pats, debug=False):
 
     # Generalize the context if possible
     if not new._is_max_gen():
-        new.context = Context.merge([p.context for p in pats], debug=debug)
+        new.context = Context.merge([p.context for p in pats])
         new._create_regex()
         new._repr = new._make_str_(features=False)
         new._feat_str = new._make_str_(features=True)
 
-    if debug:
-        print("Result:", new)
+    log.debug("Result: %s", new)
 
     new.lexemes = set().union(*(p.lexemes for p in pats))
     return new
@@ -79,7 +78,7 @@ def incremental_generalize_patterns(*args):
         for i in range(len(merged)):
             lexemes = merged[i].lexemes
             if not (lexemes.issubset(pat.lexemes) or lexemes.issuperset(pat.lexemes)):
-                new = generalize_patterns([merged[i], pat], debug=False)
+                new = generalize_patterns([merged[i], pat])
                 if all(correct(new, a, b) for l, a, b in new.lexemes):
                     merged[i] = new
                     pat_is_merged = True

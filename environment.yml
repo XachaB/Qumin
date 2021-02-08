@@ -9,6 +9,7 @@ dependencies:
 - pygraphviz
 - tqdm 
 - seaborn
+- pygraphviz
 - tabulate 
 - pip
 - pip:

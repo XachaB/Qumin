@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 import re
 from tqdm import tqdm
+import logging
+log = logging.getLogger(__name__)
 
 len = len
 sorted = sorted
@@ -1224,7 +1226,7 @@ def from_csv(filename, defective=True, overabundant=True):
 
     is_alt_str = table.applymap(lambda x: x and "/" not in x).all().all()
     if is_alt_str:
-        print("Warning: These are not patterns but alternation strings")
+        log.warning("These are not patterns but alternation strings")
         return table, {}
     pat_table = table.apply(str_to_pat_column, args=(collection,))
 

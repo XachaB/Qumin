@@ -12,7 +12,7 @@ from os import path, makedirs
 from representations import segments, patterns, create_paradigms, create_features
 from entropy.distribution import PatternDistribution, SplitPatternDistribution
 from utils import get_repository_version
-
+import logging
 
 def main(args):
     r"""Compute entropies of flexional paradigms' distributions.
@@ -33,18 +33,12 @@ def main(args):
     paradigms_file_path = args.paradigms
     data_file_name = path.basename(patterns_file_path).rstrip("_")
 
-    verbose = args.verbose
     features_file_name = args.segments
 
     import time
 
     now = time.strftime("%Hh%M")
     day = time.strftime("%Y%m%d")
-
-    # if compress and args.probabilities:
-    #     print("WARNING: Printing probabilitie log isn't possible"
-    #           " if we compress the data, so we won't compress.")
-    #     compress = False
 
     result_dir = "../Results/{}/{}".format(args.folder, day)
     makedirs(result_dir, exist_ok=True)
@@ -55,15 +49,17 @@ def main(args):
         preds.pop(0)
     result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
 
-    if onePred: #TODO: Changer la gestion du fichier de log
-        logfile_name = result_prefix + "onePred_log.log"
-    if args.nPreds:
-        logfile_name = result_prefix + "nPreds_log.log"
-    else:
+    # Define logging levels (different depending on verbosity)
+    if args.debug:
         logfile_name = result_prefix + ".log"
-
-    if verbose or args.probabilities:
-        logfile = open(logfile_name, "w", encoding="utf-8")
+        logging.basicConfig(level=logging.DEBUG, filename=logfile_name, filemode='w')
+        console = logging.StreamHandler()
+        console.setLevel(logging.INFO)
+        logging.getLogger('').addHandler(console)
+    else:
+        logging.basicConfig(level=logging.INFO)
+    log = logging.getLogger(__name__)
+    log.info(args)
 
     # Initialize the class of segments.
     segments.Inventory.initialize(features_file_name)
@@ -73,7 +69,11 @@ def main(args):
                                  segcheck=True)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True, overabundant=False)
 
-    sanity_check = verbose and len(pat_table.columns) < 10
+    if args.debug and len(pat_table.columns) > 10:
+        log.warning("Using debug mode is strongly "
+                    "discouraged on large (>10 cells) datasets."
+                    "You should probably stop this process now.")
+    sanity_check = args.debug and len(pat_table.columns) < 10
 
     if args.features is not None:
         features = create_features(args.features)
@@ -91,9 +91,6 @@ def main(args):
                                            [pat_table, pat_table2],
                                            [pat_dic, pat_dic2],
                                            args.names,
-                                           logfile=logfile
-                                           if verbose or args.probabilities
-                                           else None,
                                            features=features)
         if args.comp:
             ent_file1 = "{}onepredEntropies-{}.csv".format(result_prefix, args.names[0])
@@ -106,21 +103,21 @@ def main(args):
             mutual = distrib.mutual_information()
             normmutual = distrib.mutual_information(normalize=True)
 
-            print("\nWriting to:", "\n\t".join([ent_file1, ent_file2, I, NMI]))
+            log.info("\nWriting to:" + "\n\t".join([ent_file1, ent_file2, I, NMI]))
             entropies1.to_csv(ent_file1, sep="\t")
             entropies2.to_csv(ent_file2, sep="\t")
             mutual.to_csv(I, sep="\t")
             normmutual.to_csv(NMI, sep="\t")
-            if args.verbose:
-                #  mean on df's index, then on Series' values.
+            if args.debug:
+                # mean on df's index, then on Series' values.
                 mean1 = entropies1.mean().mean()
                 mean2 = entropies2.mean().mean()
                 mean3 = mutual.mean().mean()
                 mean4 = normmutual.mean().mean()
-                print("Mean remaining H(c1 -> c2) for " + args.names[0], mean1)
-                print("Mean remaining H(c1 -> c2) for " + args.names[1], mean2)
-                print("Mean I({},{})".format(*args.names), mean3)
-                print("Mean NMI({},{})".format(*args.names), mean4)
+                log.debug("Mean remaining H(c1 -> c2) for %s = %s", args.names[0], mean1)
+                log.debug("Mean remaining H(c1 -> c2) for %s = %s", args.names[1], mean2)
+                log.debug("Mean I(%s,%s) = %s",*args.names, mean3)
+                log.debug("Mean NMI(%s,%s) = %s",*args.names, mean4)
 
     else:
         distrib = PatternDistribution(paradigms,
@@ -136,25 +133,22 @@ def main(args):
             entropies = entropies.stack()
             entropies.index = [' -> '.join(index[::-1])
                                for index in entropies.index.values]
-        print("\nWriting to: {}\n\tand {}".format(ent_file, effectifs_file))
+        log.info("\nWriting to: {}\n\tand {}".format(ent_file, effectifs_file))
         entropies.to_csv(ent_file, sep="\t")
         effectifs.to_csv(effectifs_file, sep="\t")
-        if args.verbose:
-            #  mean on df's index, then on Series' values.
-            mean = entropies.mean().mean()
-            print("Mean H(c1 -> c2) entropy: ", mean)
-            print("Mean H(c1 -> c2) entropy: ", mean, file=logfile)
+        # mean on df's index, then on Series' values.
+        mean = entropies.mean().mean()
+        log.info("Mean H(c1 -> c2) = %s ", mean)
+        log.debug("Mean H(c1 -> c2) = %s ", mean)
 
-        if args.probabilities:
-            check = distrib.one_pred_distrib_log(logfile,
-                                                 sanity_check=sanity_check)
+        if args.debug:
+            check = distrib.one_pred_distrib_log(sanity_check=sanity_check)
 
             if sanity_check:
                 scsuffix = "{}onePredEntropies_slow_method.csv"
                 check_file = scsuffix.format(result_prefix)
 
-                print("\nWriting slowly computed "
-                      "entropies to: {}".format(check_file))
+                log.info("\nWriting slowly computed entropies to: {}".format(check_file))
 
                 check.to_csv(check_file, sep="\t")
 
@@ -167,39 +161,31 @@ def main(args):
             n_ent_file = "{}{}PredsEntropies.csv".format(result_prefix, n)
             effectifs_file = "{}{}PredsEntropiesEffectifs.csv".format(result_prefix, n)
             n_entropies, effectifs = distrib.n_preds_entropy_matrix(n)
-            print("\nWriting to: {}\n\tand {}".format(n_ent_file, effectifs_file))
+            log.info("\nWriting to: {}\n\tand {}".format(n_ent_file, effectifs_file))
             if args.stacked:
                 n_entropies = n_entropies.stack()
                 n_entropies.index = [' -> '.join(index[::-1])
                                      for index in n_entropies.index.values]
             n_entropies.to_csv(n_ent_file, sep="\t")
             effectifs.to_csv(effectifs_file, sep="\t")
-            if args.verbose:
-                #  mean on df's index, then on Series' values.
-                mean = n_entropies.mean().mean()
-                print("Mean H(c1, ..., c{!s} -> c)"
-                      "  entropy: ".format(n), mean)
-                print("Mean H(c1, ..., c{!s} -> c)"
-                      "  entropy: ".format(n), mean, file=logfile)
-            if args.probabilities:
-                n_check = distrib.n_preds_distrib_log(logfile, n,
-                                                      sanity_check=sanity_check)
+            mean = n_entropies.mean().mean()
+            log.info("Mean H(c1, ..., c%s-> c) = %s",n, mean)
+            log.debug("Mean H(c1, ..., c%s -> c) = %s", n, mean)
+            if args.debug:
+                n_check = distrib.n_preds_distrib_log(n, sanity_check=sanity_check)
 
                 if sanity_check:
                     scsuffix = "{}{}PredsEntropies_slow_method.csv"
                     n_check_file = scsuffix.format(result_prefix, n)
-                    print("\nWriting slowly computed"
+                    log.info("\nWriting slowly computed"
                           " entropies to: {}".format(n_check_file))
                     n_check.to_csv(n_check_file, sep="\t")
 
-            if onePred and verbose:
-                distrib.value_check(n, logfile=logfile if verbose else None)
+            if onePred and args.debug:
+                distrib.value_check(n)
 
-    print()
-
-    if verbose or args.probabilities:
-        print("\nWrote log to: {}".format(logfile_name))
-        logfile.close()
+    if args.debug:
+        log.info("\nWrote log to: {}".format(logfile_name))
 
 
 if __name__ == '__main__':
@@ -242,12 +228,11 @@ if __name__ == '__main__':
                         type=str,
                         default=None)
 
-    parser.add_argument("-v", "--verbose",
-                        help="increase output verbosity "
-                             "(On small datasets (less than 10 columns),"
-                             " if used in conjunction with -p,"
-                             " will compute a sanity-check "
-                             "and output also _slow_method.csv files.",
+    parser.add_argument("-d", "--debug",
+                        help="show debug information."
+                             "On small datasets "
+                             "this will compute a sanity-check "
+                             "and output write probability tables.",
                         action="store_true")
 
     parser.add_argument("-i", "--importFile", metavar="file",
@@ -280,11 +265,6 @@ if __name__ == '__main__':
                          help="Export result as only one column.",
                          action="store_true",
                          default=False)
-
-    options.add_argument("-p", "--probabilities",
-                         help="output probability distribution tables"
-                              " for the selected number of predictors.",
-                         action="store_true", default=False)
 
     options.add_argument("-f", "--folder",
                          help="Output folder name",

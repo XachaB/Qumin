@@ -10,7 +10,7 @@ from representations import segments, patterns
 from utils import get_repository_version
 from lattice.lattice import ICLattice
 import pandas as pd
-
+import logging
 
 def main(args):
     r""" Infer Inflection classes as a lattice from alternation patterns.
@@ -23,6 +23,9 @@ def main(args):
       Quantitative modeling of inflection
 
     """
+    logging.basicConfig(level=logging.INFO)
+    log = logging.getLogger(__name__)
+    log.info(args)
     from os import path, makedirs
     import time
     now = time.strftime("%Hh%M")
@@ -45,10 +48,10 @@ def main(args):
     if features_file_name != "ORTHO":
 
         # Initializing segments
-        print("Initializing segments...")
+        log.info("Initializing segments...")
         segments.Inventory.initialize(features_file_name)
 
-        print("Reading patterns...")
+        log.info("Reading patterns...")
         pat_table, _ = patterns.from_csv(data_file_path)
         # pat_table = pat_table.applymap(str)
         # pat_table.columns = [x+" ~ "+y for x,y in pat_table.columns]
@@ -64,20 +67,20 @@ def main(args):
                 pat_table2.columns = [comp + c for c in pat_table2.columns]
             pat_table = pat_table.join(pat_table2)
     else:
-        print("Reading patterns...")
+        log.info("Reading patterns...")
         pat_table = pd.read_csv(data_file_path, index_col=0)
         collections = False
 
     microclasses = find_microclasses(pat_table.applymap(str))
 
-    print("Building the lattice...")
+    log.info("Building the lattice...")
     lattice = ICLattice(pat_table.loc[list(microclasses), :], microclasses,
                         collections=collections, comp_prefix=comp, aoc=args.aoc, keep_names=(not args.shorten))
 
     if args.stat:
         with open(result_prefix + "_stats.txt", "w", encoding="utf-8") as flow:
-            print(lattice.stats().to_frame().T.to_latex(), file=flow)
-            print(lattice.stats().to_frame().T.to_latex())
+            flow.write(lattice.stats().to_frame().T.to_latex())
+            log.info(lattice.stats().to_frame().T.to_latex())
 
     if args.png:
         lattice.draw(result_prefix + ".png", figsize=(20, 10), title=None, point=True)
@@ -86,22 +89,22 @@ def main(args):
         lattice.draw(result_prefix + ".pdf", figsize=(20, 10), title=None, point=True)
 
     if args.html:
-        print("Exporting to html:", result_prefix + ".html")
+        log.info("Exporting to html: " + result_prefix + ".html")
         lattice.to_html(result_prefix + ".html")
 
     if args.cxt:
-        print("Exporting context to file:", result_prefix + ".cxt")
+        log.info(" ".join("Exporting context to file:", result_prefix + ".cxt"))
         lattice.context.tofile(result_prefix + ".cxt", frmat='cxt')
 
     if args.first:
-        print("Here is the first level of the hierarchy:")
-        print("Root:")
+        log.info("Here is the first level of the hierarchy:")
+        log.info("Root:")
         obj, common = lattice.nodes.attributes["objects"], lattice.nodes.attributes["common"]
         if obj or common:
-            print("\tdefines:", obj, common)
+            log.info("\tdefines: "+ str(obj) + str(common))
         for child in lattice.nodes.children:
             extent, common = child.labels, child.attributes["common"]
-            print("extent:", extent, "\n\tdefines:", common, ">")
+            log.info(" ".join("extent:", extent, "\n\tdefines:", common, ">"))
 
 
 if __name__ == '__main__':
@@ -172,5 +175,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print(args)
     main(args)
