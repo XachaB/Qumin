@@ -46,7 +46,7 @@ def main(args):
 
         # Initializing segments
         print("Initializing segments...")
-        segments.initialize(features_file_name, sep="\t")
+        segments.Inventory.initialize(features_file_name)
 
         print("Reading patterns...")
         pat_table, _ = patterns.from_csv(data_file_path)

@@ -62,12 +62,10 @@ def create_paradigms(data_file_name,
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
     """
 
-    def get_unknown_segments(form, unknowns, name):
-        for char in form:
-            try:
-                Inventory._features(char)
-            except KeyError:
-                if char != ";":
+    def get_unknown_segments(forms, unknowns, name):
+        for form in forms:
+            for char in form:
+                if char not in Inventory._classes and char != ";":
                     unknowns[char].append(form + " " + name)
 
     # Reading the paradigms.
@@ -120,7 +118,7 @@ def create_paradigms(data_file_name,
             forms = forms[0]
         else:
             forms = sorted(forms)
-        return {Form(f) for f in forms}
+        return tuple(Form(f) for f in forms)
 
     paradigms = paradigms.applymap(parse_cell)
 
@@ -141,5 +139,3 @@ def create_paradigms(data_file_name,
     if not fillna:
         paradigms = paradigms.replace("", np.NaN)
     return paradigms
-
-

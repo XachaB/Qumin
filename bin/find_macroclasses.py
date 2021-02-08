@@ -62,7 +62,7 @@ def main(args):
     # Initializing segments
 
     if features_file_name != "ORTHO":
-        segments.initialize(features_file_name, sep="\t")
+        segments.Inventory.initialize(features_file_name)
         pat_table, pat_dic = patterns.from_csv(data_file_path, defective=False, overabundant=False)
         pat_table = pat_table.applymap(str)
     else:

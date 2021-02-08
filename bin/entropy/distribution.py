@@ -14,7 +14,6 @@ from itertools import combinations
 from functools import reduce
 from entropy import cond_entropy, entropy, P
 import representations.patterns
-from representations.segments import restore
 from tqdm import tqdm
 
 
@@ -326,7 +325,7 @@ class PatternDistribution(object):
                                            paradigms.at[lemma, c1],
                                            paradigms.at[lemma, c2])
             counter[pattern] += 1
-            examples[pattern] = restore(example)
+            examples[pattern] = example
 
         print("\n\nPrinting log for P(c1 → c2).")
 
@@ -379,7 +378,7 @@ class PatternDistribution(object):
                 for i, (classe, members) in enumerate(sorted(cond_events, key=lambda x: len(x[1]), reverse=True)):
                     headers = ("Pattern", "Example",
                                "Size", "P(Pattern|class)")
-                    table = PrettyTable(headers, hrules=ALL)
+                    table = PrettyTable(headers, hrules=ALL) # TODO: change to remove prettytable
                     # table.set_style(PLAIN_COLUMNS)
 
                     print("\n## Class n°", i, " (", str(len(members)), " members).", sep="", file=logfile)
@@ -496,7 +495,7 @@ class PatternDistribution(object):
                                              predictors,
                                              paradigms.at[lemma, out])
             counter[pattern] += 1
-            examples[pattern] = restore(example)
+            examples[pattern] = example
 
         print("\n\nPrinting log of "
               "P( (c1, ..., c{!s}) → c{!s} ).".format(n, n + 1))

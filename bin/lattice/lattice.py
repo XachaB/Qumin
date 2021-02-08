@@ -119,48 +119,56 @@ def to_dummies(table, **kwargs):
     return merge_duplicate_columns(dummies, sep="; ", **kwargs)
 
 
+def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
+                     col_formatter=None, na_value=None,collections=False):
+    """ Create a Context from a dataframe of properties.
+
+    Args:
+        dataframe (:class:`pandas:pandas.DataFrame`): A dataframe
+        dummy_formatter (func): Function to make dummies from the table. (default to panda's)
+        keep_names (bool): whether to keep original column names when dropping duplicate dummy columns.
+        col_formatter (func): Function to format columns in the context table.
+        na_value : A value tu use as "Na". Defaults to `None`
+        collections (bool): Whether the table contains :class:`representations.patterns.PatternCollection` objects.
+
+    Returns:
+        concepts.Context: the created Context
+    """
+    if na_value is not None:
+        dataframe = dataframe.applymap(lambda x: None if x == na_value else x)
+    if collections:
+        dummies = to_dummies(dataframe, keep_names=keep_names)
+    elif dummy_formatter:
+        dummies = dummy_formatter(dataframe)
+    else:
+        dummies = pd.get_dummies(dataframe, prefix_sep="=")
+        dummies = dummies.applymap(lambda x: "X" if x == 1 else "")
+    if col_formatter:
+        dummies.columns = col_formatter(dummies.columns)
+    context_str = dummies.to_csv()
+    return Context.fromstring(context_str, frmat='csv')
+
 class ICLattice(object):
     """Inflection Class Lattice.
 
     This is a wrapper around (:class:`concepts.Context`).
     """
 
-    def __init__(self, dataframe, leaves, annotate=None, dummy_formatter=None,
-                 keep_names=True, comp_prefix=None,
-                 col_formatter=None, na_value=None, AOC=False, collections=False, verbose=True):
+    def __init__(self, dataframe, leaves, annotate=None, comp_prefix=None, AOC=False,  verbose=True, **kwargs):
         """
         Arguments:
             dataframe (:class:`pandas:pandas.DataFrame`): A dataframe
             leaves (dict): Dictionnaire de microclasses
             annotate (dict): Extra annotations to add on lattice.
                 Of the form: {<object label>:<annotation>}
-            dummy_formatter (func): Function to make dummies from the table. (default to panda's)
-            keep_names (bool): whether to keep original column names when dropping duplicate dummy columns.
             comp_prefix (str): If there are two sets of properties, the prefix used to distinguish column names.
             AOC (bool): Whether to limit ourselves to Attribute or Object Concepts.
-            col_formatter (func): Function to format columns in the context table.
-            na_value : A value tu use as "Na". Defaults to `None`
-            collections (bool): Whether the table contains :class:`representations.patterns.PatternCollection` objects.
+            kwargs: all other keyword arguments are passed to table_to_context
         """
 
         self.comp = comp_prefix  # whether there are two sets of properties.
-        if na_value is not None:
-            dataframe = dataframe.applymap(lambda x: None if x == na_value else x)
-        if collections:
-            dummies = to_dummies(dataframe, keep_names=keep_names)
-        elif dummy_formatter:
-            dummies = dummy_formatter(dataframe)
-        else:
-            dummies = pd.get_dummies(dataframe, prefix_sep="=")
-            dummies = dummies.applymap(lambda x: "X" if x == 1 else "")
-        if col_formatter:
-            dummies.columns = col_formatter(dummies.columns)
-        if verbose:
-            print("Reading the context and building the lattice...")
-        context_str = dummies.to_csv()
-        c1 = Context.fromstring(context_str, frmat='csv')
-        self.context = c1
-        self.lattice = c1.lattice
+        self.context = table_to_context(dataframe, **kwargs)
+        self.lattice = self.context.lattice
         if annotate:
             for label in annotate:
                 if label in self.lattice.supremum.extent:

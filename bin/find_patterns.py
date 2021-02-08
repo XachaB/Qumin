@@ -47,7 +47,7 @@ def main(args):
 
     # Initializing segments
     if features_file_name != "ORTHO":
-        segments.initialize(features_file_name, sep="\t")
+        segments.Inventory.initialize(features_file_name)
     elif is_of_pattern_type:
         raise argparse.ArgumentTypeError("You can't find patterns on orthographic material.")
     else:

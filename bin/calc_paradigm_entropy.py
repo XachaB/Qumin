@@ -66,7 +66,7 @@ def main(args):
         logfile = open(logfile_name, "w", encoding="utf-8")
 
     # Initialize the class of segments.
-    segments.initialize(features_file_name, sep="\t")
+    segments.Inventory.initialize(features_file_name)
 
     # Inflectional paradigms: columns are cells, rows are lexemes.
     paradigms = create_paradigms(paradigms_file_path, defective=True, overabundant=False, merge_cols=args.cols_merged,

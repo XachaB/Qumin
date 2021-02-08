@@ -6,16 +6,13 @@ This module addresses the modelisation of phonological segments.
 """
 
 import pandas as pd
-from collections import defaultdict
-from lattice.lattice import ICLattice
-
-import functools
-import unicodedata
+from lattice.lattice import table_to_context
 import numpy as np
 from itertools import combinations
 import re
 from utils import snif_separator
 
+inventory = None
 
 class Form(object):
     def __init__(self, string):
@@ -31,36 +28,35 @@ class Form(object):
     def __getitem__(self, item): return self.tokens[item]
 
 class Inventory(object):
-    """The `Segments.Segment` class holds the definition of a single segment.
-*
-    Attributes:
-        name (str or _CharClass): Name of the segment.
-        features (frozenset of tuples):
-            The tuples are of the form `(attribute, value)`
-            with a positive value, used for set operations.
+    """The static `segments.Inventory` class describes a sound inventory.
 
-            TODO: rewrite docstr
-    A `_CharClass` is a `str` with sorted chars and brackets.
+    This class is static, so that all other modules can access its current state,
+    without passing an inventory instance everywhere.
 
-    Charclasses have a: attr:`Segments._CharClass.REGEX` constant field.
-    This class is used for segments names. This way we get:
+    The inventory first needs to be initialized with a distinctive features file.
 
-    * An immutable class.
-    * Enforced sorted characters.
-    * Identical to a corresponding string.
-    * Which __str__() returns a ready-to-use regex character class string.
-    * Iterators go through the content (without the brakets)
+    Each sound class in the inventory is a concept in a FCA lattice.
+    Sound class identifiers are either strings (for phonemes)
+    or frozensets (for sound classes). Phonemes are the leaves of the hierarchy.
 
-    Attributes:
-        REGEX (str): constant. The string wrapped in "[]"
+    Sound classes can be seen as under-determined phonemes, and both phonemes and sound
+    classes are handled in the same way. For this reason, we call both "sound".
 
+    Static Attributes:
+        _lattice: the FCA lattice underlying the feature space
+        _score_matrix (dict): a dictionnary of sound tuples to alignment score
+        _gap_score (float): a score for insertions
+        _normalization (dict): a dictionnary of sounds to their normalized counterparts
+        _segmenter (re.pattern): a compiled regex to segment words into phonemes
+        _legal_str (re.pattern): a compiled regex to recognize words made of known phonemes
+        _max (frozenset): the identifier of the supremum in the lattice
+        _regexes_end (dict): a dictionnary of sound IDs to regex strings (to use at the end of words) -- currently unused
+        _regexes (dict): a dictionnary of sound IDs to regex strings
+        _pretty_str (dict): a dictionnary of sound IDs to pretty formatted strings
+        _features (dict): a dictionnary of sound IDs to set of features
+        _features_str (dict): a dictionnary of sound IDs to a string representing features
+        _classes (dict): a dictionnary of sound IDs to a list of classes (ancestors)
 
-    We still use get for:
-
-    - pretty, shorthand, regex
-    - s1 < s2
-    - is s simple
-    - is the segment known
     """
     _lattice = None
     _score_matrix = {}
@@ -78,7 +74,17 @@ class Inventory(object):
 
     @classmethod
     def _add_segment(cls, classes, extent, intent, shorthand=None):
-        """Constructor for Segments."""
+        """ Adds a single lattice concept to the inventory.
+
+        A concept is a sound class. If there is a single sound in the class,
+        the node represents that specific phoneme.
+
+        Args:
+            classes: list of ancestors for this concept
+            extent: list of phonemes in the sound class
+            intent: list of features for this concept
+            shorthand: short string expressing the value of this node
+        """
         id = frozenset(extent) if len(extent) > 1 else extent[0]
         ordered = sorted(extent)
         joined = "|".join(ordered)
@@ -97,46 +103,105 @@ class Inventory(object):
 
     @classmethod
     def regex(cls, sound, end=False):
+        """ Returns a regex representing a sound.
+
+        Args:
+            sound: identifier of a sound
+            end: whether this regex is at the end of a word
+                (this is intended to later get rid of trailing spaces in Form)
+
+        Returns:
+            (str): regex string
+        """
         if end:
             return cls._regexes_end[sound]
         return cls._regexes[sound]
 
     @classmethod
     def pretty_str(cls, sound, **kwargs):
+        """ Returns a pretty string representing a sound.
+
+        Args:
+            sound: identifier of a sound
+
+        Returns:
+            (str): pretty string
+        """
         return cls._pretty_str[sound]
 
     @classmethod
     def features(cls, sound, **kwargs):
+        """ Returns a set of features representing a sound.
+
+        Args:
+            sound: identifier of a sound
+
+        Returns:
+            (set): features
+        """
         return cls._features[sound]
 
     @classmethod
     def features_str(cls, sound, **kwargs):
+        """ Returns a string which described the features of a sound.
+
+        Args:
+            sound: identifier of a sound
+
+        Returns:
+            (str): features string
+        """
         return cls._features_str[sound]
 
     @classmethod
     def shortest(cls, sound, **kwargs):
+        """ Returns a string which describes the sound in as little characters as possible.
+
+        Args:
+            sound: identifier of a sound
+
+        Returns:
+            (str): short string
+        """
         return min((cls.pretty_str(sound), cls.features_str(sound)), key=len)
 
     @classmethod
     def is_leaf(cls, sound):
+        """ Returns whether this sound is a leaf (a phoneme, rather than a sound class)
+
+        Args:
+            sound: identifier of a sound
+
+        Returns:
+
+        """
         return (type(sound) is str)
 
     @classmethod
     def infos(cls, sound):
+        """ String giving all useful information on a sound.
+
+        Args:
+            sound: identifier of a sound
+
+        Returns:
+            pretty string and features of a sound.
+
+        """
         return cls.pretty_str(sound) +" = "+cls._features_str[sound]
 
     @classmethod
     def inf(cls, a, b):
         """ Checks if a is a descendant of b.
 
-        a < b ff b has children and either a is a string
+        a < b iff b has children and either a is a string
         which is part of b, or a is a subset of b.
         """
         return (not cls.is_leaf(b)) and ((a in b) or (not cls.is_leaf(a) and a < b))
 
     @classmethod
     def similarity(cls, a, b):
-        """Compute phonological similarity  (Frisch, 2004)
+        """Computes phonological similarity  (Frisch, 2004)
 
         Measure from "Similarity avoidance and the OCP" , Frisch, S. A.; Pierrehumbert, J. B. & Broe,
         M. B. *Natural Language \& Linguistic Theory*, Springer, 2004, 22, 179-228, p. 198.
@@ -152,10 +217,16 @@ class Inventory(object):
         cb = cls._classes[b]
         return len(ca & cb) / len(ca | cb)
 
-    ####
     @classmethod
     def initialize(cls, filename, sep=None):
-        print("Reading table")
+        """ Initializes the inventory
+
+        Args:
+            filename: path to a csv or tsv file with distinctive features
+            sep: separator in the file
+        """
+        print("Reading table ",filename)
+
         table = pd.read_table(filename, header=0, dtype=str,
                               index_col=False, sep=sep or snif_separator(filename),
                               encoding="utf-8")
@@ -194,7 +265,7 @@ class Inventory(object):
             shorthands = shorthands.applymap(str)  # Why is this necessary ?
         table.set_index("Seg.", inplace=True)
 
-        print("Normalizing identical segments")
+        print("Normalizing identical rows")
         attributes = list(table.columns)
         cls._normalization = normalize(table, attributes)
         table.set_index("Normalized", inplace=True)
@@ -211,24 +282,16 @@ class Inventory(object):
                 key, val = c.split("=")
                 yield signs[int(float(val))] + key.replace(" ", "_")
 
-        leaves = {t: [] for t in table.index}
         table = table.applymap(lambda x: str(x))
 
-        lattice = ICLattice(table, leaves,
-                            na_value="-1",
-                            col_formatter=feature_formatter,
-                            verbose=False)
-
-        cls._lattice = lattice.lattice
+        context = table_to_context(table, na_value="-1", col_formatter=feature_formatter)
+        cls._lattice = context.lattice
 
         if shorthands is not None:
-            shorthand_lattice = ICLattice(shorthands, {t: [] for t in shorthands.index},
-                                          na_value="-1",
-                                          col_formatter=feature_formatter,
-                                          verbose=False)
-
+            shorthand_context = table_to_context(shorthands, na_value="-1",
+                                                col_formatter=feature_formatter)
             shorthands = {cls._lattice[i].intent: e[0].strip("#") for e, i in
-                          shorthand_lattice.lattice if
+                          shorthand_context.lattice if
                           e and len(e) == 1}
 
         for extent, intent in cls._lattice:
@@ -245,15 +308,13 @@ class Inventory(object):
                     if minimal:
                         shorthand = "[{}]".format(" ".join(minimal))
 
-                ancestors = lattice.ancestors(extent)
-                classes = sorted(
-                    ["|".join(sorted(ancestor.extent)) for ancestor in ancestors]
-                    + [extent], key=len)
-
+                concept = cls._lattice[extent]
+                ancestors = ["|".join(sorted(c.extent)) for c in concept.upset()]
+                classes = sorted(ancestors, key=len)
                 cls._add_segment(classes, extent, intent, shorthand=shorthand)
 
         not_actual_leaves = []
-        for leaf in leaves:
+        for leaf in table.index:
             lattice_node = frozenset(cls._lattice[(leaf,)].extent)
             if len(lattice_node) > 1:
                 not_actual_leaves.append((leaf, lattice_node))
@@ -280,7 +341,7 @@ class Inventory(object):
 
     @classmethod
     def init_dissimilarity_matrix(cls, gap_prop=0.24, **kwargs):
-        """Compute score matrix with dissimilarity scores."""
+        """Computes score matrix with dissimilarity scores."""
         # TODO: should this be delegated to morphalign ?
         # TODO: should this code all on integers ?
         costs = []
@@ -296,32 +357,48 @@ class Inventory(object):
 
     @classmethod
     def insert_cost(cls, *_):
+        """Returns the constant insertion/deletion cost"""
         return cls._gap_score
 
     @classmethod
     def sub_cost(self, a, b):
+        """ Returns the cost of aligning sounds `a` and `b`
+
+        Args:
+            a: sound identifier
+            b: sound identifier
+
+        Returns: (float): substitution cost
+
+        """
         return self._score_matrix[(a, b)]
 
     @classmethod
     def get(cls, descriptor):
-        """Get a sound using the lattice."""
+        """ Get a sound using the lattice.
+
+        Args:
+            descriptor: iterable of phonemes OR iterable of features
+
+        Returns: (str or frozenset) sound identifier
+
+        """
         try:
             s = cls._lattice[descriptor].extent
             if len(s) == 1:
                 return s[0]
             return frozenset(s)
         except:
-            print(descriptor)
-            print(cls._lattice[descriptor])
-            raise
+            raise ValueError("Unknown sound descriptor: "+repr(descriptor))
 
     @classmethod
     def meet(cls, *args):
-        """Intersect some segments from their names.
-        This is the "meet" operation on the lattice nodes, and returns the lowest common ancestor.
+        """Finds the lowest common ancestors of segments from their identifiers.
+
+        Args: several sound identifiers
 
         Returns:
-            lowest common ancestor ID
+            lowest common ancestor identifier
         """
         segments = set()
         for segment in args:
@@ -333,12 +410,12 @@ class Inventory(object):
 
     @classmethod
     def transformation(cls, a, b):
-        """Find a transformation between aliases a and b.
+        """Find a transformation between a and b.
 
         The transformation is a pair of two maximal sets of segments related by a bijective phonological function.
 
-        This function takes a pair of strings representing segments. It calculates the function which relates
-        these two segments. It then finds the two maximal sets of segments related by this function.
+        This function takes a pair of sound identifiers and calculates the function which relates
+        these two segments. It then finds and returns the two maximal sets of segments related by this function.
 
         Example:
             In French, t -> s can be expressed by a phonological function
@@ -351,14 +428,13 @@ class Inventory(object):
 
             >>> a,b = Inventory.transformation("t","s")
             >>> print(a,b)
-            [bdpt] [fsvz]
+            {"b","d","p","t"} {"f","s","v","z"}
 
         Arguments:
-            a,b (str): Segment aliases.
+            a,b (str): Segment identifiers.
 
         Returns:
-            two charclasses.
-
+            (tuple of frozensets): two sets of sounds.
         """
 
         def select_if_reciprocal(cls, segs, left, right):
@@ -387,11 +463,11 @@ class Inventory(object):
         """ Get the features corresponding to a transformation.
 
         Arguments:
-            left (tuple): string of segment aliases
-            right (tuple): string of segment aliases
+            left (frozenset): set of phonemes
+            right (frozenset): set of phonemes
 
         Example:
-            >>> inventory.get_from_transform("bd", "pt")
+            >>> inventory.get_from_transform({"b","d"}, {"p","t"})
             {'+vois'}, {'-vois'}
         """
 
