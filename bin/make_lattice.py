@@ -72,7 +72,7 @@ def main(args):
 
     print("Building the lattice...")
     lattice = ICLattice(pat_table.loc[list(microclasses), :], microclasses,
-                        collections=collections, comp_prefix=comp, AOC=args.aoc, keep_names=(not args.shorten))
+                        collections=collections, comp_prefix=comp, aoc=args.aoc, keep_names=(not args.shorten))
 
     if args.stat:
         with open(result_prefix + "_stats.txt", "w", encoding="utf-8") as flow:

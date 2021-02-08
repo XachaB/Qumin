@@ -30,10 +30,11 @@ matplotlib.rc('grid', **grid)
 
 
 def _load_external_text(filename):
-    return "\n".join(open(join(dirname(__file__), filename), "r", encoding="utf-8").readlines())
+    return "\n".join(
+        open(join(dirname(__file__), filename), "r", encoding="utf-8").readlines())
 
 
-def _node_to_label_IC(node, comp=None, remove_context=True):
+def _node_to_label_IC(node, comp=None, **kwargs):
     objs = node.attributes.get("objects", node.labels)
     if not objs:
         objs = node.labels
@@ -120,7 +121,7 @@ def to_dummies(table, **kwargs):
 
 
 def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
-                     col_formatter=None, na_value=None,collections=False):
+                     col_formatter=None, na_value=None, collections=False):
     """ Create a Context from a dataframe of properties.
 
     Args:
@@ -148,13 +149,15 @@ def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
     context_str = dummies.to_csv()
     return Context.fromstring(context_str, frmat='csv')
 
+
 class ICLattice(object):
     """Inflection Class Lattice.
 
     This is a wrapper around (:class:`concepts.Context`).
     """
 
-    def __init__(self, dataframe, leaves, annotate=None, comp_prefix=None, AOC=False,  verbose=True, **kwargs):
+    def __init__(self, dataframe, leaves, annotate=None, comp_prefix=None, aoc=False,
+                 verbose=True, **kwargs):
         """
         Arguments:
             dataframe (:class:`pandas:pandas.DataFrame`): A dataframe
@@ -162,7 +165,7 @@ class ICLattice(object):
             annotate (dict): Extra annotations to add on lattice.
                 Of the form: {<object label>:<annotation>}
             comp_prefix (str): If there are two sets of properties, the prefix used to distinguish column names.
-            AOC (bool): Whether to limit ourselves to Attribute or Object Concepts.
+            aoc (bool): Whether to limit ourselves to Attribute or Object Concepts.
             kwargs: all other keyword arguments are passed to table_to_context
         """
 
@@ -177,7 +180,7 @@ class ICLattice(object):
         self.leaves = leaves
         if verbose:
             print("Converting to qumin node...")
-        if AOC:
+        if aoc:
             self.nodes = self._lattice_to_nodeAOC()
         else:
             self.nodes = self._lattice_to_node()
@@ -204,33 +207,39 @@ class ICLattice(object):
                 intent = concept.intent
                 properties = concept.properties
                 objects = concept.objects
-                size = sum(len(self.leaves[label]) for label in extent if label in self.leaves)
-                nodes[extent] = Node(extent, intent=intent, size=size, common=properties, objects=objects,
+                size = sum(
+                    len(self.leaves[label]) for label in extent if label in self.leaves)
+                nodes[extent] = Node(extent, intent=intent, size=size, common=properties,
+                                     objects=objects,
                                      macroclass=False)
                 prb.update(1)
             return nodes
 
-        AOC = sorted(
-            [v for v in self.lattice if (v == self.lattice.supremum or v.properties or v.objects) and v.extent != ()],
-            key=lambda x: len(x.extent), reverse=True)
+        aoc = sorted([v for v in self.lattice
+                      if (v == self.lattice.supremum or
+                          v.properties or v.objects)
+                            and v.extent != ()],
+                    key=lambda x: len(x.extent), reverse=True)
 
-        with tqdm(total=len(AOC) * 2) as prb:
+        with tqdm(total=len(aoc) * 2) as prb:
             # Creating nodes
-            nodes = make_nodes(AOC, prb)
+            nodes = make_nodes(aoc, prb)
 
             # Creating arcs
-            for vertice in AOC:
+            for vertice in aoc:
                 span = set(vertice.extent)
                 for descendant in vertice.downset():
                     descendant_extent = set(descendant.extent)
-                    if descendant != vertice and descendant in AOC and (span & descendant_extent):
+                    if descendant != vertice and \
+                            descendant in aoc \
+                            and (span & descendant_extent):
                         nodes[vertice.extent].children.append(nodes[descendant.extent])
                         span = span - descendant_extent
                         if len(span) == 0:
                             break
                 prb.update(1)
 
-        return nodes[AOC[0].extent]
+        return nodes[aoc[0].extent]
 
     def _lattice_to_node(self, keep_infimum=False):
         def make_nodes(concepts, prb):
@@ -240,14 +249,17 @@ class ICLattice(object):
                 intent = concept.intent
                 properties = concept.properties
                 objects = concept.objects
-                size = sum(len(self.leaves[label]) for label in extent if label in self.leaves)
+                size = sum(
+                    len(self.leaves[label]) for label in extent if label in self.leaves)
                 annotations = getattr(concept, '_extra_qumin_annotation', {})
-                nodes[extent] = Node(extent, intent=intent, size=size, common=properties, objects=objects,
+                nodes[extent] = Node(extent, intent=intent, size=size, common=properties,
+                                     objects=objects,
                                      macroclass=False, **annotations)
                 prb.update(1)
             return nodes
 
-        concepts = sorted([v for v in self.lattice if keep_infimum or v.extent != ()], key=lambda x: len(x.extent), reverse=True)
+        concepts = sorted([v for v in self.lattice if keep_infimum or v.extent != ()],
+                          key=lambda x: len(x.extent), reverse=True)
 
         with tqdm(total=len(concepts) * 2) as prb:
             # Creating nodes
@@ -291,7 +303,8 @@ class ICLattice(object):
         stats_lattice = {"Microclasses": len(self.leaves),
                          "Base": len(self.lattice.atoms),
                          "Hauteur": height(self.nodes),
-                         "Degré": nb_arcs / (nb_noeuds - 2),  # -2 car on ignore supremum et infimum
+                         "Degré": nb_arcs / (nb_noeuds - 2),
+                         # -2 car on ignore supremum et infimum
                          "Noeuds": nb_noeuds - 1  # -1 car on ignore infimum
                          }
 
@@ -308,12 +321,17 @@ class ICLattice(object):
                         left += 1
                 else:
                     right += 1
-            print("Concepts définissant des propriétés de la classification de gauche (-b):", left)
-            print("Concepts définissant des propriétés de la classification de droite:", right)
+            print(
+                "Concepts définissant des propriétés de la classification de gauche (-b):",
+                left)
+            print("Concepts définissant des propriétés de la classification de droite:",
+                  right)
             print("Concepts définissant des propriétés des deux classifications:", both)
-        return pd.Series(stats_lattice, index=["Microclasses", "Base", "Hauteur", "Degré", "Noeuds"])
+        return pd.Series(stats_lattice,
+                         index=["Microclasses", "Base", "Hauteur", "Degré", "Noeuds"])
 
-    def _draw_one(self, node, figsize=(24, 12), scale=False, colormap="Blues", point=None, **kwargs):
+    def _draw_one(self, node, figsize=(24, 12), scale=False, colormap="Blues", point=None,
+                  **kwargs):
         mini, maxi = self._pat_range()
         cm = matplotlib.cm.get_cmap(colormap)
         cnorm = matplotlib.colors.Normalize(vmin=mini, vmax=maxi)
@@ -328,7 +346,6 @@ class ICLattice(object):
             return ", ".join(node.labels) + n
 
         def point_function(node):
-            l = len(node.attributes["common"])
             default = {"color": colors[0],
                        "edgecolors": colors[0],
                        "zorder": 3,
@@ -345,7 +362,8 @@ class ICLattice(object):
                         default["facecolor"] = colors[1]
                         default["edgecolor"] = colors[1]
                         del default["color"]
-            default["s"] = 20 + ((node.attributes.get("size", 0)+1) / (self.nodes.attributes.get("size", 0)+1)) * 100
+            default["s"] = 20 + ((node.attributes.get("size", 0) + 1) / (
+                    self.nodes.attributes.get("size", 0) + 1)) * 100
             node.attributes["point_settings"] = default
             return default
 
@@ -353,9 +371,11 @@ class ICLattice(object):
             return {"color": colors[0], "zorder": custom_zorder(node)}
 
         fig = plt.figure(figsize=figsize)  # for export: 12,6
-        lines, ordered_nodes = node.draw(horizontal=False, square=False, leavesfunc=leaves_label,
+        lines, ordered_nodes = node.draw(horizontal=False, square=False,
+                                         leavesfunc=leaves_label,
                                          point=point_function if point else None,
-                                         edge_attributes=default_edge_attr, lattice=False, **kwargs)
+                                         edge_attributes=default_edge_attr, lattice=False,
+                                         **kwargs)
 
         if scale:
             colors = [smap.to_rgba(i) for i in range(mini, maxi)]
@@ -390,11 +410,13 @@ class ICLattice(object):
                                                    figsize=(20, 9),
                                                    n=4,
                                                    scale=False,
-                                                   point={"s": 50}, # TODO: Something wrong here
+                                                   point={"s": 50},
+                                                   # TODO: Something wrong here
                                                    interactive=True, **kwargs)
 
-        paths = list(filter(lambda obj: type(obj) is matplotlib.collections.PathCollection,
-                            fig.axes[0].get_children(), ))
+        paths = list(
+            filter(lambda obj: type(obj) is matplotlib.collections.PathCollection,
+                   fig.axes[0].get_children(), ))
         lines = list(filter(lambda obj: type(obj) is matplotlib.lines.Line2D and
                                         len(obj.get_xdata(orig=True)) > 1,
                             fig.axes[0].get_children()))
