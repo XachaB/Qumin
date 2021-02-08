@@ -142,7 +142,7 @@ class Pattern(object):
         if aligned:
             alignment_of_forms = list(forms)
         else:
-            alignment_of_forms = list(alignment.align_left(*list(forms), fillvalue=""))
+            alignment_of_forms = list(alignment.align_left(*[f.tokens for f in forms], fillvalue=""))
 
         self._init_from_alignment(alignment_of_forms)
         self._repr = self._make_str_(features=False)
@@ -319,7 +319,6 @@ class Pattern(object):
             tmp_alt = self.alternation
             self.alternation = self._gen_alt
 
-        result = [add_ellipsis(alt, initial, final) for alt in self._iter_alt()]
         result = [add_ellipsis(alt, initial, final) for alt in self._iter_alt()]
 
         if use_gen and self._gen_alt:
@@ -542,7 +541,7 @@ class BinaryPattern(Pattern):
         """
         try:
             regex = self._regex[cell]
-            return bool(regex.match(str(form)))
+            return bool(regex.match(form))
         except KeyError as err:
             raise KeyError("Unknown cell {}."
                            " This pattern's cells are {}."
@@ -567,13 +566,12 @@ class BinaryPattern(Pattern):
         """
         from_cell, to_cell = names if names else self.cells
         reg = self._regex[from_cell]
-        string, nb_subs = reg.subn(lambda x: _replace_alternation(x, self._repl[to_cell]), str(form))
+        string, nb_subs = reg.subn(lambda x: _replace_alternation(x, self._repl[to_cell]), form)
         if nb_subs == 0 and (not self.applicable(form, from_cell)):
             if raiseOnFail:
                 raise NotApplicable("The context {} from the pattern {} and cells {} -> {}"
                                     "doesn't match the form \"{}\""
-                                    "".format(self._regex[from_cell].pattern, self, from_cell, to_cell,
-                                              form))#TODO: used restore
+                                    "".format(self._regex[from_cell].pattern, self, from_cell, to_cell, form))
             else:
                 return None
         return string
@@ -630,15 +628,14 @@ class BinaryPattern(Pattern):
     def _iter_alt(self, features=True):
         """Generator of formatted alternating material for each cell."""
         def format_as_chars(left, right):
-            return ("[{}]".format("-".join(sorted(left))),#TODO: used restore
-                    "[{}]".format("-".join(sorted(right))))#TODO: used restore
+            return ("{{{}}}".format(",".join(sorted(left))),
+                    "{{{}}}".format(",".join(sorted(right))))
 
         def format_as_features(left, right):
             feats_left, feats_right = Inventory.get_transform_features(left, right)
             feats_left = "[{}]".format(" ".join(sorted(feats_left)))
             feats_right = "[{}]".format(" ".join(sorted(feats_right)))
-            chars_left = Inventory.pretty_str(left)
-            chars_right = Inventory.pretty_str(right)
+            chars_left, chars_right = format_as_chars(left, right)
             if len(feats_left) +len(feats_right) <= len(chars_left) + len(chars_right):
                 return feats_left, feats_right
             return chars_left, chars_right
@@ -772,7 +769,7 @@ def _with_deterministic_alignment(paradigms, method="suffix", disable_tqdm=False
 
         for a, b in pairs:
             if a and b:
-                aligned = align_func(a, b)
+                aligned = align_func(a.tokens, b.tokens)
                 new_rule = Pattern(cells, aligned, aligned=True)
                 new_rule.lexemes.add(row.name)
                 alt = new_rule.to_alt(exhaustive_blanks=False)
@@ -841,11 +838,10 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         else:
             pairs = product(*row)
 
-        # print("row: ",row)
         for a, b in pairs:
             if a and b:
                 if a == b:
-                    new_rule = Pattern(cells, zip(a, b), aligned=True)
+                    new_rule = Pattern(cells, zip(a.tokens, b.tokens), aligned=True)
                     new_rule.lexemes = {(row.name, a, b)}
                     alt = new_rule.to_alt(exhaustive_blanks=False)
                     t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
@@ -853,7 +849,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                 else:
                     done = []
                     # print("All alignments of {}, {}".format(a,b))
-                    for aligned in alignment.align_auto(a, b, insert_cost, sub_cost):
+                    for aligned in alignment.align_auto(a.tokens, b.tokens, insert_cost, sub_cost):
                         # print((aligned))
                         new_rule = Pattern(cells, aligned, aligned=True)
                         new_rule.lexemes = {(row.name, a, b)}

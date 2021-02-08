@@ -11,21 +11,27 @@ import numpy as np
 from itertools import combinations
 import re
 from utils import snif_separator
+import functools
 
 inventory = None
 
-class Form(object):
-    def __init__(self, string):
+class Form(str):
+    """ A form is a string of sounds, separated by spaces.
+
+    Sounds might be more than one character long.
+    Forms are strings, they are segmented at the object creation.
+    They have a tokens attribute, which is a tuple of phonemes.
+    """
+    def __new__(cls, string):
         if Inventory._legal_str.fullmatch(string) is None:
             raise ValueError("Unknown sound in: " + repr(string))
         tokens = Inventory._segmenter.findall(string)
-        self.tokens = [Inventory._normalization.get(c, c) for c in tokens]
-        self.str = " ".join(self.tokens)+" "
-
-    def __str__(self): return self.str
-    def __len__(self): return len(self.tokens)
-    def __iter__(self): yield from self.tokens
-    def __getitem__(self, item): return self.tokens[item]
+        tokens = tuple(Inventory._normalization.get(c, c) for c in tokens)
+        self = str.__new__(cls, " ".join(tokens) + " ")
+        self.tokens = tokens
+        return self
+    def __repr__(self):
+        return "Form("+self+")"
 
 class Inventory(object):
     """The static `segments.Inventory` class describes a sound inventory.
@@ -374,6 +380,7 @@ class Inventory(object):
         return self._score_matrix[(a, b)]
 
     @classmethod
+    @functools.lru_cache(maxsize=None)
     def get(cls, descriptor):
         """ Get a sound using the lattice.
 
@@ -388,7 +395,7 @@ class Inventory(object):
             if len(s) == 1:
                 return s[0]
             return frozenset(s)
-        except:
+        except KeyError:
             raise ValueError("Unknown sound descriptor: "+repr(descriptor))
 
     @classmethod
@@ -406,7 +413,7 @@ class Inventory(object):
                 segments.add(segment)
             else:
                 segments |= segment
-        return cls.get(segments)
+        return cls.get(frozenset(segments))
 
     @classmethod
     def transformation(cls, a, b):
@@ -439,17 +446,12 @@ class Inventory(object):
 
         def select_if_reciprocal(cls, segs, left, right):
             tmp = []
-            if cls.is_leaf(segs):
-                segs = {segs}
-            for x in segs:
-                try:
-                    y = cls.get((cls.features(x) - left) | right)
-                    if y and len(y) == 1: # TODO: check if this is still correct
-                        x_back = cls.get((y.features - right) | left)
-                        if x == x_back.ipa:
-                            tmp.append(x)
-                except:
-                    pass
+            for x in cls.id_to_frozenset(segs):
+                y = cls.get(frozenset((cls.features(x) - left) | right))
+                if y and len(y) == 1: # TODO: check if this is still correct
+                    x_back = cls.get(frozenset((cls.features(y) - right) | left))
+                    if x == x_back:
+                        tmp.append(x)
             return frozenset(tmp) # TODO: warning: this need not be a lattice node
 
         left, right = cls.get_transform_features(a, b)
@@ -457,6 +459,12 @@ class Inventory(object):
         A = select_if_reciprocal(cls, A, left, right)
         B = select_if_reciprocal(cls, B, right, left)
         return A, B
+
+    @classmethod
+    def id_to_frozenset(cls, sound_id):
+        if cls.is_leaf(sound_id):
+            return frozenset({sound_id})
+        return sound_id
 
     @classmethod
     def get_transform_features(cls, left, right):
@@ -468,14 +476,14 @@ class Inventory(object):
 
         Example:
             >>> inventory.get_from_transform({"b","d"}, {"p","t"})
-            {'+vois'}, {'-vois'}
+            frozenset({'+vois'}), frozenset({'-vois'})
         """
 
-        t1 = cls.features(left)
-        t2 = cls.features(right)
+        t1 = cls.features(cls.get(cls.id_to_frozenset(left)))
+        t2 = cls.features(cls.get(cls.id_to_frozenset(right)))
         f1 = t1 - t2
         f2 = t2 - t1
-        return f1, f2
+        return frozenset(f1), frozenset(f2)
 
     @classmethod
     def get_from_transform(cls, a, transform):
@@ -495,7 +503,7 @@ class Inventory(object):
         """
         a = cls.features(a)
         f1, f2 = cls.get_transform_features(*transform)
-        return cls.get((a - f1) | f2)
+        return cls.get(frozenset((a - f1) | f2))
 
     @classmethod
     def show_pool(cls):
