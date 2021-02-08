@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 from utils import merge_duplicate_columns
-from representations.segments import  Segment, Form
+from representations.segments import  Inventory, Form
 
 def unique_lexemes(series):
     """Rename duplicates in a serie of strings.
@@ -65,7 +65,7 @@ def create_paradigms(data_file_name,
     def get_unknown_segments(form, unknowns, name):
         for char in form:
             try:
-                Segment.get(char)
+                Inventory._features(char)
             except KeyError:
                 if char != ";":
                     unknowns[char].append(form + " " + name)

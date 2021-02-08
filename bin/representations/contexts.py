@@ -6,7 +6,7 @@ This module implements patterns' contexts, which are series of phonological rest
 
 from representations.quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
 from representations.alignment import align_right, align_left, align_multi
-from representations.segments import  Segment
+from representations.segments import  Inventory
 
 def _align_edges(*args, debug=False, **kwargs):
     """Align at both edges.
@@ -68,18 +68,15 @@ class _ContextMember(object):
     def __repr__(self):
         return self.to_str(mode=0)
 
-    def to_str(self, mode=2):
+    def to_str(self, mode=2, last=False):
         def to_features(s):
-            s = Segment.get(s)
-            if s:
-                if len(s) == 1: return s.pretty
-                return s.shorthand
-            return s
+            if Inventory.is_leaf(s): return s
+            return Inventory.features_str(s)
 
         # Format modes:
-        format_modes = [lambda x:Segment.get(x).REGEX,  # str (0):      ([Ei]...) - with parenthesis, regex
-                        lambda x:Segment.get(x).pretty, # pretty  (1):  {e, i}
-                        lambda x:Segment.get(x).shortest, # display (2): shortest possible string
+        format_modes = [Inventory.regex ,  # str (0):      ([Ei]...) - with parenthesis, regex
+                        Inventory.pretty_str,  # pretty  (1):  {e, i}
+                        Inventory.shortest,  # display (2): shortest possible string
                         to_features]         # features: [+syll, -open]
         format_blanks = ["{}", "_", "_", "_"]
         format_segment = format_modes[mode]
@@ -89,7 +86,6 @@ class _ContextMember(object):
             formatted += "("
 
         for segment, quantifier in self.restrictions:
-
             if segment != "":
                 formatted += format_segment(segment)
                 formatted += str(quantifier)
@@ -151,12 +147,12 @@ class _ContextMember(object):
             (s1, q1), (s2, q2) = self.restrictions[i - 1:i + 1]
 
             # print("Quantifiers [{}]~[{}]".format(repr(q1),repr(q2)),"in reduction ?",(q1, q2) in reduction)
-            # print(s1,"<",s2,"?",Segment.get(s1) < Segment.get(s2))
+            # print(s1,"<",s2,"?",Segment.if(s1, s2))
             if s1 == s2 and (q1, q2) in equal_reduction:
                 self.restrictions[i - 1:i + 1] = [(s2, equal_reduction[(q1, q2)])]
                 if i > 1:
                     i -= 1
-            elif (q1, q2) in reduction and Segment.get(s1) < Segment.get(s2):
+            elif (q1, q2) in reduction and Inventory.inf(s1, s2):
                 self.restrictions[i - 1:i + 1] = [(s2, reduction[(q1, q2)])]
                 if i > 1:
                     i -= 1
@@ -202,7 +198,8 @@ class Context(object):
         return self.to_str(mode=2)
 
     def to_str(self, mode=2):
-        return "".join(member.to_str(mode=mode) for member in self.elements)
+        l = len(self.elements)-1
+        return "".join(member.to_str(mode=mode, last=i == l) for i, member in enumerate(self.elements))
 
     @classmethod
     def _align(cls, contexts, debug=False):
@@ -270,7 +267,7 @@ class Context(object):
                 else:
                     if buffer_segments:
                         # TODO: intersect re-parses the segments...
-                        s1, q1 = Segment.intersect(*buffer_segments), quantity_sum(buffer_quantities)
+                        s1, q1 = Inventory.meet(*buffer_segments), quantity_sum(buffer_quantities)
 
                         if debug:
                             print(buffer_sources, "->", s1, q1)
@@ -281,13 +278,13 @@ class Context(object):
                         buffer_sources = []
                     # Not buffer
                     segments, quantities = zip(*aligned_segments)
-                    segment = Segment.intersect(*[s for s in segments if s])
+                    segment = Inventory.meet(*[s for s in segments if s])
                     quantity = quantity_largest(quantities)
                     if debug:
                         print(aligned_segments, "->", (segment, quantity))
                     context_members.append((segment, quantity))
             if buffer_segments:
-                context_members.append((Segment.intersect(*buffer_segments),
+                context_members.append((Inventory.meet(*buffer_segments),
                                         quantity_sum(buffer_quantities)))
             new_context_member = _ContextMember(context_members, blank=blank, opt=opt)
             new_context_member.simplify()

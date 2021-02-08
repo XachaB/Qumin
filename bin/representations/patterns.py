@@ -7,7 +7,7 @@ This module addresses the modeling of inflectional alternation patterns."""
 from os.path import commonprefix
 from itertools import combinations, product
 from representations import alignment
-from representations.segments import Segment
+from representations.segments import Inventory
 from representations.contexts import Context
 from representations.quantity import one, optional, some, kleenestar
 from representations.generalize import generalize_patterns, incremental_generalize_patterns
@@ -165,7 +165,7 @@ class Pattern(object):
         """Create a new identity pattern for a given set of cells.
         """
         p = cls(cells, [""] * len(cells))
-        p.context = [(Segment._max, kleenestar)]
+        p.context = [(Inventory._max, kleenestar)]
         p._repr = p._make_str_(features=False)
         p._feat_str = p._make_str_(features=True)
         return p
@@ -180,45 +180,54 @@ class Pattern(object):
 
         def segment_and_normalize(string):
             if string:
-                for key in sorted(Segment.aliases, key=lambda x: len(x), reverse=True):
-                    string = string.replace(key, Segment.aliases[key])
-                return string.translate(Segment._normalization)
+                for key in sorted(Inventory.aliases, key=lambda x: len(x), reverse=True):
+                    string = string.replace(key, Inventory.aliases[key])
+                return string.translate(Inventory._normalization)
             return string
 
         def parse_alternation(string, cells):
             string = segment_and_normalize(string)
-            simple_segs = "".join(Segment._simple_segments)
+            simple_segs = "".join([s for s in Inventory._classes if Inventory.is_leaf(s)])
             seg = r"[{}]".format(simple_segs)
-            classes = r"\[[{}\-]+\]".format(simple_segs)
+            classes = r"[\[{{][{sounds}\-,]+[}}\]]".format(sounds=simple_segs)
             regex = r"({seg}|{classes})".format(seg=seg, classes=classes)
             for c, alt in zip(cells, string.split(" ⇌ ")):
                 alts = []
                 for segs in alt.split("_"):
                     alts.append([])
                     for s in re.findall(regex, segs):
-                        if (len(s) > 2 or "-" in s) and (s[0], s[-1]) == ("[", "]"):
+                        if (len(s) > 2 or "-" in s or "," in s) and \
+                                ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}")):
                             if "-" in s:
-                                # TODO: this should be {x,y} not [x-y]
+                                # Legacy parser
                                 segments = s[1:-1].split("-")
                                 s = "|".join(sorted(segments))
+                            elif "," in s:
+                                segments = s[1:-1].split(",")
+                                s = "|".join(sorted(segments))
                             else:
-                                # Legacy parser
+                                # Legacy parser (old)
                                 s = "|".join(sorted(s[1:-1]))
                         alts[-1].append(s)
                 yield c, [tuple(x) for x in alts]
 
         def parse_context(string):
             string = segment_and_normalize(string)
-            simple_segs = "".join(Segment._simple_segments)
+            simple_segs = "".join([s for s in Inventory._classes if Inventory.is_leaf(s)])
             seg = r"[{}]".format(simple_segs)
-            classes = r"\[[{}\-]+\]".format(simple_segs)
+            classes = r"[\[{{][{sounds}\-,]+[}}\]]".format(sounds=simple_segs)
             regex = r"({seg}|{classes}|_)([+*?]?)".format(seg=seg, classes=classes)
             for s, q in re.findall(regex, string):
                 if (s, q) == ("_", ""):
                     yield "{}"
-                elif (len(s) > 2 or "-" in s) and (s[0], s[-1]) == ("[", "]"):
-                    if "-" in s:
+                if (len(s) > 2 or "-" in s or "," in s) and \
+                        ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}")):
+                    if "-" in s: # Legacy 2
                         raw_segments = s[1:-1].split("-")
+                        s = "|".join(sorted(raw_segments))
+                        yield s, quantities[q]
+                    elif "," in s:
+                        raw_segments = s[1:-1].split(",")
                         s = "|".join(sorted(raw_segments))
                         yield s, quantities[q]
                     else:
@@ -439,7 +448,7 @@ class BinaryPattern(Pattern):
         c1, c2 = self.cells
 
         def make_transform_repl(a, b):
-            return lambda x: Segment.get_from_transform(x, (a, b)).REGEX
+            return lambda x: Inventory.get_from_transform(x, (a, b)).REGEX
 
         def make_sub_repl(chars):
             return lambda x: chars
@@ -448,12 +457,12 @@ class BinaryPattern(Pattern):
             return x
 
         def iter_alternation(alt):
-            for is_transform, group in groupby(alt, lambda x: not Segment.is_simple_sound(x)): #TODO: used Charclass
+            for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)): #TODO: used Charclass
                 if is_transform:
                     for x in group:
                         yield is_transform, x
                 else:
-                    yield is_transform, "".join(Segment.get(x).REGEX if x else "" for x in group)
+                    yield is_transform, "".join(Inventory.regex(x) if x else "" for x in group)
 
         # Build alternation as list of zipped segments / transformations
         alternances = []
@@ -503,7 +512,7 @@ class BinaryPattern(Pattern):
             gen_right = []
             for a, b in zip_longest(left, right, fillvalue=""):
                 if a != "" and b != "" :
-                    A, B = Segment.transformation(a, b)
+                    A, B = Inventory.transformation(a, b)
                 else:
                     A, B = "", ""
                 if (len(A) > 1 or len(B) > 1):
@@ -615,7 +624,7 @@ class BinaryPattern(Pattern):
         self._feat_str = self._make_str_(features=True)
 
     def _is_max_gen(self):
-        maxi_seg = Segment._max
+        maxi_seg = Inventory._max
         return all([x in [(maxi_seg, kleenestar), "{}"] for x in self.context])
 
     def _iter_alt(self, features=True):
@@ -625,11 +634,11 @@ class BinaryPattern(Pattern):
                     "[{}]".format("-".join(sorted(right))))#TODO: used restore
 
         def format_as_features(left, right):
-            feats_left, feats_right = Segment.get_transform_features(left, right)
+            feats_left, feats_right = Inventory.get_transform_features(left, right)
             feats_left = "[{}]".format(" ".join(sorted(feats_left)))
             feats_right = "[{}]".format(" ".join(sorted(feats_right)))
-            chars_left = Segment.get(left).pretty
-            chars_right = Segment.get(right).pretty
+            chars_left = Inventory.pretty_str(left)
+            chars_right = Inventory.pretty_str(right)
             if len(feats_left) +len(feats_right) <= len(chars_left) + len(chars_right):
                 return feats_left, feats_right
             return chars_left, chars_right
@@ -648,8 +657,7 @@ class BinaryPattern(Pattern):
             formatted_left = ""
             formatted_right = ""
             for seg_left, seg_right in zip_longest(left, right, fillvalue=""):
-                #TODO: faire attention à tous les "len(x) <= 1"
-                if Segment.is_simple_sound(seg_left) and Segment.is_simple_sound(seg_right) :
+                if Inventory.is_leaf(seg_left) and Inventory.is_leaf(seg_right) :
                     formatted_left += seg_left
                     formatted_right += seg_right
                 else:
@@ -812,9 +820,9 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         insert_cost = alignment.levenshtein_ins_cost
         sub_cost = alignment.levenshtein_sub_cost
     elif scoring_method == "similarity":
-        Segment.init_dissimilarity_matrix(**kwargs)
-        insert_cost = Segment.insert_cost
-        sub_cost = Segment.sub_cost
+        Inventory.init_dissimilarity_matrix(**kwargs)
+        insert_cost = Inventory.insert_cost
+        sub_cost = Inventory.sub_cost
     else:
         raise NotImplementedError("Alignment method {} is not implemented."
                                   "Call find_patterns(paradigms, method) "

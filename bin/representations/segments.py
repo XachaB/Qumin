@@ -19,10 +19,10 @@ from utils import snif_separator
 
 class Form(object):
     def __init__(self, string):
-        if Segment._legal_str.fullmatch(string) is None:
+        if Inventory._legal_str.fullmatch(string) is None:
             raise ValueError("Unknown sound in: " + repr(string))
-        tokens = Segment._segmenter.findall(string)
-        self.tokens = [Segment._normalization.get(c, c) for c in tokens]
+        tokens = Inventory._segmenter.findall(string)
+        self.tokens = [Inventory._normalization.get(c, c) for c in tokens]
         self.str = " ".join(self.tokens)+" "
 
     def __str__(self): return self.str
@@ -30,7 +30,7 @@ class Form(object):
     def __iter__(self): yield from self.tokens
     def __getitem__(self, item): return self.tokens[item]
 
-class Segment(object):
+class Inventory(object):
     """The `Segments.Segment` class holds the definition of a single segment.
 *
     Attributes:
@@ -62,8 +62,6 @@ class Segment(object):
     - is s simple
     - is the segment known
     """
-    _pool = {}
-    _simple_segments = []
     _lattice = None
     _score_matrix = {}
     _gap_score = None
@@ -71,64 +69,73 @@ class Segment(object):
     _segmenter = None
     _legal_str = None
     _max = None
+    _regexes_end = {}
+    _regexes = {}
+    _pretty_str = {}
+    _features = {}
+    _features_str = {}
+    _classes = {}
 
-    def __new__(cls, classes, extent, intent, shorthand=None):
-        s = " ".join(sorted(extent))
-        obj = cls._pool.get(s, None)
-        if obj is None:
-            obj = object.__new__(cls)
-            cls._pool[s] = obj
-        return obj
-
-    def __init__(self, classes, extent, intent, shorthand=None):
+    @classmethod
+    def _add_segment(cls, classes, extent, intent, shorthand=None):
         """Constructor for Segments."""
-        self.charset = frozenset(extent)
-        ordered = sorted(self.charset)
+        id = frozenset(extent) if len(extent) > 1 else extent[0]
+        ordered = sorted(extent)
         joined = "|".join(ordered)
-        if len(self.charset) == 1:
-            self.REGEX = joined+" "
-            self.pretty = joined
+        if len(extent) == 1:
+            cls._regexes[id] = id+" "
+            cls._regexes_end[id] = id
+            cls._pretty_str[id] = id
         else:
             # The non capturing group of each segment
-            self.REGEX = "(?:" + "|".join(x+" " for x in ordered) + ")"
-            self.pretty = "[" + "-".join(ordered)+"]"
-        self.classes = set(classes)
-        self.features = set(intent)
-        self.ipa = " ".join(ordered)
-        self.shorthand = shorthand or "[{}]".format(" ".join(self.features))
-        self.shortest = min((self.pretty, self.shorthand), key=len)
+            cls._regexes[id] = "(?:" + "|".join(x+" " for x in ordered) + ")"
+            cls._regexes_end[id] = "(?:" + "|".join(x for x in ordered) + ")"
+            cls._pretty_str[id] = "{" + ",".join(ordered)+"}" #TODO: change to "{a,b,c}"
+        cls._classes[id] = set(classes)
+        cls._features[id] = set(intent)
+        cls._features_str[id] = shorthand or "[{}]".format(" ".join(sorted(intent)))
 
-    def __iter__(self):
-        yield from self.charset
+    @classmethod
+    def regex(cls, sound, end=False):
+        if end:
+            return cls._regexes_end[sound]
+        return cls._regexes[sound]
 
-    def __str__(self):
-        return self.REGEX
+    @classmethod
+    def pretty_str(cls, sound, **kwargs):
+        return cls._pretty_str[sound]
 
-    def __repr__(self):
-        r"""Return the representation of one segment.
+    @classmethod
+    def features(cls, sound, **kwargs):
+        return cls._features[sound]
 
-        Example:
+    @classmethod
+    def features_str(cls, sound, **kwargs):
+        return cls._features_str[sound]
 
-            >>> a = [+syl, +rel.ret., -haut, +arr, -cons, +son, +vois,\
-            ...      -rond, +cont, +bas, -nas, -ant]
+    @classmethod
+    def shortest(cls, sound, **kwargs):
+        return min((cls.pretty_str(sound), cls.features_str(sound)), key=len)
 
+    @classmethod
+    def is_leaf(cls, sound):
+        return (type(sound) is str)
+
+    @classmethod
+    def infos(cls, sound):
+        return cls.pretty_str(sound) +" = "+cls._features_str[sound]
+
+    @classmethod
+    def inf(cls, a, b):
+        """ Checks if a is a descendant of b.
+
+        a < b ff b has children and either a is a string
+        which is part of b, or a is a subset of b.
         """
-        return "{} = {}".format(self.ipa, self.shorthand)
+        return (not cls.is_leaf(b)) and ((a in b) or (not cls.is_leaf(a) and a < b))
 
-    def __lt__(self, other):
-        """ Checks if self is a descendant of other.
-
-        X is a descendant of Y if Y is in X's ancestor list.
-        """
-        return other.ipa in self.classes
-
-    def __le__(self, other):
-        return (self.ipa == other.ipa) or (self < other)
-
-    def __len__(self):
-        return len(self.charset)
-
-    def similarity(self, other):
+    @classmethod
+    def similarity(cls, a, b):
         """Compute phonological similarity  (Frisch, 2004)
 
         Measure from "Similarity avoidance and the OCP" , Frisch, S. A.; Pierrehumbert, J. B. & Broe,
@@ -140,10 +147,12 @@ class Segment(object):
 
         (7) :math:`Similarity = \\frac{\\text{Shared natural classes}}{\\text{Shared natural classes } + \\text{Non-shared natural classes}}`
         """
-        if self == other: return 1
-        return len(self.classes & other.classes) / len(self.classes | other.classes)
+        if a == b: return 1
+        ca = cls._classes[a]
+        cb = cls._classes[b]
+        return len(ca & cb) / len(ca | cb)
 
-
+    ####
     @classmethod
     def initialize(cls, filename, sep=None):
         print("Reading table")
@@ -241,57 +250,48 @@ class Segment(object):
                     ["|".join(sorted(ancestor.extent)) for ancestor in ancestors]
                     + [extent], key=len)
 
-                segment = Segment(classes, extent, intent, shorthand=shorthand)
-                if len(extent) == 1:
-                    cls._simple_segments.append(segment.ipa)
-                cls._lattice[extent].ipa = segment.ipa
-            else:
-                cls._lattice[extent].ipa = "X"
+                cls._add_segment(classes, extent, intent, shorthand=shorthand)
 
         not_actual_leaves = []
         for leaf in leaves:
-            lattice_node = "|".join(sorted(cls._lattice[(leaf,)].extent))
-            if leaf != lattice_node:
+            lattice_node = frozenset(cls._lattice[(leaf,)].extent)
+            if len(lattice_node) > 1:
                 not_actual_leaves.append((leaf, lattice_node))
 
         if not_actual_leaves:
             alert = ""
             for leaf, lattice_node in not_actual_leaves:
-                other = "".join((set(lattice_node) - {leaf}))
-                alert += "\n\t" + leaf + " is the same node as " + cls.get(
-                    lattice_node).ipa
-                alert += "\n\t\t" + repr(cls.get(lattice_node))
+                other = set(lattice_node) - {leaf}
+                alert += "\n\t" + leaf + " is the same node as " + str(lattice_node)
+                alert += "\n\t\t" + cls.infos(lattice_node)
                 for o in other:
-                    alert += "\n\t\t" + repr(cls.get(o))
+                    alert += "\n\t\t" +  cls.infos(o)
 
-            raise Exception(
-                "Warning, some of the segments aren't actual leaves :" + alert)
+            raise Exception("Warning, some segments are " # TODO: change doc!!!
+                            "ancestors of other segments:" + alert)
 
-        cls.max = max(cls._pool, key=len)
+        cls.max = max(cls._classes, key=len)
 
-        all_sounds = sorted(cls._simple_segments + list(cls._normalization) + [";"],
+        simple_sounds = [s for s in cls._classes if cls.is_leaf(s)]
+        all_sounds = sorted(simple_sounds + list(cls._normalization),
                             key=len, reverse=True)
         cls._segmenter = re.compile("(" + "|".join(all_sounds) + ")")
         cls._legal_str = re.compile("(" + "|".join(all_sounds) + ")+")
 
-
-    @classmethod
-    def is_simple_sound(cls, sound):
-        return sound == "" or (sound in cls._simple_segments)
-
     @classmethod
     def init_dissimilarity_matrix(cls, gap_prop=0.24, **kwargs):
         """Compute score matrix with dissimilarity scores."""
+        # TODO: should this be delegated to morphalign ?
+        # TODO: should this code all on integers ?
         costs = []
-        for a, b in combinations(cls._simple_segments, 2):
-            seg_a = cls._pool[a]
-            seg_b = cls._pool[b]
-            cost = 1 - seg_a.similarity(seg_b)
+        simple_sounds = [s for s in cls._classes if cls.is_leaf(s)]
+        for a, b in combinations(simple_sounds, 2):
+            cost = 1 - cls.similarity(a, b)
             cls._score_matrix[(a, b)] = cls._score_matrix[(b, a)] = cost
             costs.append(cost)
 
-        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop
-        for a in cls._simple_segments:
+        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop # TODO: Gap score might need to be different...
+        for a in simple_sounds:
             cls._score_matrix[(a, a)] = 0
 
     @classmethod
@@ -303,29 +303,33 @@ class Segment(object):
         return self._score_matrix[(a, b)]
 
     @classmethod
-    def intersect(cls, *args):
+    def get(cls, descriptor):
+        """Get a sound using the lattice."""
+        try:
+            s = cls._lattice[descriptor].extent
+            if len(s) == 1:
+                return s[0]
+            return frozenset(s)
+        except:
+            print(descriptor)
+            print(cls._lattice[descriptor])
+            raise
+
+    @classmethod
+    def meet(cls, *args):
         """Intersect some segments from their names.
         This is the "meet" operation on the lattice nodes, and returns the lowest common ancestor.
 
         Returns:
-            a str representing the segment which classes are the intersection of the input.
+            lowest common ancestor ID
         """
-        segs = {s for segment in args for s in segment.split(" ")} # TODO: Having to re-split on spaces is bad
-        return cls._lattice[segs].ipa
-
-    @classmethod
-    def get(cls, descriptor):
-        """Get a Segment from an alias."""
-        try:
-            # Simple case: the descriptor is a  known alias
-            return cls._pool[descriptor]
-        except:
-            try:
-                # Alternate case: use lattice to recover segment
-                v = (descriptor,) if type(descriptor) is str else descriptor
-                return cls._pool[cls._lattice[v].ipa]
-            except:
-                raise KeyError("The segment {} isn't known".format(descriptor))
+        segments = set()
+        for segment in args:
+            if cls.is_leaf(segment):
+                segments.add(segment)
+            else:
+                segments |= segment
+        return cls.get(segments)
 
     @classmethod
     def transformation(cls, a, b):
@@ -345,7 +349,7 @@ class Segment(object):
             b -> v
             p -> f
 
-            >>> a,b = Segment.transformation("t","s")
+            >>> a,b = Inventory.transformation("t","s")
             >>> print(a,b)
             [bdpt] [fsvz]
 
@@ -359,21 +363,20 @@ class Segment(object):
 
         def select_if_reciprocal(cls, segs, left, right):
             tmp = []
-            for x in segs.charset:
+            if cls.is_leaf(segs):
+                segs = {segs}
+            for x in segs:
                 try:
-                    y = cls.get((cls.get(x).features - left) | right)
-                    if y and len(y) == 1:
+                    y = cls.get((cls.features(x) - left) | right)
+                    if y and len(y) == 1: # TODO: check if this is still correct
                         x_back = cls.get((y.features - right) | left)
                         if x == x_back.ipa:
                             tmp.append(x)
                 except:
                     pass
-            return cls.get(tmp).ipa #TODO: attention a ne plus concatener les segments, mais faire des listes
+            return frozenset(tmp) # TODO: warning: this need not be a lattice node
 
-        a_f = cls.get(a).features
-        b_f = cls.get(b).features
-        left = a_f - b_f
-        right = b_f - a_f
+        left, right = cls.get_transform_features(a, b)
         A, B = cls.get(left), cls.get(right)
         A = select_if_reciprocal(cls, A, left, right)
         B = select_if_reciprocal(cls, B, right, left)
@@ -391,10 +394,9 @@ class Segment(object):
             >>> inventory.get_from_transform("bd", "pt")
             {'+vois'}, {'-vois'}
         """
-        # TODO: having to resplit is bad
 
-        t1 = cls.get(left.split(" ")).features
-        t2 = cls.get(right.split(" ")).features
+        t1 = cls.features(left)
+        t2 = cls.features(right)
         f1 = t1 - t2
         f2 = t2 - t1
         return f1, f2
@@ -407,26 +409,23 @@ class Segment(object):
 
         Arguments:
             a (str): Segment alias
-            transform (tuple): Couple of two strings of segments aliases.
+            transform (tuple): Couple of two segment IDs
 
         Example:
-            >>> inventory.get_from_transform("d",("bdpt", "fsvz"))
+            >>> segments.Inventory.get_from_transform("d",
+            ...                                     (frozenset({"b","d","p","t"}),
+            ...                                     frozenset({"f","s","v","z"})))
             'z'
         """
-        a = cls.get(a).features
+        a = cls.features(a)
         f1, f2 = cls.get_transform_features(*transform)
-        return cls.get((a - f1) | f2).ipa
+        return cls.get((a - f1) | f2)
 
     @classmethod
-    def show_pool(cls, only_single=False):
+    def show_pool(cls):
         """Return a string description of the whole segment pool."""
-        if not only_single:
-            return "\n".join(
-                [repr(cls._pool[seg]) for seg in sorted(cls._pool, key=lambda x: len(x))])
-        else:
-            return "\n".join(
-                [repr(cls._pool[seg]) for seg in sorted(cls._pool, key=lambda x: len(x))
-                 if len(seg) == 1])
+        return "\n".join([cls.infos(seg)
+                          for seg in sorted(cls._classes, key=lambda x: len(x))])
 
 
 def normalize(ipa, features):
