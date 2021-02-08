@@ -178,19 +178,12 @@ class Pattern(object):
         Note: Contexts strings are now separated by "-" (because phonemes can be)
         """
         quantities = {"": one, "?": optional, "+": some, "*": kleenestar}
-
-        def segment_and_normalize(string):
-            if string:
-                for key in sorted(Inventory.aliases, key=lambda x: len(x), reverse=True):
-                    string = string.replace(key, Inventory.aliases[key])
-                return string.translate(Inventory._normalization)
-            return string
+        simple_segs = sorted((s for s in Inventory._classes if Inventory.is_leaf(s)),
+                             key=len, reverse=True)
+        seg = r"(?:{})".format("|".join(simple_segs))
+        classes = r"[\[{{][{sounds}\-,]+[}}\]]".format(sounds=simple_segs)
 
         def parse_alternation(string, cells):
-            string = segment_and_normalize(string)
-            simple_segs = "".join([s for s in Inventory._classes if Inventory.is_leaf(s)])
-            seg = r"[{}]".format(simple_segs)
-            classes = r"[\[{{][{sounds}\-,]+[}}\]]".format(sounds=simple_segs)
             regex = r"({seg}|{classes})".format(seg=seg, classes=classes)
             for c, alt in zip(cells, string.split(" ⇌ ")):
                 alts = []
@@ -199,41 +192,24 @@ class Pattern(object):
                     for s in re.findall(regex, segs):
                         if (len(s) > 2 or "-" in s or "," in s) and \
                                 ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}")):
-                            if "-" in s:
-                                # Legacy parser
-                                segments = s[1:-1].split("-")
-                                s = "|".join(sorted(segments))
-                            elif "," in s:
+                            if "," in s:
                                 segments = s[1:-1].split(",")
-                                s = "|".join(sorted(segments))
-                            else:
-                                # Legacy parser (old)
-                                s = "|".join(sorted(s[1:-1]))
+                                s = frozenset(segments)
                         alts[-1].append(s)
                 yield c, [tuple(x) for x in alts]
 
         def parse_context(string):
-            string = segment_and_normalize(string)
-            simple_segs = "".join([s for s in Inventory._classes if Inventory.is_leaf(s)])
-            seg = r"[{}]".format(simple_segs)
-            classes = r"[\[{{][{sounds}\-,]+[}}\]]".format(sounds=simple_segs)
             regex = r"({seg}|{classes}|_)([+*?]?)".format(seg=seg, classes=classes)
+
             for s, q in re.findall(regex, string):
                 if (s, q) == ("_", ""):
                     yield "{}"
-                if (len(s) > 2 or "-" in s or "," in s) and \
+                elif (len(s) > 2 or "-" in s or "," in s) and \
                         ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}")):
-                    if "-" in s: # Legacy 2
-                        raw_segments = s[1:-1].split("-")
-                        s = "|".join(sorted(raw_segments))
-                        yield s, quantities[q]
-                    elif "," in s:
+                    if "," in s:
                         raw_segments = s[1:-1].split(",")
-                        s = "|".join(sorted(raw_segments))
+                        s = frozenset(raw_segments)
                         yield s, quantities[q]
-                    else:
-                        # Legacy parser
-                        yield "|".join(sorted(s[1:-1])), quantities[q]
                 else:
                     yield s, quantities[q]
 

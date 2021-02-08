@@ -68,8 +68,6 @@ class PatternDistribution(object):
             features:
                 optional table of features
         """
-
-        log.info("\n\nLooking for patterns for each pair of cell")
         self.paradigms = paradigms
         self.patterns = patterns
         self.pat_dict = pat_dic
@@ -87,7 +85,7 @@ class PatternDistribution(object):
             self.features = None
             self.add_features = lambda x: x
 
-        log.info("\n\nLooking for classes of applicable patterns")
+        log.info("Looking for classes of applicable patterns")
         self.classes = representations.patterns.find_applicable(self.paradigms,
                                                                 self.pat_dict)
 
@@ -194,7 +192,7 @@ class PatternDistribution(object):
         if n == 1:
             return self.entropy_matrix()
 
-        log.info("\n\nComputing (c1, ..., c{!s}) → c{!s} entropies".format(n, n + 1))
+        log.info("Computing (c1, ..., c{!s}) → c{!s} entropies".format(n, n + 1))
 
         # For faster access
         patterns = self.patterns
@@ -282,7 +280,7 @@ class PatternDistribution(object):
 
                 H( patterns_{c1, c2} | classes_{c1, c2} )
         """
-        log.info("\n\nComputing c1 → c2 entropies")
+        log.info("Computing c1 → c2 entropies")
 
         # For faster access
         patterns = self.patterns
@@ -330,7 +328,7 @@ class PatternDistribution(object):
             counter[pattern] += 1
             examples[pattern] = example
 
-        log.info("\n\nPrinting log for P(c1 → c2).")
+        log.info("Printing log for P(c1 → c2).")
 
         if sanity_check:
             rows = list(self.paradigms.columns)
@@ -498,7 +496,7 @@ class PatternDistribution(object):
             counter[pattern] += 1
             examples[pattern] = example
 
-        log.info("\n\nPrinting log of "
+        log.info("Printing log of "
                  "P( (c1, ..., c{!s}) → c{!s} ).".format(n, n + 1))
 
         log.debug("Logging n preds probabilities, with n = {}".format(n))

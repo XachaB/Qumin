@@ -337,7 +337,7 @@ class Inventory(object):
             raise Exception("Warning, some segments are " # TODO: change doc!!!
                             "ancestors of other segments:" + alert)
 
-        cls.max = max(cls._classes, key=len)
+        cls._max = max(cls._classes, key=len)
 
         simple_sounds = [s for s in cls._classes if cls.is_leaf(s)]
         all_sounds = sorted(simple_sounds + list(cls._normalization),

@@ -66,10 +66,15 @@ def create_paradigms(data_file_name,
     """
 
     def get_unknown_segments(forms, unknowns, name):
-        for form in forms:
-            for char in form:
+        if type(forms) is tuple:
+            for form in forms:
+                for char in form.tokens:
+                    if char not in Inventory._classes and char != ";":
+                        unknowns[char].append(form + " " + name)
+        else:
+            for char in forms.tokens:
                 if char not in Inventory._classes and char != ";":
-                    unknowns[char].append(form + " " + name)
+                    unknowns[char].append(forms + " " + name)
 
     # Reading the paradigms.
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False)
@@ -115,12 +120,12 @@ def create_paradigms(data_file_name,
     def parse_cell(cell):
         if cell is None:
             return cell
-        forms = cell.split(";")
+        forms = [Form(f) for f in cell.split(";")]
         if overabundant:
-            forms = forms[0]
+            forms = tuple(sorted(forms))
         else:
-            forms = sorted(forms)
-        return tuple(Form(f) for f in forms)
+            forms = forms[0]
+        return forms
 
     paradigms = paradigms.applymap(parse_cell)
 

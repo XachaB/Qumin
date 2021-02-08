@@ -110,13 +110,13 @@ def main(args):
 
     microclasses = find_microclasses(patterns_df.applymap(str))
     filename = result_prefix + "_microclasses.txt"
-    log.info("\nFound ", len(microclasses), " microclasses.\nPrinting microclasses to ", filename)
+    log.info("\nFound % microclasses.\nPrinting microclasses to %s", len(microclasses), filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
     patfilename = result_prefix + "_" + kind + ".csv"
-    log.info("Writing patterns (importable by other scripts) to " + patfilename)
+    log.info("Writing patterns (importable by other scripts) to %s", patfilename)
     if is_of_pattern_type:
         if args.optim_mem:
             patterns.to_csv(patterns_df, patfilename, pretty=True)  # uses str because optim_mem already used repr
@@ -124,7 +124,7 @@ def main(args):
         else:
             patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
             pathumanfilename = result_prefix + "_human_readable_" + kind + ".csv"
-            log.info("Writing pretty patterns (for manual examination) to " + pathumanfilename)
+            log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
             patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
     else:
         patterns_df.to_csv(patfilename, sep=",")
