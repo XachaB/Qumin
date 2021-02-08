@@ -4,7 +4,7 @@ from collections import defaultdict
 import subprocess
 from tqdm import tqdm
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 def snif_separator(filename):
     with open(filename, "r", encoding="utf-8") as f:

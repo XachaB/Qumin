@@ -9,7 +9,7 @@ from collections import defaultdict
 from clustering import Node
 from os.path import join, dirname
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 try:
     import mpld3
 except:

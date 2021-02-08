@@ -18,8 +18,8 @@ from tqdm import tqdm
 import seaborn as sns; sns.set()
 from matplotlib import pyplot as plt
 import logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+log = logging.getLogger()
 
 def prepare_arguments(paradigms, iterations, methods, features):
     """Generate argument tuples for each evaluation task.
@@ -135,9 +135,12 @@ def predict_two_directions(test_items, train_items, method, features=None):
             else:
                 pat = sorted(classe, key=lambda x: repli[x])[-1]
 
+        # form and solution are length-1 tuples with Form objects
+        # They are tuples because paradigms can have overabundant forms
+        # for eval, we ignore overabundant items
         if pat is not None:
-            result = pat.apply(form, names=cells, raiseOnFail=False)
-        return result == solution
+            result = pat.apply(form[0], names=cells, raiseOnFail=False)
+        return result == solution[0]
 
     def prepare_prediction(patrons, classes):
         return cond_P(patrons, classes).groupby(level=0).aggregate(lambda x: x.idxmax()[1]).to_dict()
@@ -157,6 +160,7 @@ def predict_two_directions(test_items, train_items, method, features=None):
         A = A[A.columns[0]]
 
     classes = patterns.find_applicable(train_items.append(test_items), dic, disable_tqdm=True)
+
 
     B = classes[(a, b)]
 
@@ -256,7 +260,7 @@ def main(args):
     np.random.seed(0)  # make random generator determinist
     now = time.strftime("%Hh%M_%Y%m%d")
 
-    segments.initialize(args.segments)
+    segments.Inventory.initialize(args.segments)
     paradigms, features = prepare_data(args)
 
     files = [Path(file).stem for file in args.paradigms]
@@ -290,15 +294,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=usage,
                                      formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument("segments",
-                        help="segments file, full path"
-                             " (csv separated by '\\t')",
-                        type=str)
-
     parser.add_argument("paradigms",
                         help="paradigm file, full path"
                              " (csv separated by ‘, ’)",
                         nargs="+",
+                        type=str)
+
+    parser.add_argument("segments",
+                        help="segments file, full path"
+                             " (csv separated by '\\t')",
                         type=str)
 
     parser.add_argument('-i', '--iterations',

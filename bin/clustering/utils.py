@@ -22,7 +22,7 @@ except:
 import numpy as np
 import re
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 class Node(object):
     """Represent an inflection class tree.

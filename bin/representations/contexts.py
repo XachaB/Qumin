@@ -8,7 +8,7 @@ from representations.quantity import one, optional, some, kleenestar, Quantity, 
 from representations.alignment import align_right, align_left, align_multi
 from representations.segments import  Inventory
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 def _align_edges(*args, **kwargs):
     """Align at both edges.

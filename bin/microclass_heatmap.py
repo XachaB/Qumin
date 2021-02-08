@@ -11,7 +11,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 def microclass_heatmap(distances, path, labels=None, cmap_name="BuPu", exhaustive_labels=False):
     """Make a heatmap of microclasses distances"""
@@ -67,7 +67,7 @@ def main(args):
       Quantitative modeling of inflection
 
     """
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     log.info(args)
     log.info("Reading files")
     categories = None

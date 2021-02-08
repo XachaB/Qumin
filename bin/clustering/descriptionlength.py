@@ -10,7 +10,7 @@ from itertools import combinations
 from clustering import Node
 from tqdm import tqdm
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 class Cluster(object):
@@ -176,10 +176,9 @@ class BUDLClustersBuilder(object):
         self.initialize_patterns()
         self.compute_DL(M=True)
         current_partition = " - ".join(", ".join(c) for c in self.clusters)
-        log.debug("\t".join(["Partition", "M", "C", "P", "R", "DL"]) + "\n")
+        log.debug("\t".join(["Partition", "M", "C", "P", "R", "DL"]))
         log.debug(" ".join([current_partition, ":\t", "\t".join(
-                (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
-             "\n"]))
+                (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL)))]))
 
     def initialize_clusters(self, paradigms):
         self.clusters = {}
@@ -284,21 +283,20 @@ class BUDLClustersBuilder(object):
         size = left.attributes["size"] + right.attributes["size"]
         color = "c"
         if self.DL >= prev_DL:
-            log.info("\nDL stopped improving: prev = {}, current best = {}".format(prev_DL,
+            log.info("DL stopped improving: prev = {}, current best = {}".format(prev_DL,
                                                                               self.DL))
             color = "r"
 
         self.nodes[labels] = Node(leaves, size=size, children=[left, right],
                                   DL=self.DL, color=color, macroclass=color != "r")
 
-        log.debug("\nMerging %s and %s with DL %s", ", ".join(a), ", ".join(b), self.DL)
+        log.debug("Merging %s and %s with DL %s", ", ".join(a), ", ".join(b), self.DL)
 
         current_partition = " - ".join(
             [", ".join(self.nodes[c].labels) for c in self.nodes])
         log.debug(" ".join(
             [current_partition, ":\t", "\t".join(
-                (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL))),
-             "\n"]))
+                (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL)))]))
 
     def find_ordered_merges(self):
         """Find the list of all best merges of two clusters.
@@ -309,8 +307,9 @@ class BUDLClustersBuilder(object):
         best_merges = []
         best = np.inf
         pairs = combinations(sorted(self.nodes), 2)
+        tot = (len(self.nodes)* (len(self.nodes)-1))//2
 
-        for g1, g2 in tqdm(pairs):
+        for g1, g2 in tqdm(pairs, leave=False, total=tot):
             R, C, P, *_ = self._simulate_merge(g1, g2)
             DL = self.M + R + C + P
             if DL < best:
@@ -322,7 +321,7 @@ class BUDLClustersBuilder(object):
         if len(best_merges) > 1:
             choices = ", ".join(
                 ["({}, {})".format("-".join(a), "-".join(b)) for a, b, _ in best_merges])
-            log.warning("\nThere were {} equivalent choices: %s"
+            log.warning("There were {} equivalent choices: %s"
                         .format(len(best_merges)), choices)
 
         return best_merges

@@ -23,8 +23,8 @@ def main(args):
       Quantitative modeling of inflection
 
     """
-    logging.basicConfig(level=logging.INFO)
-    log = logging.getLogger(__name__)
+    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+    log = logging.getLogger()
     log.info(args)
     from os import path, makedirs
     import time

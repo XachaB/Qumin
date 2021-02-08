@@ -10,7 +10,7 @@ from collections import defaultdict
 from utils import merge_duplicate_columns
 from representations.segments import  Inventory, Form
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 def unique_lexemes(series):
@@ -71,10 +71,6 @@ def create_paradigms(data_file_name,
                 for char in form.tokens:
                     if char not in Inventory._classes and char != ";":
                         unknowns[char].append(form + " " + name)
-        else:
-            for char in forms.tokens:
-                if char not in Inventory._classes and char != ";":
-                    unknowns[char].append(forms + " " + name)
 
     # Reading the paradigms.
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False)
@@ -118,13 +114,13 @@ def create_paradigms(data_file_name,
                     break
 
     def parse_cell(cell):
-        if cell is None:
+        if not cell:
             return cell
         forms = [Form(f) for f in cell.split(";")]
         if overabundant:
             forms = tuple(sorted(forms))
         else:
-            forms = forms[0]
+            forms = (forms[0], )
         return forms
 
     paradigms = paradigms.applymap(parse_cell)

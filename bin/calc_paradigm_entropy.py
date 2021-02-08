@@ -52,13 +52,13 @@ def main(args):
     # Define logging levels (different depending on verbosity)
     if args.debug:
         logfile_name = result_prefix + ".log"
-        logging.basicConfig(level=logging.DEBUG, filename=logfile_name, filemode='w')
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename=logfile_name, filemode='w')
         console = logging.StreamHandler()
         console.setLevel(logging.INFO)
         logging.getLogger('').addHandler(console)
     else:
-        logging.basicConfig(level=logging.INFO)
-    log = logging.getLogger(__name__)
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+    log = logging.getLogger()
     log.info(args)
 
     # Initialize the class of segments.
@@ -103,7 +103,7 @@ def main(args):
             mutual = distrib.mutual_information()
             normmutual = distrib.mutual_information(normalize=True)
 
-            log.info("\nWriting to:" + "\n\t".join([ent_file1, ent_file2, I, NMI]))
+            log.info("Writing to:" + "\n\t".join([ent_file1, ent_file2, I, NMI]))
             entropies1.to_csv(ent_file1, sep="\t")
             entropies2.to_csv(ent_file2, sep="\t")
             mutual.to_csv(I, sep="\t")
@@ -133,7 +133,7 @@ def main(args):
             entropies = entropies.stack()
             entropies.index = [' -> '.join(index[::-1])
                                for index in entropies.index.values]
-        log.info("\nWriting to: {}\n\tand {}".format(ent_file, effectifs_file))
+        log.info("Writing to: {}\n\tand {}".format(ent_file, effectifs_file))
         entropies.to_csv(ent_file, sep="\t")
         effectifs.to_csv(effectifs_file, sep="\t")
         # mean on df's index, then on Series' values.
@@ -148,7 +148,7 @@ def main(args):
                 scsuffix = "{}onePredEntropies_slow_method.csv"
                 check_file = scsuffix.format(result_prefix)
 
-                log.info("\nWriting slowly computed entropies to: {}".format(check_file))
+                log.info("Writing slowly computed entropies to: {}".format(check_file))
 
                 check.to_csv(check_file, sep="\t")
 
@@ -161,7 +161,7 @@ def main(args):
             n_ent_file = "{}{}PredsEntropies.csv".format(result_prefix, n)
             effectifs_file = "{}{}PredsEntropiesEffectifs.csv".format(result_prefix, n)
             n_entropies, effectifs = distrib.n_preds_entropy_matrix(n)
-            log.info("\nWriting to: {}\n\tand {}".format(n_ent_file, effectifs_file))
+            log.info("Writing to: {}\n\tand {}".format(n_ent_file, effectifs_file))
             if args.stacked:
                 n_entropies = n_entropies.stack()
                 n_entropies.index = [' -> '.join(index[::-1])
@@ -177,7 +177,7 @@ def main(args):
                 if sanity_check:
                     scsuffix = "{}{}PredsEntropies_slow_method.csv"
                     n_check_file = scsuffix.format(result_prefix, n)
-                    log.info("\nWriting slowly computed"
+                    log.info("Writing slowly computed"
                           " entropies to: {}".format(n_check_file))
                     n_check.to_csv(n_check_file, sep="\t")
 
@@ -185,7 +185,7 @@ def main(args):
                 distrib.value_check(n)
 
     if args.debug:
-        log.info("\nWrote log to: {}".format(logfile_name))
+        log.info("Wrote log to: {}".format(logfile_name))
 
 
 if __name__ == '__main__':

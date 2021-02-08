@@ -19,7 +19,7 @@ import pandas as pd
 import re
 from tqdm import tqdm
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 len = len
 sorted = sorted
@@ -644,17 +644,14 @@ class BinaryPattern(Pattern):
         yield c2_alt
 
 
-class PatternCollection(object):
+class PatternCollection(tuple):
     """Represent a set of patterns."""
 
-    def __init__(self, collection):
-        self.collection = tuple(sorted(set(collection)))
+    def __init__(self, items):
+        self.collection = tuple(sorted(set(items)))
 
     def __str__(self):
         return ";".join(str(p) for p in self.collection)
-
-    def _reverse_str(self):
-        return ";".join(p._make_str_(features=True, reverse=True) for p in self.collection)
 
     def __repr__(self):
         return ";".join(repr(p) for p in self.collection)
@@ -962,6 +959,7 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
 
     def _iter_applicable_patterns(form, local_patterns, cell):
         known_regexes = set()
+        form = form[0] # from tuple to Form
         for pattern in local_patterns:
             regex = pattern._regex[cell]
             if regex in known_regexes:

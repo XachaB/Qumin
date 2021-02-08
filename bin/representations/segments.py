@@ -13,7 +13,7 @@ import re
 from utils import snif_separator
 import functools
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 inventory = None

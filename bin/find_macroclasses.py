@@ -16,7 +16,7 @@ except ImportError:
 
 from utils import get_repository_version
 from representations import segments, patterns
-from clustering import algorithms, descriptionlength, find_min_attribute, distances
+from clustering import algorithms, descriptionlength, find_min_attribute
 import pandas as pd
 import logging
 
@@ -36,10 +36,10 @@ def main(args):
 
     """
     if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     else:
-        logging.basicConfig(level=logging.INFO)
-    log = logging.getLogger(__name__)
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+    log = logging.getLogger()
     log.info(args)
 
     from os import path, makedirs

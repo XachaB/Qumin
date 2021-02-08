@@ -17,7 +17,7 @@ import representations.patterns
 from tqdm import tqdm
 import logging
 
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 def merge_split_df(dfs):
@@ -68,10 +68,9 @@ class PatternDistribution(object):
             features:
                 optional table of features
         """
-        self.paradigms = paradigms
-        self.patterns = patterns
+        self.paradigms = paradigms.applymap(lambda x: x[0])
         self.pat_dict = pat_dic
-        self.patterns = self.patterns.applymap(lambda x: (str(x),))
+        self.patterns = patterns.applymap(lambda x: (str(x),))
 
         if features is not None:
             # Add feature names

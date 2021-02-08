@@ -7,7 +7,7 @@ Author: Sacha Beniamine
 import numpy as np
 from clustering import find_microclasses
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 def choose(iterable):
     """Choose a random element in an iterable of iterable."""
@@ -57,7 +57,7 @@ def hierarchical_clustering(patterns, Clusters, **kwargs):
 
     clusters = Clusters(microclasses, paradigms=patterns, **kwargs)
     while len(clusters.nodes) > 1:
-        log.info("N = %s", len(clusters.nodes))
+        log.info("number of classes = %s", len(clusters.nodes))
         possible_merges = clusters.find_ordered_merges()
         a, b, score = choose(possible_merges)
         clusters.merge(a, b)

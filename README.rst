@@ -115,3 +115,4 @@ This script was used in:
 **Inferring a lattice of inflection classes, with html output** ::
 
     bin/$ python3 make_lattice.py --html <patterns.csv> <segments.csv>
+
