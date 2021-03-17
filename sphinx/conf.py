@@ -20,7 +20,7 @@ import os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
-sys.path.insert(0,os.path.abspath("../bin"))
+sys.path.insert(0, os.path.abspath("../qumin"))
 print("path is:",sys.path)
 
 # -- General configuration ------------------------------------------------
@@ -132,7 +132,7 @@ pygments_style = 'sphinx'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "../bin/qumin.png"
+html_logo = "../qumin.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -217,7 +217,7 @@ latex_documents = [
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
-latex_logo = "../bin/qumin.png"
+latex_logo = "../qumin.png"
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.

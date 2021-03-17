@@ -7,7 +7,7 @@ Author: Sacha Beniamine
 import numpy as np
 from collections import defaultdict, Counter
 from itertools import combinations
-from clustering import Node
+from . import Node
 from tqdm import tqdm
 import logging
 log = logging.getLogger()

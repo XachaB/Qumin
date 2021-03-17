@@ -14,12 +14,12 @@ try:
 except ImportError:
     MATPLOTLIB_LOADED = False
 
-from utils import get_repository_version
-from representations import segments, patterns
-from clustering import algorithms, descriptionlength, find_min_attribute
+from .utils import get_repository_version
+from .representations import segments, patterns
+from .clustering import algorithms, descriptionlength, find_min_attribute
 import pandas as pd
 import logging
-
+import argparse
 
 def main(args):
     r"""Cluster lexemes in macroclasses according to alternation patterns.
@@ -111,9 +111,7 @@ def main(args):
     flow.write("\n" + experiment_id)
     flow.close()
 
-
-if __name__ == '__main__':
-    import argparse
+def macroclasses_command():
 
     usage = main.__doc__
 
@@ -148,3 +146,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args)
+
+if __name__ == '__main__':
+    macroclasses_command()
+

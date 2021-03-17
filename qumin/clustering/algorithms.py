@@ -5,7 +5,7 @@
 Author: Sacha Beniamine
 """
 import numpy as np
-from clustering import find_microclasses
+from . import find_microclasses
 import logging
 log = logging.getLogger()
 

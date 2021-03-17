@@ -9,9 +9,9 @@ import argparse
 from os import path, makedirs
 
 # Our libraries
-from representations import segments, patterns, create_paradigms, create_features
-from entropy.distribution import PatternDistribution, SplitPatternDistribution
-from utils import get_repository_version
+from .representations import segments, patterns, create_paradigms, create_features
+from .entropy.distribution import PatternDistribution, SplitPatternDistribution
+from .utils import get_repository_version
 import logging
 
 def main(args):
@@ -188,7 +188,7 @@ def main(args):
         log.info("Wrote log to: {}".format(logfile_name))
 
 
-if __name__ == '__main__':
+def H_command():
     usage = main.__doc__
 
     parser = argparse.ArgumentParser(description=usage,
@@ -273,3 +273,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args)
+
+
+if __name__ == '__main__':
+    H_command()

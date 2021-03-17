@@ -6,12 +6,13 @@ Author: Sacha Beniamine.
 """
 from matplotlib import pyplot as plt
 from scipy.spatial.distance import pdist, squareform
-from clustering import find_microclasses
+from .clustering import find_microclasses
 import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
 import logging
 log = logging.getLogger()
+import argparse
 
 def microclass_heatmap(distances, path, labels=None, cmap_name="BuPu", exhaustive_labels=False):
     """Make a heatmap of microclasses distances"""
@@ -84,9 +85,7 @@ def main(args):
                        exhaustive_labels=args.exhaustive_labels)
 
 
-if __name__ == '__main__':
-    import argparse
-
+def heatmap_command():
     usage = main.__doc__
 
     parser = argparse.ArgumentParser(description=usage, formatter_class=argparse.RawTextHelpFormatter)
@@ -119,3 +118,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args)
+
+if __name__ == '__main__':
+    heatmap_command()

@@ -7,8 +7,8 @@ Utility functions for representations.
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from utils import merge_duplicate_columns
-from representations.segments import  Inventory, Form
+from ..utils import merge_duplicate_columns
+from .segments import  Inventory, Form
 import logging
 log = logging.getLogger()
 

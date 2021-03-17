@@ -4,12 +4,12 @@
 
 Author: Sacha Beniamine.
 """
-from entropy import cond_P, P
+from .entropy import cond_P, P
 import numpy as np
-from representations import segments, create_paradigms, patterns, create_features
+from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
 import argparse
-from utils import get_repository_version
+from .utils import get_repository_version
 from itertools import combinations, chain
 from multiprocessing import Pool
 import time
@@ -288,7 +288,7 @@ def main(args):
                     dpi=300, bbox_inches='tight', pad_inches=0.5)
 
 
-if __name__ == '__main__':
+def eval_command():
     usage = main.__doc__
 
     parser = argparse.ArgumentParser(description=usage,
@@ -312,9 +312,11 @@ if __name__ == '__main__':
 
     parser.add_argument('-m', '--methods',
                         help="Methods to align forms. Default: compare all.",
-                        choices=["suffix", "prefix", "baseline", "levenshtein", "similarity"],
+                        choices=["suffix", "prefix", "baseline", "levenshtein",
+                                 "similarity"],
                         nargs="+",
-                        default=["suffix", "prefix", "baseline", "levenshtein", "similarity"])
+                        default=["suffix", "prefix", "baseline", "levenshtein",
+                                 "similarity"])
 
     parser.add_argument('--workers',
                         help="number of workers",
@@ -333,3 +335,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     main(args)
+
+if __name__ == '__main__':
+    eval_command()

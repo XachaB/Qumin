@@ -7,7 +7,7 @@ This module is used to generalise pats contexts.
 
 from copy import deepcopy
 from collections import Counter
-from representations.contexts import Context
+from .contexts import Context
 import logging
 log = logging.getLogger()
 

@@ -4,9 +4,9 @@
 
 This module implements patterns' contexts, which are series of phonological restrictions."""
 
-from representations.quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
-from representations.alignment import align_right, align_left, align_multi
-from representations.segments import  Inventory
+from .quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
+from .alignment import align_right, align_left, align_multi
+from .segments import  Inventory
 import logging
 log = logging.getLogger()
 

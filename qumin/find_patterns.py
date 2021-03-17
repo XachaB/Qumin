@@ -4,11 +4,12 @@
 
 Author: Sacha Beniamine.
 """
-from utils import get_repository_version
-from representations import patterns, segments, create_paradigms
-from clustering import find_microclasses
+from .utils import get_repository_version
+from .representations import patterns, segments, create_paradigms
+from .clustering import find_microclasses
 from itertools import combinations
 import logging
+import argparse
 
 def main(args):
     r"""Find pairwise alternation patterns from paradigms.
@@ -129,9 +130,7 @@ def main(args):
     else:
         patterns_df.to_csv(patfilename, sep=",")
 
-
-if __name__ == '__main__':
-    import argparse
+def pat_command():
 
     usage = main.__doc__
 
@@ -186,3 +185,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args)
+
+
+if __name__ == '__main__':
+    pat_command()

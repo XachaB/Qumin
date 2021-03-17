@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use("agg", force=True)
 from matplotlib import pyplot as plt
 from collections import defaultdict
-from clustering import Node
+from ..clustering import Node
 from os.path import join, dirname
 import logging
 log = logging.getLogger()
@@ -17,7 +17,7 @@ except:
     log.warning("Warning: mpld3 could not be imported. No html export possible.")
 from concepts import Context
 import pandas as pd
-from utils import merge_duplicate_columns
+from ..utils import merge_duplicate_columns
 from tqdm import tqdm
 
 axes = {'facecolor': 'None', 'edgecolor': 'None', 'linewidth': 0}

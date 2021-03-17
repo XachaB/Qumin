@@ -6,11 +6,11 @@ This module addresses the modelisation of phonological segments.
 """
 
 import pandas as pd
-from lattice.lattice import table_to_context
+from ..lattice.lattice import table_to_context
 import numpy as np
 from itertools import combinations
 import re
-from utils import snif_separator
+from ..utils import snif_separator
 import functools
 import logging
 log = logging.getLogger()

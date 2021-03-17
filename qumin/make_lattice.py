@@ -5,12 +5,13 @@
 Author: Sacha Beniamine.
 """
 
-from clustering import find_microclasses
-from representations import segments, patterns
-from utils import get_repository_version
-from lattice.lattice import ICLattice
+from .clustering import find_microclasses
+from .representations import segments, patterns
+from .utils import get_repository_version
+from .lattice.lattice import ICLattice
 import pandas as pd
 import logging
+import argparse
 
 def main(args):
     r""" Infer Inflection classes as a lattice from alternation patterns.
@@ -107,8 +108,7 @@ def main(args):
             log.info(" ".join("extent:", extent, "\n\tdefines:", common, ">"))
 
 
-if __name__ == '__main__':
-    import argparse
+def lattice_command():
 
     usage = main.__doc__
 
@@ -176,3 +176,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args)
+
+if __name__ == '__main__':
+    lattice_command()

@@ -6,11 +6,11 @@ This module addresses the modeling of inflectional alternation patterns."""
 
 from os.path import commonprefix
 from itertools import combinations, product
-from representations import alignment
-from representations.segments import Inventory
-from representations.contexts import Context
-from representations.quantity import one, optional, some, kleenestar
-from representations.generalize import generalize_patterns, incremental_generalize_patterns
+from . import alignment
+from .segments import Inventory
+from .contexts import Context
+from .quantity import one, optional, some, kleenestar
+from .generalize import generalize_patterns, incremental_generalize_patterns
 from itertools import groupby, zip_longest
 from collections import defaultdict
 from copy import deepcopy

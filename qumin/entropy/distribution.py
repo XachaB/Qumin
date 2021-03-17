@@ -12,8 +12,8 @@ from prettytable import PrettyTable, ALL
 from itertools import combinations
 
 from functools import reduce
-from entropy import cond_entropy, entropy, P
-import representations.patterns
+from . import cond_entropy, entropy, P
+from .. import representations
 from tqdm import tqdm
 import logging
 
