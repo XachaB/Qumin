@@ -9,6 +9,7 @@ from collections import defaultdict
 from ..clustering import Node
 from os.path import join, dirname
 import logging
+
 log = logging.getLogger()
 try:
     import mpld3
@@ -62,8 +63,12 @@ def _node_to_label_IC(node, comp=None, **kwargs):
         return header + common + "</table>"
     return ""
 
-def to_dummies(table, **kwargs):
-    """Make a context table from a dataframe.
+
+def to_dummies_overabundant(table, **kwargs):
+    """Make a context table from a dataframe, where cells can be overabundant.
+
+    Overabundant entries are given as either ";" separated strings or as
+     :class:`representations.patterns.PatternCollection` objects
 
     Arguments:
         table (:class:`pandas:pandas.DataFrame`): A dataframe of patterns or strings
@@ -71,7 +76,6 @@ def to_dummies(table, **kwargs):
     Returns:
         dummies (:class:`pandas:pandas.DataFrame`): A context table.
     """
-    log.info("Preparing the context...")
     dic_dummies = defaultdict(dict)
 
     for l in table.index:
@@ -80,7 +84,7 @@ def to_dummies(table, **kwargs):
             if type(values) is str:
                 for val in values.split(";"):
                     if val:
-                        key = col + "=" + str(values)
+                        key = col + "=" + str(val)
                         dic_dummies[key][l] = "X"
             else:  # assuming this is a pattern collection
                 c1, c2 = col
@@ -92,11 +96,11 @@ def to_dummies(table, **kwargs):
     dummies = pd.DataFrame(dic_dummies)
     dummies.fillna("", inplace=True)
 
-    return merge_duplicate_columns(dummies, sep="; ", **kwargs)
+    return dummies.loc[table.index,:]
 
 
 def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
-                     col_formatter=None, na_value=None, collections=False):
+                     col_formatter=None, na_value=None, overabundant=False):
     """ Create a Context from a dataframe of properties.
 
     Args:
@@ -105,15 +109,17 @@ def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
         keep_names (bool): whether to keep original column names when dropping duplicate dummy columns.
         col_formatter (func): Function to format columns in the context table.
         na_value : A value tu use as "Na". Defaults to `None`
-        collections (bool): Whether the table contains :class:`representations.patterns.PatternCollection` objects.
+        overabundant (bool): Whether the table has overabundant cells (these should be
+            given as either ";" separated strings or
+            :class:`representations.patterns.PatternCollection` objects).
 
     Returns:
         concepts.Context: the created Context
     """
     if na_value is not None:
         dataframe = dataframe.applymap(lambda x: None if x == na_value else x)
-    if collections:
-        dummies = to_dummies(dataframe, keep_names=keep_names)
+    if overabundant:
+        dummies = to_dummies_overabundant(dataframe, keep_names=keep_names)
     elif dummy_formatter:
         dummies = dummy_formatter(dataframe)
     else:
@@ -131,7 +137,8 @@ class ICLattice(object):
     This is a wrapper around (:class:`concepts.Context`).
     """
 
-    def __init__(self, dataframe, leaves, annotate=None, comp_prefix=None, aoc=False, **kwargs):
+    def __init__(self, dataframe, leaves, annotate=None, comp_prefix=None, aoc=False,
+                 **kwargs):
         """
         Arguments:
             dataframe (:class:`pandas:pandas.DataFrame`): A dataframe
@@ -172,49 +179,7 @@ class ICLattice(object):
                 maxi = l
         return mini, maxi
 
-    def _lattice_to_nodeAOC(self):
-        def make_nodes(concepts, prb):
-            nodes = {}
-            for concept in concepts:
-                extent = concept.extent
-                intent = concept.intent
-                properties = concept.properties
-                objects = concept.objects
-                size = sum(
-                    len(self.leaves[label]) for label in extent if label in self.leaves)
-                nodes[extent] = Node(extent, intent=intent, size=size, common=properties,
-                                     objects=objects,
-                                     macroclass=False)
-                prb.update(1)
-            return nodes
-
-        aoc = sorted([v for v in self.lattice
-                      if (v == self.lattice.supremum or
-                          v.properties or v.objects)
-                            and v.extent != ()],
-                    key=lambda x: len(x.extent), reverse=True)
-
-        with tqdm(total=len(aoc) * 2) as prb:
-            # Creating nodes
-            nodes = make_nodes(aoc, prb)
-
-            # Creating arcs
-            for vertice in aoc:
-                span = set(vertice.extent)
-                for descendant in vertice.downset():
-                    descendant_extent = set(descendant.extent)
-                    if descendant != vertice and \
-                            descendant in aoc \
-                            and (span & descendant_extent):
-                        nodes[vertice.extent].children.append(nodes[descendant.extent])
-                        span = span - descendant_extent
-                        if len(span) == 0:
-                            break
-                prb.update(1)
-
-        return nodes[aoc[0].extent]
-
-    def _lattice_to_node(self, keep_infimum=False):
+    def _get_nodes(self, keep_infimum=False):
         def make_nodes(concepts, prb):
             nodes = {}
             for concept in concepts:
@@ -244,7 +209,62 @@ class ICLattice(object):
                     if keep_infimum or daughter.extent != ():
                         nodes[vertice.extent].children.append(nodes[daughter.extent])
                 prb.update(1)
-        return nodes[concepts[0].extent]
+        return nodes
+
+    def _lattice_to_node(self, **kwargs):
+        nodes = self._get_nodes(**kwargs)
+        root = nodes[self.lattice.supremum.extent]
+        return root
+
+    def _lattice_to_nodeAOC(self):
+        nodes = self._get_nodes(keep_infimum=False)
+        supremum = self.lattice.supremum
+        infimum = self.lattice.infimum
+
+        # select concepts to be deleted
+        delc = {c for c in self.lattice
+               if (c != supremum
+                   and not c.properties
+                   and not c.objects
+                   and c != infimum)}
+
+        # all nodes need to be deleted bottom-up
+        del_agenda = sorted(delc, key=lambda x: len(x.extent))
+
+        for concept in del_agenda:
+            # To delete the node, we short-circuit it
+            node = nodes[concept.extent]
+            parents = set(concept.upper_neighbors)
+            # print("########################################")
+            # print("Removing node:",concept)
+            # print("Parents:",*parents)
+
+            # Remove edges: parent -> node
+            for p in parents:
+                # print("DEL",p.extent,"-//->",concept.extent)
+                n = nodes[p.extent]
+                n.children.remove(node)
+
+            # Add edges: child -> parent; if child doesn't already inherit from parent
+            for child in node.children:
+                child_concept = self.lattice[child.labels]
+                # print("------------------------------------")
+                # print("child:",child_concept)
+                other_parents = set(child_concept.upper_neighbors) - {concept}
+                # print("other parents:", other_parents)
+                ancestors = set().union(*[c.upset() for c in other_parents if c not in delc])
+                # print("known ancestors:\n\t","\n\t".join(str(x) for x in ancestors))
+                # print("possible new parents:\n\t","\n\t".join(str(x) for x in parents))
+                new_edges = parents - ancestors
+
+                for p in new_edges:
+                    n = nodes[p.extent]
+                    if child not in n.children:
+                        # print("ADD",p.extent,"-->",child_concept.extent)
+                        n.children.append(child) # court-circuiter node
+
+        root = nodes[self.lattice.supremum.extent]
+        return root
 
     def parents(self, identifier):
         """Return all direct parents of a node  which corresponds to the identifier."""
@@ -295,11 +315,11 @@ class ICLattice(object):
                 else:
                     right += 1
             log.info("Concepts définissant des propriétés "
-                     "de la classification de gauche (-b): %s",left)
+                     "de la classification de gauche (-b): %s", left)
             log.info("Concepts définissant des propriétés "
-                  "de la classification de droite: %s",right)
+                     "de la classification de droite: %s", right)
             log.info("Concepts définissant des propriétés "
-                  "des deux classifications: %s", both)
+                     "des deux classifications: %s", both)
         return pd.Series(stats_lattice,
                          index=["Microclasses", "Base", "Hauteur", "Degré", "Noeuds"])
 
@@ -343,12 +363,14 @@ class ICLattice(object):
         def default_edge_attr(node, child):
             return {"color": colors[0], "zorder": custom_zorder(node)}
 
+        params = dict(leavesfunc=leaves_label,
+                      edge_attributes=default_edge_attr,
+                      point=point_function if point else None,
+                      horizontal=False, square=False, layout="qumin",
+                      )
+        params.update(kwargs)
         fig = plt.figure(figsize=figsize)  # for export: 12,6
-        lines, ordered_nodes = node.draw(horizontal=False, square=False,
-                                         leavesfunc=leaves_label,
-                                         point=point_function if point else None,
-                                         edge_attributes=default_edge_attr, lattice=False,
-                                         **kwargs)
+        lines, ordered_nodes = node.draw(**params)
 
         if scale:
             colors = [smap.to_rgba(i) for i in range(mini, maxi)]

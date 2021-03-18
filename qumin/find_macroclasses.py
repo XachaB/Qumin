@@ -95,6 +95,7 @@ def main(args):
         log.info("Drawing figure to: {}".format(figname))
         node.draw(horizontal=True,
                   square=True,
+                  layout="qumin",
                   leavesfunc=lambda x: x.labels[0] + " (" + str(x.attributes["size"]) + ")",
                   nodefunc=lambda x: "{0:.3f}".format(x.attributes["DL"]),
                   keep_above_macroclass=True)
@@ -105,9 +106,8 @@ def main(args):
 
     # Saving text tree
     log.info("Printing tree to: {}".format(result_prefix + "_tree.txt"))
-    string_tree = repr(node)
     flow = open(result_prefix + "_tree.txt", "w", encoding="utf8")
-    flow.write(string_tree)
+    flow.write(node.tree_string())
     flow.write("\n" + experiment_id)
     flow.close()
 
