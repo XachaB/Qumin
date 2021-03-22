@@ -81,17 +81,18 @@ def to_dummies_overabundant(table, **kwargs):
     for l in table.index:
         for col in table.columns:
             values = table.at[l, col]
-            if type(values) is str:
-                for val in values.split(";"):
-                    if val:
-                        key = col + "=" + str(val)
-                        dic_dummies[key][l] = "X"
-            else:  # assuming this is a pattern collection
-                c1, c2 = col
-                for p in values.collection:
-                    if p:
-                        key = str(c1) + "~" + str(c2) + "=" + str(p)
-                        dic_dummies[key][l] = "X"
+            if values is not None:
+                if type(values) is str:
+                    for val in values.split(";"):
+                        if val:
+                            key = col + "=" + str(val)
+                            dic_dummies[key][l] = "X"
+                else:  # assuming this is a pattern collection
+                    c1, c2 = col
+                    for p in values.collection:
+                        if p:
+                            key = str(c1) + "~" + str(c2) + "=" + str(p)
+                            dic_dummies[key][l] = "X"
 
     dummies = pd.DataFrame(dic_dummies)
     dummies.fillna("", inplace=True)

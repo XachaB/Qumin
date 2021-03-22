@@ -97,6 +97,7 @@ class Node(object):
 
     def _recursive_xy(self, ticks, node_spacing):
         if self.attributes.get("_y", None) is None:
+            half_step = node_spacing // 2
             y = 1
             if len(self.children) > 0:
                 xs, ys = zip(
@@ -108,12 +109,11 @@ class Node(object):
 
                     # If the preferred value is far enough, pick it
                     dist_mean_x = min(abs(center-x2) for x2 in ticks[y])
-                    if dist_mean_x >= node_spacing:
+                    if dist_mean_x >= half_step:
                         x = center
                     else:
                         # Otherwise, candidates are all ticks in the node's span
-                        step = node_spacing // 2
-                        candidates = np.arange(xs[0]-step, xs[-1] + step, step).tolist()
+                        candidates = np.arange(xs[0]-half_step, xs[-1] + half_step, half_step).tolist()
 
                         # Pick the candidate which is the further from existing points
                         x = max(candidates,
@@ -148,7 +148,7 @@ class Node(object):
         if layout == "qumin":  # For trees
             leaves_ordered = self._sort_leaves()
             x = 0
-            step = 10
+            step = 30
             for leaf in leaves_ordered:
                 leaf.attributes["_x"] = x
                 x += step
@@ -184,9 +184,12 @@ class Node(object):
         similarities = np.zeros((li, li))
         ancestors = defaultdict(set)
         for node in self:
-            for c in node.children:
-                if len(c.labels) == 1:
-                    ancestors[tuple(c.labels)].add(tuple(node.labels))
+            for l in node.labels:
+                ancestors[(l,)].add(tuple(node.labels))
+            # for c in node.children:
+            #     if len(c.labels) == 1:
+            #         ancestors[tuple(c.labels)].add(tuple(node.labels))
+
         for i, leaf in enumerate(leaves):
             for j, leaf2 in enumerate(leaves):
                 if i != j:
