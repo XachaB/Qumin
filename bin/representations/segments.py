@@ -190,7 +190,7 @@ class Segment(object):
             for x in segs.alias:
                 try:
                     y = cls.get((cls.get(x).features - left) | right)
-                    if y:
+                    if y and len(y) == 1:
                         x_back = cls.get((y.features - right) | left)
                         # print("x :",x,"y:",y,"x_back",x_back.alias)
                         if x == x_back.alias:
@@ -198,11 +198,10 @@ class Segment(object):
                 except:
                     pass
             return _CharClass(tmp)
-
-        a = cls.get(a).features
-        b = cls.get(b).features
-        left = a - b
-        right = b - a
+        a_f = cls.get(a).features
+        b_f = cls.get(b).features
+        left = a_f - b_f
+        right = b_f - a_f
         A, B = cls.get(left), cls.get(right)
         A = select_if_reciprocal(cls, A, left, right)
         B = select_if_reciprocal(cls, B, right, left)

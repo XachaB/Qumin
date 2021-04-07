@@ -504,14 +504,13 @@ class BinaryPattern(Pattern):
             gen_left = []
             gen_right = []
             for a, b in zip_longest(left, right, fillvalue=""):
-                A, B = Segment.transformation(a, b)
-                if a != "" and b != "" and (len(A) > 1 or len(B) > 1):
-                    gen_any = True
-                    gen_left.append(A)
-                    gen_right.append(B)
-                else:
-                    gen_left.append(a)
-                    gen_right.append(b)
+                if a != "" and b != "":
+                    A, B = Segment.transformation(a, b)
+                    if (len(A) > 1 or len(B) > 1):
+                        gen_any = True
+                        a, b = A, B
+                gen_left.append(a)
+                gen_right.append(b)
             this_alt[c1].append(tuple(gen_left))
             this_alt[c2].append(tuple(gen_right))
         if gen_any:
@@ -628,8 +627,10 @@ class BinaryPattern(Pattern):
             feats_left = "[{}]".format(" ".join(sorted(feats_left)))
             feats_right = "[{}]".format(" ".join(sorted(feats_right)))
 
+
             chars_left = "[{}]".format("-".join([restore(c) for c in left]))
             chars_right = "[{}]".format("-".join([restore(Segment.get_from_transform(c, (left, right))) for c in left]))
+
 
             if len(feats_left) +len(feats_right) <= len(chars_left) + len(chars_right):
                 return feats_left, feats_right
