@@ -416,6 +416,7 @@ class Inventory(object):
         return cls.get(frozenset(segments))
 
     @classmethod
+    @functools.lru_cache(maxsize=None)
     def transformation(cls, a, b):
         """Find a transformation between a and b.
 
@@ -448,7 +449,7 @@ class Inventory(object):
             tmp = []
             for x in cls.id_to_frozenset(segs):
                 y = cls.get(frozenset((cls.features(x) - left) | right))
-                if y and len(y) == 1: # TODO: check if this is still correct
+                if y and type(y) is str:
                     x_back = cls.get(frozenset((cls.features(y) - right) | left))
                     if x == x_back:
                         tmp.append(x)
