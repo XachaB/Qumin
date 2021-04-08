@@ -66,11 +66,11 @@ def create_paradigms(data_file_name,
     """
 
     def get_unknown_segments(forms, unknowns, name):
-        if type(forms) is tuple:
-            for form in forms:
-                for char in form.tokens:
-                    if char not in Inventory._classes and char != ";":
-                        unknowns[char].append(form + " " + name)
+        for form in forms.split(";"):
+            tokens = Inventory._segmenter.split(form)
+            for char in tokens:
+                if char not in Inventory._classes and char not in {";", ""}:
+                    unknowns[char].append(form + " " + name)
 
     # Reading the paradigms.
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False)
@@ -113,6 +113,16 @@ def create_paradigms(data_file_name,
                     paradigms.drop([a, b], inplace=True, axis=1)
                     break
 
+    if segcheck:
+        log.info("Checking we have definitions for all the phonological segments in this data...")
+        unknowns = defaultdict(list)
+        paradigms.apply(lambda x: x.apply(get_unknown_segments, args=(unknowns, x.name)), axis=1)
+
+        if len(unknowns) > 0:
+            alert = "Your paradigm has unknown segments: " + "\n ".join(
+                "[{}] (in {} forms:{}) ".format(u, len(unknowns[u]), ", ".join(unknowns[u][:10])) for u in unknowns)
+            raise ValueError(alert)
+
     def parse_cell(cell):
         if not cell:
             return cell
@@ -129,15 +139,6 @@ def create_paradigms(data_file_name,
     if merge_cols:
         merge_duplicate_columns(paradigms, sep="#")
 
-    if segcheck:
-        log.info("Checking we have definitions for all the phonological segments in this data...")
-        unknowns = defaultdict(list)
-        paradigms.apply(lambda x: x.apply(get_unknown_segments, args=(unknowns, x.name)), axis=1)
-
-        if len(unknowns) > 0:
-            alert = "Your paradigm has unknown segments: " + "\n ".join(
-                "[{}] (in {} forms:{}) ".format(u, len(unknowns[u]), ", ".join(unknowns[u][:10])) for u in unknowns)
-            raise ValueError(alert)
 
     if not fillna:
         paradigms = paradigms.replace("", np.NaN)
