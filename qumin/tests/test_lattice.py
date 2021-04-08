@@ -8,6 +8,7 @@ import random
 from ..lattice import ICLattice, to_dummies_overabundant
 from ..clustering import Node
 from . import TestCaseWithPandas
+from itertools import combinations
 
 
 def parse_lattice(nodes):
@@ -38,6 +39,16 @@ class AOCTestCase(unittest.TestCase):
             descendants = set().union(*[x.labels for x in node])
             self.assertEqual(extent, descendants)
 
+        # Check that node children are not grand-children
+        for node in l.nodes:
+            children_extents = [set(x.labels) for x in node.children]
+            for c1, c2 in combinations(children_extents, 2):
+                try:
+                    self.assertFalse(c1 < c2)
+                    self.assertFalse(c2 < c1)
+                except:
+                    print("C1, C2", c1, c2)
+                    raise
     def test_AOC_simplecase(self):
         """This test checks that non aoc nodes are removed in a minimal case.
 
@@ -163,13 +174,25 @@ class AOCTestCase(unittest.TestCase):
         algorithm tend to generate results where l3 is missing entirely.
         """
         data = pd.DataFrame([['2', '1', '4', '9', '4', '9'],
-                                 ['8', '6', '4', '9', '4', '4'],
-                                 ['8', '3', '1', '9', '4', '8'],
-                                 ['8', '4', '7', '9', '0', '4'],
-                                 ['8', '4', '8', '6', '0', '7'],
-                                 ['6', '9', '3', '7', '4', '6']],
-                                index=['l1', 'l2', 'l3', 'l4', 'l5', 'l6'],
-                                columns= ['A', 'B', 'C', 'D', 'E', 'F'])
+                             ['8', '6', '4', '9', '4', '4'],
+                             ['8', '3', '1', '9', '4', '8'],
+                             ['8', '4', '7', '9', '0', '4'],
+                             ['8', '4', '8', '6', '0', '7'],
+                             ['6', '9', '3', '7', '4', '6']],
+                            index=['l1', 'l2', 'l3', 'l4', 'l5', 'l6'],
+                            columns=['A', 'B', 'C', 'D', 'E', 'F'])
+
+        l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
+        self.conformity_check(l)
+
+    def test_hierarchical_constraint(self):
+        data = pd.DataFrame([['1', '2', '2', '1', '1'],
+                             ['2', '1', '1', '2', '2'],
+                             ['3', '1', '1', '1', '3'],
+                             ['1', '1', '1', '1', '4'],
+                             ['1', '3', '1', '3', '5']],
+                            index=['l1', 'l2', 'l3', 'l4', 'l5'],
+                            columns=['A', 'B', 'C', 'D', 'E', ])
 
         l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
         self.conformity_check(l)
@@ -182,8 +205,8 @@ class AOCTestCase(unittest.TestCase):
             id = [prefix, str(i), "-"] + [random.choice(alpha) for _ in range(length - 1)]
             return "".join(id)
 
-        for i in range(20):
-            shape =  np.random.randint(10, high=50, size=(2,))
+        for i in range(10):
+            shape = np.random.randint(10, high=100, size=(2,))
             values = np.random.randint(0, high=10, size=shape)
             indexes = [id_str(i, 4, "l") for i in range(shape[0])]
             columns = [id_str(i, 4, "f").upper() for i in range(shape[1])]

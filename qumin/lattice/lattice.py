@@ -9,6 +9,7 @@ from collections import defaultdict
 from ..clustering import Node
 from os.path import join, dirname
 import logging
+import heapq
 
 log = logging.getLogger()
 try:
@@ -180,7 +181,7 @@ class ICLattice(object):
                 maxi = l
         return mini, maxi
 
-    def _get_nodes(self, keep_infimum=False):
+    def _lattice_to_node(self, keep_infimum=False):
         def make_nodes(concepts, prb):
             nodes = {}
             for concept in concepts:
@@ -210,62 +211,62 @@ class ICLattice(object):
                     if keep_infimum or daughter.extent != ():
                         nodes[vertice.extent].children.append(nodes[daughter.extent])
                 prb.update(1)
-        return nodes
-
-    def _lattice_to_node(self, **kwargs):
-        nodes = self._get_nodes(**kwargs)
         root = nodes[self.lattice.supremum.extent]
         return root
 
     def _lattice_to_nodeAOC(self):
-        nodes = self._get_nodes(keep_infimum=False)
+        def make_nodes(concepts, prb):
+            nodes = {}
+            for concept in concepts:
+                extent = concept.extent
+                intent = concept.intent
+                properties = concept.properties
+                objects = concept.objects
+                size = sum(
+                    len(self.leaves[label]) for label in extent if label in self.leaves)
+                annotations = getattr(concept, '_extra_qumin_annotation', {})
+                nodes[extent] = Node(extent, intent=intent, size=size, common=properties,
+                                     objects=objects,
+                                     macroclass=False, **annotations)
+                prb.update(1)
+            return nodes
+
+        #nodes = self._get_nodes(keep_infimum=False)
         supremum = self.lattice.supremum
         infimum = self.lattice.infimum
 
-        # select concepts to be deleted
-        delc = {c for c in self.lattice
-               if (c != supremum
-                   and not c.properties
-                   and not c.objects
-                   and c != infimum)}
+        def concept_sorter(concept):
+            return (len(concept.extent), -len(list(concept.upset())))
+        # select concept in AOC
+        aoc = {c for c in self.lattice
+               if (c == supremum or c.properties or c.objects) and c != infimum}
 
-        # all nodes need to be deleted bottom-up
-        del_agenda = sorted(delc, key=lambda x: len(x.extent))
+        # Make links (long way)
+        concepts = sorted(aoc, key=concept_sorter, reverse=True)
+        downsets = {c:set(c.downset()) for c in self.lattice}
+        children = defaultdict(set)
+        l = len(concepts)
+        with tqdm(total=l* 3) as prb:
+            # Compute descendants in aoc poset
+            for i in range(l):
+                concept = concepts[i]
+                span = set()
+                for candidate in sorted((downsets[concept] & aoc) - {concept},
+                                        key=concept_sorter, reverse=True):
+                    if candidate not in span:
+                        children[concept.extent].add(candidate)
+                        span.update(downsets[candidate])
+                prb.update(1)
 
-        for concept in del_agenda:
-            # To delete the node, we short-circuit it
-            node = nodes[concept.extent]
-            parents = set(concept.upper_neighbors)
-            # print("########################################")
-            # print("Removing node:",concept)
-            # print("Parents:",*parents)
-
-            # Remove edges: parent -> node
-            for p in parents:
-                # print("DEL",p.extent,"-//->",concept.extent)
-                n = nodes[p.extent]
-                n.children.remove(node)
-
-            # Add edges: child -> parent; if child doesn't already inherit from parent
-            for child in node.children:
-                child_concept = self.lattice[child.labels]
-                # print("------------------------------------")
-                # print("child:",child_concept)
-                other_parents = set(child_concept.upper_neighbors) - {concept}
-                # print("other parents:", other_parents)
-                ancestors = set().union(*[c.upset() for c in other_parents if c not in delc])
-                # print("known ancestors:\n\t","\n\t".join(str(x) for x in ancestors))
-                # print("possible new parents:\n\t","\n\t".join(str(x) for x in parents))
-                new_edges = parents - ancestors
-
-                for p in new_edges:
-                    n = nodes[p.extent]
-                    if child not in n.children:
-                        # print("ADD",p.extent,"-->",child_concept.extent)
-                        n.children.append(child) # court-circuiter node
-
-        root = nodes[self.lattice.supremum.extent]
-        return root
+            # Make and link Node objects
+            # Creating nodes
+            nodes = make_nodes(concepts, prb)
+            # Creating arcs
+            for vertice in concepts:
+                for daughter in children[vertice.extent]:
+                    nodes[vertice.extent].children.append(nodes[daughter.extent])
+                prb.update(1)
+            return nodes[supremum.extent]
 
     def parents(self, identifier):
         """Return all direct parents of a node  which corresponds to the identifier."""
