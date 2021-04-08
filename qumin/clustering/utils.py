@@ -95,35 +95,45 @@ class Node(object):
             return macroclasses_under
         return {}
 
-    def _recursive_xy(self, ticks, node_spacing):
+    def _recursive_xy(self, ticks, node_spacing, max_x, y_factor=1):
         if self.attributes.get("_y", None) is None:
             half_step = node_spacing // 2
-            y = 1
             if len(self.children) > 0:
                 xs, ys = zip(
-                    *[child._recursive_xy(ticks, node_spacing) for child in self.children])
-                y += max(ys)
+                    *[child._recursive_xy(ticks, node_spacing,
+                                          max_x, y_factor) for child in self.children])
+                self.height = max([child.height for child in self.children]) +1
+                y = max(ys) + (y_factor ** (self.height-1))
                 xs = sorted(xs)
-                center = xs[0] + ((xs[-1] - xs[0])/2)
+                x = xs[0] + ((xs[-1] - xs[0])/2)
                 if y in ticks:
 
                     # If the preferred value is far enough, pick it
-                    dist_mean_x = min(abs(center-x2) for x2 in ticks[y])
-                    if dist_mean_x >= half_step:
-                        x = center
-                    else:
-                        # Otherwise, candidates are all ticks in the node's span
-                        candidates = np.arange(xs[0]-half_step, xs[-1] + half_step, half_step).tolist()
-
+                    min_dist = min(abs(x-x2) for x2 in ticks[y])
+                    if min_dist < half_step:
+                        # We prefer candidates in the node span
+                        candidates = np.arange(xs[0] - half_step, xs[-1] + half_step, half_step).tolist()
                         # Pick the candidate which is the further from existing points
-                        x = max(candidates,
-                                key=lambda x1: min(abs(x1 - x2) for x2 in ticks[y]))
+                        # And closest to the preferred center point
+                        candidates = [(x1, min(abs(x1 - x2) for x2 in ticks[y])) for x1 in candidates]
+                        x, min_dist = max(candidates, key=lambda x: x[1])
 
+                    if min_dist < half_step:
+                        # Fallback on more points
+                        candidates = np.arange(0 - half_step, xs[0] - half_step, half_step).tolist() \
+                                    + np.arange(xs[-1] + half_step, max_x + half_step, half_step).tolist()
+                        # Pick the candidate which is the further from existing points
+                        # And closest to the preferred center point
+                        candidates = [(x1, min(abs(x1 - x2) for x2 in ticks[y]), max_x-abs(x1-x)) for x1 in candidates]
+
+                        x, min_dist, center_dist = max(candidates, key=lambda x: x[1])
                     ticks[y].append(x)
                 else:
-                    x = center
                     ticks[y] = [x]
                 self.attributes["_x"] = x
+            else:
+                y = 1
+                self.height = 1
             self.attributes["_y"] = y
         return self.attributes["_x"], self.attributes["_y"]
 
@@ -135,7 +145,7 @@ class Node(object):
         for child in self.children:
             child._erase_xy()
 
-    def _compute_xy(self, layout="qumin", pos=None):
+    def _compute_xy(self, layout="qumin", pos=None, y_factor=1):
         graphviz_layout = nx.drawing.nx_agraph.graphviz_layout
         nx_layouts = {"dot": lambda x: graphviz_layout(x, prog="dot"),
                       # "spring":nx.drawing.spring_layout,
@@ -152,7 +162,7 @@ class Node(object):
             for leaf in leaves_ordered:
                 leaf.attributes["_x"] = x
                 x += step
-            self._recursive_xy({}, step)
+            self._recursive_xy({}, step, x, y_factor)
         elif layout in nx_layouts:
             infimum = Node(["infimum"])
             layout_f = nx_layouts[layout]
@@ -178,7 +188,9 @@ class Node(object):
                                                                         nx_layouts)))
 
     def _sort_leaves(self):
-        """Sorts leaves by similarity for plotting"""
+        """Sorts leaves by similarity for plotting.
+        This is a greedy tsp implementation.
+        """
         leaves = list(self.leaves())
         li = len(leaves)
         similarities = np.zeros((li, li))
@@ -186,9 +198,6 @@ class Node(object):
         for node in self:
             for l in node.labels:
                 ancestors[(l,)].add(tuple(node.labels))
-            # for c in node.children:
-            #     if len(c.labels) == 1:
-            #         ancestors[tuple(c.labels)].add(tuple(node.labels))
 
         for i, leaf in enumerate(leaves):
             for j, leaf2 in enumerate(leaves):
@@ -197,24 +206,24 @@ class Node(object):
                     a2 = ancestors[tuple(leaf2.labels)]
                     jaccard = len(a1 & a2) / len(a1 | a2)
                     similarities[i, j] = similarities[j, i] = jaccard
-        i, j = np.unravel_index(np.argmax(similarities, axis=None),
-                                similarities.shape)
-        leaves_ordered = [leaves[i], leaves[j]]
-        similarities[:, i] = float("-inf")
-        similarities[:, j] = float("-inf")
-        # mark visited
-        for _ in range(li - 2):
-            k1 = np.argmax(similarities[i, :])
-            k2 = np.argmax(similarities[j, :])
-            if k1 > k2:
-                leaves_ordered.insert(0,leaves[k1])
-                similarities[:, k1] = float("-inf")  # mark visited
-                i = k1
-            else:
-                leaves_ordered.append(leaves[k2])
-                similarities[:, k2] = float("-inf")  # mark visited
-                j = k2
-        return leaves_ordered
+
+        paths = {i:[i] for i in range(li)}
+        def shortest_path(sim):
+            return np.unravel_index(np.argmax(sim, axis=None), sim.shape)
+
+        for x in range(li-1):
+            i, j = shortest_path(similarities)
+            i_start = paths[i][0]
+            j_end = paths[j][-1]
+            similarities[i,:] = float("-inf")
+            similarities[:,j] = float("-inf")
+            similarities[j_end,i_start] = float("-inf") # don't loop
+            res = paths[i]+paths[j]
+            for k in res:
+                paths[k] = res
+
+        assert len(paths[i]) == li
+        return [leaves[k] for k in paths[i]]
 
     def to_networkx(self):
         if not nx_loaded:
@@ -285,7 +294,7 @@ class Node(object):
         return string
 
     def to_tikz(self, leavesfunc=None, nodefunc=None, layout="qumin", pos=None,
-                ratio=(1, 1), width=20, color_attrs=None):
+                ratio=(1, 1), width=20, color_attrs=None, y_factor=.8):
         color_attrs = color_attrs or []
 
         def attribute_table(node):
@@ -296,7 +305,7 @@ class Node(object):
                 if common:
                     table.append("\\\\")
             if common:
-                table.append("\\begin{tabular}{rl}")
+                table.append("\\begin{tabular}{r@{ }l}")
                 for feature in node.attributes["common"]:
                     a, b = feature.split("=")
                     table.append("\\textsc{" + a + "} & " + b + " \\\\")
@@ -306,19 +315,13 @@ class Node(object):
         def scale(m, max_obs, max_target):
             return round((m / max_obs) * max_target, 2)
 
-        def get_anchor(node):
-            if node.children:
-                return ("north", "south")
-            return ("south", "north")
-
         nodefunc = nodefunc or attribute_table
         leavesfunc = leavesfunc or attribute_table
-        self._compute_xy(pos=pos, layout=layout)
+        self._compute_xy(pos=pos, layout=layout, y_factor=y_factor)
 
-        node_template = "\\node ({name}) at ({x},{y}) [shape=circle,draw=black,inner sep=0," \
-                        "fill=black,minimum size=3pt] {{}};"
-        edge_template = "\\draw ({a}.{anchor_a}) edge[-] ({b}.{anchor_b});"
-        node_annot = "\\node[anchor={anchor_self},align=left{style}] at ({a}.{anchor_pt}) {{{label}}};"
+        node_template = "\\node ({name}) at ({x},{y}) [draw=none] {{}};"
+        node_label = "\\node ({parent}-label) at ({parent}.south) [anchor={anchor_self},align=center{style}] {{{label}}};"
+        edge_template = "\\draw ({a}-label.{anchor_a}) edge[-] ({b}.{anchor_b});"
 
         xys = list(zip(*[(n.attributes["_x"], n.attributes["_y"]) for n in self]))
         max_x = max(xys[0])
@@ -329,10 +332,8 @@ class Node(object):
 
         for i, node in enumerate(self):
             label_f = nodefunc if node.children else leavesfunc
-            style = ""
-            if not node.children:
-                style = ",draw,fill=white,fill opacity=.8"
-            elif i == 0 or not node.attributes.get("common", False):
+            style = ",draw=none,fill=white,fill opacity=.8"
+            if not node.attributes.get("common", False):
                 style = ",draw=none,fill=none"
 
             if color_attrs and \
@@ -340,20 +341,17 @@ class Node(object):
                          for f in node.attributes.get("common", [])]):
                 style = ",fill=gray!20"
 
-            node_point = node_template.format(name=str(i),
+            node_filled = node_template.format(name=str(i),
                                               x=scale(node.attributes["_x"],
                                                       max_x, width),
                                               y=scale(node.attributes["_y"],
-                                                      max_y, height),
-                                              )
-            a,b = get_anchor(node)
-            node_text = node_annot.format(a=str(i),
+                                                      max_y, height))
+            node_text = node_label.format(parent=str(i),
                                           label=label_f(node),
                                           style=style,
-                                          anchor_pt=a,
-                                          anchor_self=b,
+                                          anchor_self="north",
                                           )
-            lines.append(node_point)
+            lines.append(node_filled)
             lines.append(node_text)
             node.attributes["tikz-label"] = str(i)
 
@@ -362,8 +360,8 @@ class Node(object):
             a = node.attributes["tikz-label"]
             for child in node.children:
                 lines.append(edge_template.format(a=a, b=child.attributes["tikz-label"],
-                                                  anchor_a="center",
-                                                  anchor_b="center"))
+                                                  anchor_a="south",
+                                                  anchor_b="north"))
 
         lines.append("\\end{pgfonlayer}")
         return "\n".join(lines)
@@ -621,7 +619,7 @@ def string_to_node(string, legacy_annotation_name=None):
     return stack[0]
 
 
-def find_microclasses(paradigms):
+def find_microclasses(paradigms, freqs=None):
     """Find microclasses in a paradigm (lines with identical rows).
 
     This is useful to identify an exemplar of each inflection microclass,
@@ -631,14 +629,14 @@ def find_microclasses(paradigms):
         paradigms (pandas.DataFrame):
             a dataframe containing inflectional paradigms.
             Columns are cells, and rows are lemmas.
+        freqs (pandas.Series): a series of frequencies for each lemma
 
     Return:
         microclasses (dict).
             classes is a dict. Its keys are exemplars,
             its values are lists of the name of rows identical to the exemplar.
-            Each exemplar represents a macroclass.
+            Each exemplar represents a macroclass. ::
 
-            >>> classes
             {"a":["a","A","aa"], "b":["b","B","BBB"]}
 
     """
@@ -647,7 +645,11 @@ def find_microclasses(paradigms):
 
     for name, group in grouped:
         members = list(group.index)
-        exemplar = min(members, key=lambda string: len(string))
+        if freqs is not None:
+            freq_subset = freqs[group.index]
+            exemplar = freq_subset.index[freq_subset.argmax()]
+        else:
+            exemplar = min(members, key=lambda string: len(string))
         mc[exemplar] = members
 
     return mc
