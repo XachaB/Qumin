@@ -68,10 +68,16 @@ def main(args):
     # Initialize the class of segments.
     segments.initialize(features_file_name, sep="\t")
 
+    # Patterns
+    pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True, overabundant=False)
+
     # Inflectional paradigms: columns are cells, rows are lexemes.
     paradigms = create_paradigms(paradigms_file_path, defective=True, overabundant=False, merge_cols=args.cols_merged,
                                  segcheck=True)
-    pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True, overabundant=False)
+
+    if pat_table.shape[0] < paradigms.shape[0]:
+        print("It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
+        paradigms = paradigms[(paradigms!="").all(axis=1)]
 
     sanity_check = verbose and len(pat_table.columns) < 10
 
@@ -131,7 +137,10 @@ def main(args):
     if onePred:
         ent_file = "{}onePredEntropies.csv".format(result_prefix)
         effectifs_file = "{}onePredEntropiesEffectifs.csv".format(result_prefix)
-        entropies, effectifs = distrib.entropy_matrix()
+        distrib.entropy_matrix()
+        entropies = distrib.entropies[1]
+        effectifs = distrib.effectifs[1]
+
         if args.stacked:
             entropies = entropies.stack()
             entropies.index = [' -> '.join(index[::-1])
@@ -166,7 +175,9 @@ def main(args):
         for n in preds:
             n_ent_file = "{}{}PredsEntropies.csv".format(result_prefix, n)
             effectifs_file = "{}{}PredsEntropiesEffectifs.csv".format(result_prefix, n)
-            n_entropies, effectifs = distrib.n_preds_entropy_matrix(n)
+            distrib.n_preds_entropy_matrix(n)
+            n_entropies = distrib.entropies[n]
+            effectifs = distrib.effectifs[n]
             print("\nWriting to: {}\n\tand {}".format(n_ent_file, effectifs_file))
             if args.stacked:
                 n_entropies = n_entropies.stack()
