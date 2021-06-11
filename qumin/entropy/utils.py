@@ -61,4 +61,4 @@ def entropy(A):
 
     Return:
         H(A)"""
-    return -sum(A * np.log2(A))
+    return -(A * np.log2(A)).sum()

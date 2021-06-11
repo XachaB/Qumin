@@ -19,6 +19,9 @@ import logging
 
 log = logging.getLogger()
 
+def value_norm(df):
+    """ Rounding at 10 significant digits, avoiding negative 0s"""
+    return df.applymap(lambda x:round(x,10)) + 0
 
 def merge_split_df(dfs):
     merged = {col: reduce(lambda x, y: x + y, [df[col] for df in dfs])
@@ -136,7 +139,7 @@ class PatternDistribution(object):
             entropy  (:class:`pandas:pandas.DataFrame`):
                 Entropy score_matrix to register.
         """
-        entropy = entropy.applymap(lambda x: max(0, x))
+        entropy = value_norm(entropy)
         try:
             self.entropies[n] = entropy
             self.effectifs[n] = effectifs
@@ -217,8 +220,7 @@ class PatternDistribution(object):
 
         indexes = list(combinations(columns, n))
         entropies = pd.DataFrame(index=indexes,
-                                 columns=columns,
-                                 dtype="float16")
+                                 columns=columns)
         effectifs = pd.DataFrame(index=indexes,
                                  columns=columns)
         iterations = len(indexes)
@@ -258,7 +260,6 @@ class PatternDistribution(object):
 
 
         self._register_entropy(n, entropies, effectifs)
-        return entropies, effectifs
 
     def entropy_matrix(self):
         r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies, and one with counts of lexemes.
@@ -286,7 +287,7 @@ class PatternDistribution(object):
         classes = self.classes
         rows = list(self.paradigms.columns)
 
-        entropies = pd.DataFrame(index=rows, columns=rows, dtype="float16")
+        entropies = pd.DataFrame(index=rows, columns=rows)
         effectifs = pd.DataFrame(index=rows, columns=rows)
 
         for a, b in patterns.columns:
@@ -303,7 +304,6 @@ class PatternDistribution(object):
             effectifs.at[b, a] = sum(selector)
 
         self._register_entropy(1, entropies, effectifs)
-        return entropies, effectifs
 
     def one_pred_distrib_log(self, sanity_check=False):
         """Print a log of the probability distribution for one predictor.
@@ -332,8 +332,7 @@ class PatternDistribution(object):
         if sanity_check:
             rows = list(self.paradigms.columns)
             entropies_check = pd.DataFrame(index=rows,
-                                           columns=rows,
-                                           dtype="float16")
+                                           columns=rows)
 
         log.debug("Logging one predictor probabilities")
         log.debug(" P(x → y) = P(x~y | Class(x))")
@@ -356,7 +355,7 @@ class PatternDistribution(object):
                     cond_p = P(cond_events)
 
                     surprisal = cond_p.groupby(level=0).apply(entropy)
-                    slow_ent = min(0, np.float16(sum(classes_p * surprisal)))
+                    slow_ent = (classes_p * surprisal).sum()
                     entropies_check.at[pred, out] = slow_ent
                     log.debug("Entropy from this distribution: %s", slow_ent)
 
@@ -414,7 +413,7 @@ class PatternDistribution(object):
                     log.debug(table.get_string())
 
         if sanity_check:
-            return entropies_check
+            return value_norm(entropies_check)
 
     def value_check(self, n):
         """Check that predicting from n predictors isn't harder than with less.
@@ -516,8 +515,7 @@ class PatternDistribution(object):
         if sanity_check:
             columns = list(self.paradigms.columns)
             entropies_check = pd.DataFrame(index=indexes,
-                                           columns=columns,
-                                           dtype="float16")
+                                           columns=columns)
 
         def format_patterns(series, string):
             patterns = ("; ".join(str(pattern)
@@ -591,7 +589,7 @@ class PatternDistribution(object):
                     classes_p = P(B)
                     cond_p = P(cond_events)
                     surprisal = cond_p.groupby(level=0).apply(entropy)
-                    slow_ent = min(0, np.float16(sum(classes_p * surprisal)))
+                    slow_ent = (classes_p * surprisal).sum()
                     entropies_check.at[predictors, out] = slow_ent
                     log.debug("Entropy from this distribution: %s", slow_ent)
 
@@ -635,7 +633,7 @@ class PatternDistribution(object):
                     log.debug(table.get_string())
 
         if sanity_check:
-            return entropies_check
+            return value_norm(entropies_check)
 
 
 class SplitPatternDistribution(PatternDistribution):
@@ -717,4 +715,4 @@ class SplitPatternDistribution(PatternDistribution):
                 self.classes[(b, a)] + predpats[(a, b)]),
                                               subset=selector)
 
-        return entropies
+        return value_norm(entropies)

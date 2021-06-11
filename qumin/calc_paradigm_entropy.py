@@ -69,6 +69,10 @@ def main(args):
                                  segcheck=True)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True, overabundant=False)
 
+    if pat_table.shape[0] < paradigms.shape[0]:
+        print("It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
+        paradigms = paradigms[(paradigms!="").all(axis=1)]
+
     if args.debug and len(pat_table.columns) > 10:
         log.warning("Using debug mode is strongly "
                     "discouraged on large (>10 cells) datasets."
@@ -98,8 +102,10 @@ def main(args):
             I = "{}EntropiesI-{}{}.csv".format(result_prefix, *args.names)
             NMI = "{}EntropiesNMI-{}{}.csv".format(result_prefix, *args.names)
 
-            entropies1, _ = distrib.distribs[0].entropy_matrix()
-            entropies2, _ = distrib.distribs[1].entropy_matrix()
+            distrib.distribs[0].entropy_matrix()
+            entropies1 = distrib.distribs[0].entropies[1]
+            distrib.distribs[1].entropy_matrix()
+            entropies2 = distrib.distribs[1].entropies[1]
             mutual = distrib.mutual_information()
             normmutual = distrib.mutual_information(normalize=True)
 
@@ -128,7 +134,10 @@ def main(args):
     if onePred:
         ent_file = "{}onePredEntropies.csv".format(result_prefix)
         effectifs_file = "{}onePredEntropiesEffectifs.csv".format(result_prefix)
-        entropies, effectifs = distrib.entropy_matrix()
+        distrib.entropy_matrix()
+        entropies = distrib.entropies[1]
+        effectifs = distrib.effectifs[1]
+
         if args.stacked:
             entropies = entropies.stack()
             entropies.index = [' -> '.join(index[::-1])
@@ -160,8 +169,10 @@ def main(args):
         for n in preds:
             n_ent_file = "{}{}PredsEntropies.csv".format(result_prefix, n)
             effectifs_file = "{}{}PredsEntropiesEffectifs.csv".format(result_prefix, n)
-            n_entropies, effectifs = distrib.n_preds_entropy_matrix(n)
-            log.info("Writing to: {}\n\tand {}".format(n_ent_file, effectifs_file))
+            distrib.n_preds_entropy_matrix(n)
+            n_entropies = distrib.entropies[n]
+            effectifs = distrib.effectifs[n]
+            print("\nWriting to: {}\n\tand {}".format(n_ent_file, effectifs_file))
             if args.stacked:
                 n_entropies = n_entropies.stack()
                 n_entropies.index = [' -> '.join(index[::-1])
