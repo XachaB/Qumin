@@ -107,8 +107,10 @@ def main(args):
             I = "{}EntropiesI-{}{}.csv".format(result_prefix, *args.names)
             NMI = "{}EntropiesNMI-{}{}.csv".format(result_prefix, *args.names)
 
-            entropies1, _ = distrib.distribs[0].entropy_matrix()
-            entropies2, _ = distrib.distribs[1].entropy_matrix()
+            distrib.distribs[0].entropy_matrix()
+            entropies1 = distrib.distribs[0].entropies[1]
+            distrib.distribs[1].entropy_matrix()
+            entropies2 = distrib.distribs[1].entropies[1]
             mutual = distrib.mutual_information()
             normmutual = distrib.mutual_information(normalize=True)
 
