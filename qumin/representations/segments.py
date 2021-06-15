@@ -299,6 +299,8 @@ class Inventory(object):
             shorthands = {cls._lattice[i].intent: e[0].strip("#") for e, i in
                           shorthand_context.lattice if
                           e and len(e) == 1}
+        else:
+            shorthands = {}
 
         for extent, intent in cls._lattice:
 

@@ -63,7 +63,7 @@ def main(args):
 
     # Setting up the output path.
     result_dir = Path(args.folder) / day
-    result_dir.mkdir(exist_ok=True)
+    result_dir.mkdir(exist_ok=True, parents=True)
     result_prefix = "{}/{}_{}_{}_{}_BU_DL".format(result_dir, data_file_name, version, day, now)
 
     # Initializing segments

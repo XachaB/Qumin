@@ -80,9 +80,11 @@ def create_paradigms(data_file_name,
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False)
 
     if long:
-        lexeme_col, cell_col, form_col = col_names
-        paradigms = paradigms.pivot_table(values=form_col, index=lexeme_col, columns=cell_col,
+        lexemes, cell_col, form_col = col_names
+        paradigms = paradigms.pivot_table(values=form_col, index=lexemes, columns=cell_col,
                               aggfunc=lambda x: ";".join(set(x)))
+        paradigms.reset_index(inplace=True, drop=False)
+
     else:
         # If the original file has two identical lexeme rows.
         if "variants" in paradigms.columns:
@@ -94,6 +96,8 @@ def create_paradigms(data_file_name,
 
     if not defective:
         paradigms.dropna(axis=0, inplace=True)
+
+    log.debug(paradigms)
 
     if cols:
         cols.append(lexemes)
@@ -151,4 +155,6 @@ def create_paradigms(data_file_name,
 
     if not fillna:
         paradigms = paradigms.replace("", np.NaN)
+
+    log.debug(paradigms)
     return paradigms

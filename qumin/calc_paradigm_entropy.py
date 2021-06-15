@@ -41,18 +41,20 @@ def main(args):
     day = time.strftime("%Y%m%d")
 
     result_dir = Path(args.folder) / day
-    result_dir.mkdir(exist_ok=True)
+    result_dir.mkdir(exist_ok=True, parents=True)
     version = get_repository_version()
     preds = sorted(args.nPreds)
     onePred = preds[0] == 1
     if onePred:
         preds.pop(0)
-    result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
+    result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day,
+                                             now)
 
     # Define logging levels (different depending on verbosity)
     if args.verbose:
         logfile_name = result_prefix + ".log"
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename=logfile_name, filemode='w')
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG,
+                            filename=logfile_name, filemode='w')
         console = logging.StreamHandler()
         console.setLevel(logging.INFO)
         logging.getLogger('').addHandler(console)
@@ -65,13 +67,17 @@ def main(args):
     segments.Inventory.initialize(features_file_name)
 
     # Inflectional paradigms: columns are cells, rows are lexemes.
-    paradigms = create_paradigms(paradigms_file_path, defective=True, overabundant=False, merge_cols=args.cols_merged,
-                                 segcheck=True)
-    pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True, overabundant=False)
+    paradigms = create_paradigms(paradigms_file_path, defective=True, overabundant=False,
+                                 merge_cols=args.cols_merged,
+                                 segcheck=True, long=args.long,
+                                 col_names=args.cols_names)
+    pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
+                                           overabundant=False)
 
     if pat_table.shape[0] < paradigms.shape[0]:
-        print("It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
-        paradigms = paradigms[(paradigms!="").all(axis=1)]
+        print(
+            "It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
+        paradigms = paradigms[(paradigms != "").all(axis=1)]
 
     if args.debug and len(pat_table.columns) > 10:
         log.warning("Using debug mode is strongly "
@@ -86,10 +92,15 @@ def main(args):
 
     if args.bipartite:
 
-        result_prefix = "{}/{}_{}_{}_{}_bipartite".format(result_dir, data_file_name, version, day, now)
-        paradigms2 = create_paradigms(args.bipartite[1], defective=True, overabundant=False,
-                                      merge_cols=args.cols_merged, segcheck=True)
-        pat_table2, pat_dic2 = patterns.from_csv(args.bipartite[0], defective=True, overabundant=False)
+        result_prefix = "{}/{}_{}_{}_{}_bipartite".format(result_dir, data_file_name,
+                                                          version, day, now)
+        paradigms2 = create_paradigms(args.bipartite[1], defective=True,
+                                      overabundant=False,
+                                      merge_cols=args.cols_merged, segcheck=True,
+                                      long=args.long,
+                                      col_names=args.cols_names)
+        pat_table2, pat_dic2 = patterns.from_csv(args.bipartite[0], defective=True,
+                                                 overabundant=False)
 
         distrib = SplitPatternDistribution([paradigms, paradigms2],
                                            [pat_table, pat_table2],
@@ -122,8 +133,8 @@ def main(args):
                 mean4 = normmutual.mean().mean()
                 log.debug("Mean remaining H(c1 -> c2) for %s = %s", args.names[0], mean1)
                 log.debug("Mean remaining H(c1 -> c2) for %s = %s", args.names[1], mean2)
-                log.debug("Mean I(%s,%s) = %s",*args.names, mean3)
-                log.debug("Mean NMI(%s,%s) = %s",*args.names, mean4)
+                log.debug("Mean I(%s,%s) = %s", *args.names, mean3)
+                log.debug("Mean NMI(%s,%s) = %s", *args.names, mean4)
 
     else:
         distrib = PatternDistribution(paradigms,
@@ -180,7 +191,7 @@ def main(args):
             n_entropies.to_csv(n_ent_file, sep="\t")
             effectifs.to_csv(effectifs_file, sep="\t")
             mean = n_entropies.mean().mean()
-            log.info("Mean H(c1, ..., c%s-> c) = %s",n, mean)
+            log.info("Mean H(c1, ..., c%s-> c) = %s", n, mean)
             log.debug("Mean H(c1, ..., c%s -> c) = %s", n, mean)
             if args.debug:
                 n_check = distrib.n_preds_distrib_log(n, sanity_check=sanity_check)
@@ -189,7 +200,7 @@ def main(args):
                     scsuffix = "{}{}PredsEntropies_slow_method.csv"
                     n_check_file = scsuffix.format(result_prefix, n)
                     log.info("Writing slowly computed"
-                          " entropies to: {}".format(n_check_file))
+                             " entropies to: {}".format(n_check_file))
                     n_check.to_csv(n_check_file, sep="\t")
 
             if onePred and args.debug:
@@ -200,10 +211,8 @@ def main(args):
 
 
 def H_command():
-
     parser = get_default_parser(main.__doc__,
                                 "Results/JointPred", paradigms=True, patterns=True)
-
 
     parser.add_argument('-b', '--bipartite',
                         help="Add a second paradigm dataset, for bipartite systems.",

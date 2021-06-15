@@ -189,7 +189,9 @@ def prepare_data(args):
 
     # Read all files
     for file in args.paradigms:
-        table = create_paradigms(file, segcheck=True, fillna=False, merge_cols=True, overabundant=False, defective=True)
+        table = create_paradigms(file, segcheck=True, fillna=False, merge_cols=True,
+                                 overabundant=False, defective=True, long=args.long,
+                                 col_names=args.cols_names)
         paradigms.append(table)
 
     # Keep only common indexes
@@ -262,7 +264,7 @@ def main(args):
     day = time.strftime("%Y%m%d")
 
     result_dir = Path(args.folder) / day
-    result_dir.mkdir(exist_ok=True)
+    result_dir.mkdir(exist_ok=True, parents=True)
 
     segments.Inventory.initialize(args.segments)
     paradigms, features = prepare_data(args)

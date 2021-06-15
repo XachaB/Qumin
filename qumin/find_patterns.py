@@ -46,7 +46,7 @@ def main(args):
     version = get_repository_version()
     # Setting up the output path.
     result_dir = Path(args.folder)
-    result_dir.mkdir(exist_ok=True)
+    result_dir.mkdir(exist_ok=True, parents=True)
     result_prefix = "{}{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
 
     is_of_pattern_type = kind.startswith("patterns")
@@ -73,7 +73,8 @@ def main(args):
         merge_cols = True
 
     paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols,
-                                 segcheck=segcheck)
+                                 segcheck=segcheck, long=args.long,
+                                 col_names=args.cols_names)
 
     log.info("Looking for patterns...")
     if kind.startswith("endings"):
@@ -135,7 +136,7 @@ def main(args):
 
 def pat_command():
 
-    parser = get_default_parser(main.__doc__, "Results/Patterns", paradigms=True, patterns=False)
+    parser = get_default_parser(main.__doc__, "./Results/Patterns/", paradigms=True, patterns=False)
 
 
     parser.add_argument('-k', '--kind',
