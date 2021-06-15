@@ -262,7 +262,7 @@ def main(args):
     day = time.strftime("%Y%m%d")
 
     result_dir = Path(args.folder) / day
-    result_dir.makedir(exist_ok=True)
+    result_dir.mkdir(exist_ok=True)
 
     segments.Inventory.initialize(args.segments)
     paradigms, features = prepare_data(args)

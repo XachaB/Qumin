@@ -41,7 +41,7 @@ def main(args):
     day = time.strftime("%Y%m%d")
 
     result_dir = Path(args.folder) / day
-    result_dir.makedir(exist_ok=True)
+    result_dir.mkdir(exist_ok=True)
     version = get_repository_version()
     preds = sorted(args.nPreds)
     onePred = preds[0] == 1

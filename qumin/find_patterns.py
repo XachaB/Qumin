@@ -46,7 +46,7 @@ def main(args):
     version = get_repository_version()
     # Setting up the output path.
     result_dir = Path(args.folder)
-    result_dir.makedir(exist_ok=True)
+    result_dir.mkdir(exist_ok=True)
     result_prefix = "{}{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
 
     is_of_pattern_type = kind.startswith("patterns")
