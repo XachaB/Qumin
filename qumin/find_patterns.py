@@ -47,7 +47,7 @@ def main(args):
     # Setting up the output path.
     result_dir = Path(args.folder)
     result_dir.mkdir(exist_ok=True, parents=True)
-    result_prefix = "{}{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
+    result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
 
     is_of_pattern_type = kind.startswith("patterns")
     segcheck = True
