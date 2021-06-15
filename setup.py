@@ -25,7 +25,7 @@ setup(
         'scipy',
         'matplotlib',
         'networkx',
-        'pygraphviz',
+        'pydot',
         'tqdm',
         'seaborn',
         'tabulate',
