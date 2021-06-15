@@ -1,4 +1,7 @@
 name: Qumin
+channels:
+  - conda-forge
+  - defaults
 dependencies:
 - python>=3.6
 - pandas
@@ -6,7 +9,7 @@ dependencies:
 - scipy
 - matplotlib
 - networkx
-- conda-forge::pygraphviz
+- pygraphviz
 - tqdm 
 - seaborn
 - tabulate 
