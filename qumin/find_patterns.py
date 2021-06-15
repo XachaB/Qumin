@@ -4,12 +4,14 @@
 
 Author: Sacha Beniamine.
 """
-from .utils import get_repository_version
+from .utils import get_repository_version, get_default_parser
 from .representations import patterns, segments, create_paradigms
 from .clustering import find_microclasses
 from itertools import combinations
 import logging
 import argparse
+from pathlib import Path
+import time
 
 def main(args):
     r"""Find pairwise alternation patterns from paradigms.
@@ -24,11 +26,12 @@ def main(args):
       Quantitative modeling of inflection
 
     """
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+    if args.verbose:
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    else:
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     log = logging.getLogger()
     log.info(args)
-    from os import path, makedirs
-    import time
     now = time.strftime("%Hh%M")
     day = time.strftime("%Y%m%d")
 
@@ -38,12 +41,12 @@ def main(args):
     overabundant = args.overabundant
     features_file_name = args.segments
     data_file_path = args.paradigms
-    data_file_name = path.basename(data_file_path).rstrip("_")
+    data_file_name = Path(data_file_path).name.rstrip("_")
 
     version = get_repository_version()
     # Setting up the output path.
-    result_dir = "../Results/{}/".format(args.folder)
-    makedirs(result_dir, exist_ok=True)
+    result_dir = Path(args.folder)
+    result_dir.makedir(exist_ok=True)
     result_prefix = "{}{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
 
     is_of_pattern_type = kind.startswith("patterns")
@@ -132,21 +135,8 @@ def main(args):
 
 def pat_command():
 
-    usage = main.__doc__
+    parser = get_default_parser(main.__doc__, "Results/Patterns", paradigms=True, patterns=False)
 
-    parser = argparse.ArgumentParser(description=usage,
-                                     formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument("paradigms",
-                        help="paradigm file, full path"
-                             " (csv separated by ‘, ’)",
-                        type=str)
-
-    parser.add_argument("segments",
-                        help="segments file, full path"
-                             " (csv separated by '\\t')"
-                             " enter ORTHO if using endings on orthographic forms.",
-                        type=str)
 
     parser.add_argument('-k', '--kind',
                         help="Kind of patterns to infer:"
@@ -178,9 +168,6 @@ def pat_command():
                         help="Whether to merge identical columns before looking for patterns.",
                         action="store_true", default=False)
 
-    parser.add_argument("-f", "--folder",
-                        help="Output folder name",
-                        type=str, default="Patterns")
 
     args = parser.parse_args()
 

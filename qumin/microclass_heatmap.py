@@ -11,8 +11,10 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
 import logging
+from .utils import get_default_parser
+
 log = logging.getLogger()
-import argparse
+
 
 def microclass_heatmap(distances, path, labels=None, cmap_name="BuPu", exhaustive_labels=False):
     """Make a heatmap of microclasses distances"""
@@ -80,20 +82,15 @@ def main(args):
     log.info("Computing distances")
     distances = distance_matrix(pat_table, microclasses)
     log.info("Drawing")
-    microclass_heatmap(distances, args.output, labels=categories,
+    microclass_heatmap(distances, args.folder, labels=categories,
                        cmap_name=args.cmap,
                        exhaustive_labels=args.exhaustive_labels)
 
 
 def heatmap_command():
-    usage = main.__doc__
-
-    parser = argparse.ArgumentParser(description=usage, formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument("patterns",
-                        help="patterns file, full path"
-                             " (csv separated by ‘, ’)",
-                        type=str)
+    parser = get_default_parser(main.__doc__,
+                                "Results/microclasses",
+                                paradigms=False, patterns=True)
 
     parser.add_argument("-l", "--labels",
                         help="csv files with class membership to compare"
@@ -110,10 +107,6 @@ def heatmap_command():
                         help="by default, seaborn shows only some labels on the heatmap for readability."
                              " This forces seaborn to print all labels.",
                         action="store_true")
-
-    parser.add_argument("output",
-                        help="output_path",
-                        type=str)
 
     args = parser.parse_args()
 

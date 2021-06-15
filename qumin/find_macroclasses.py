@@ -14,12 +14,14 @@ try:
 except ImportError:
     MATPLOTLIB_LOADED = False
 
-from .utils import get_repository_version
+from .utils import get_repository_version, get_default_parser
 from .representations import segments, patterns
 from .clustering import algorithms, descriptionlength, find_min_attribute
 import pandas as pd
 import logging
-import argparse
+from pathlib import Path
+import time
+import re
 
 def main(args):
     r"""Cluster lexemes in macroclasses according to alternation patterns.
@@ -35,23 +37,20 @@ def main(args):
       Quantitative modeling of inflection
 
     """
-    if args.debug:
+    if args.verbose:
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     else:
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     log = logging.getLogger()
     log.info(args)
 
-    from os import path, makedirs
-    import time
-    import re
     now = time.strftime("%Hh%M")
     day = time.strftime("%Y%m%d")
 
     # Loading files and paths
     features_file_name = args.segments
     data_file_path = args.patterns
-    data_file_name = path.basename(data_file_path).rstrip("_")
+    data_file_name = Path(data_file_path).name.rstrip("_")
     version = get_repository_version()
 
     pattern_type_match = re.match(r".+_(.+)\.csv", data_file_name)
@@ -63,8 +62,8 @@ def main(args):
         kind = pattern_type_match.groups()[0]
 
     # Setting up the output path.
-    result_dir = "../Results/{}/{}".format(args.folder, day)
-    makedirs(result_dir, exist_ok=True)
+    result_dir = Path(args.folder) / day
+    result_dir.makedir(exist_ok=True)
     result_prefix = "{}/{}_{}_{}_{}_BU_DL".format(result_dir, data_file_name, version, day, now)
 
     # Initializing segments
@@ -112,39 +111,9 @@ def main(args):
     flow.close()
 
 def macroclasses_command():
-
-    usage = main.__doc__
-
-    parser = argparse.ArgumentParser(description=usage,
-                                     formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument("patterns",
-                        help="patterns file, full path"
-                             " (csv separated by ‘, ’)",
-                        type=str)
-
-    parser.add_argument("segments",
-                        help="segments file, full path"
-                             " (csv separated by '\\t')"
-                             " enter ORTHO if using endings on orthographic forms.",
-                        type=str)
-
-    options = parser.add_argument_group('Options')
-
-    options.add_argument("-d", "--debug",
-                         help="Activate debug logs.",
-                         action="store_true", default=False)
-
-    options.add_argument("-f", "--folder",
-                         help="Output folder name",
-                         type=str, default="Clustering")
-
-    # options.add_argument("-r", "--randomised",
-    #                      help="Run N times and keep the best result.",
-    #                      type=int, default=None)
-
+    parser = get_default_parser(main.__doc, "Results/Clustering",
+                                patterns=True, paradigms=False)
     args = parser.parse_args()
-
     main(args)
 
 if __name__ == '__main__':

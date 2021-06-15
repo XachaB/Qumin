@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # !/usr/bin/python3
+import argparse
 from collections import defaultdict
 import subprocess
 from tqdm import tqdm
@@ -54,3 +55,64 @@ def merge_duplicate_columns(df, sep=";", keep_names=True):
 
     log.info("Reduced from %s to %s columns", l, len(new_df.columns))
     return new_df
+
+
+class ArgumentDefaultsRawTextHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """Combines RawTextHelpFormatter & class ArgumentDefaultsHelpFormatter
+    """
+
+    def _split_lines(self, text, width):
+        return text.splitlines()
+
+    def _get_help_string(self, action):
+        help = action.help
+        if '%(default)' not in action.help:
+            if action.default is not argparse.SUPPRESS:
+                defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
+                if action.option_strings or action.nargs in defaulting_nargs:
+                    help += ' (default: %(default)s)'
+        return help
+
+def get_default_parser(usage, default_output, patterns=False, paradigms=True, ):
+
+    parser = argparse.ArgumentParser(description=usage,
+                                     formatter_class=ArgumentDefaultsRawTextHelpFormatter)
+
+    if patterns:
+        parser.add_argument("patterns",
+                            help="patterns file, full path"
+                                 " (csv separated by ‘, ’)",
+                            type=str)
+
+    if paradigms:
+        parser.add_argument("paradigms",
+                            help="paradigms file, full path"
+                                 " (csv separated by ‘, ’)",
+                            type=str)
+
+
+
+    parser.add_argument("segments",
+                        help="segments file, full path (csv or tsv)",
+                        type=str)
+
+    if paradigms:
+        parser.add_argument("-l", "--long",
+                            help="Use this option if the data is in long form",
+                            action="store_true", default=False)
+
+        parser.add_argument("-c", "--cols",
+                            help="In long form, specify the name of respectively the lexeme, cell and form columns.",
+                            nargs=3, type=str, default=["lexeme", "cell", "form"])
+
+    options = parser.add_argument_group('Options')
+
+    options.add_argument("-v", "--verbose",
+                         help="Activate debug logs.",
+                         action="store_true", default=False)
+
+    options.add_argument("-f", "--folder",
+                        help="Output folder name",
+                        type=str, default=default_output)
+
+    return parser

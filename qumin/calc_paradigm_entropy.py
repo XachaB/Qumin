@@ -5,14 +5,14 @@
 Compute conditional entropies in inflectional patterns.
 """
 
-import argparse
-from os import path, makedirs
+from pathlib import Path
+import logging
 
 # Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
-from .utils import get_repository_version
-import logging
+from .utils import get_repository_version, get_default_parser
+
 
 def main(args):
     r"""Compute entropies of flexional paradigms' distributions.
@@ -31,7 +31,7 @@ def main(args):
     """
     patterns_file_path = args.patterns
     paradigms_file_path = args.paradigms
-    data_file_name = path.basename(patterns_file_path).rstrip("_")
+    data_file_name = Path(patterns_file_path).name.rstrip("_")
 
     features_file_name = args.segments
 
@@ -40,8 +40,8 @@ def main(args):
     now = time.strftime("%Hh%M")
     day = time.strftime("%Y%m%d")
 
-    result_dir = "../Results/{}/{}".format(args.folder, day)
-    makedirs(result_dir, exist_ok=True)
+    result_dir = Path(args.folder) / day
+    result_dir.makedir(exist_ok=True)
     version = get_repository_version()
     preds = sorted(args.nPreds)
     onePred = preds[0] == 1
@@ -50,7 +50,7 @@ def main(args):
     result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
 
     # Define logging levels (different depending on verbosity)
-    if args.debug:
+    if args.verbose:
         logfile_name = result_prefix + ".log"
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename=logfile_name, filemode='w')
         console = logging.StreamHandler()
@@ -200,25 +200,10 @@ def main(args):
 
 
 def H_command():
-    usage = main.__doc__
 
-    parser = argparse.ArgumentParser(description=usage,
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = get_default_parser(main.__doc__,
+                                "Results/JointPred", paradigms=True, patterns=True)
 
-    parser.add_argument("patterns",
-                        help="patterns file, full path"
-                             " (csv separated by ‘, ’)",
-                        type=str)
-
-    parser.add_argument("paradigms",
-                        help="paradigms file, full path"
-                             " (csv separated by ‘, ’)",
-                        type=str)
-
-    parser.add_argument("segments",
-                        help="segments file, full path"
-                             " (csv separated by '\\t')",
-                        type=str, default=None)
 
     parser.add_argument('-b', '--bipartite',
                         help="Add a second paradigm dataset, for bipartite systems.",
@@ -276,10 +261,6 @@ def H_command():
                          help="Export result as only one column.",
                          action="store_true",
                          default=False)
-
-    options.add_argument("-f", "--folder",
-                         help="Output folder name",
-                         type=str, default="JointPred")
 
     args = parser.parse_args()
 

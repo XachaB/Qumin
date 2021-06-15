@@ -50,11 +50,15 @@ Patterns
 Alternation patterns serve as a basis for all the other scripts. The algorithm to find the patterns was presented in: Sacha Beniamine. `Un algorithme universel pour l'abstraction automatique d'alternances morphophonologiques
 24e Conférence sur le Traitement Automatique des Langues Naturelles <https://halshs.archives-ouvertes.fr/hal-01615899>`_ (TALN), Jun 2017, Orléans, France. 2 (2017), 24e Conférence sur le Traitement Automatique des Langues Naturelles.
 
-**Computing automatically aligned patterns** for paradigm entropy or macroclass::
+**Computing automatically aligned patterns** for  macroclass (ignore defective lexemes and overabundant forms)::
 
     bin/$ python3 find_patterns.py <paradigm.csv> <segments.csv>
 
-**Computing automatically aligned patterns** for lattices::
+**Computing automatically aligned patterns** for paradigm entropy (keep defective lexemes, but not overabundant forms)::
+
+    bin/$ python3 find_patterns.py -d <paradigm.csv> <segments.csv>
+
+**Computing automatically aligned patterns** for lattices (keep defective lexemes and overabundant forms)::
 
     bin/$ python3 find_patterns.py -d -o <paradigm.csv> <segments.csv>
 

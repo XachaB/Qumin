@@ -9,7 +9,7 @@ import numpy as np
 from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
 import argparse
-from .utils import get_repository_version
+from .utils import get_repository_version, get_default_parser
 from itertools import combinations, chain
 from multiprocessing import Pool
 import time
@@ -259,6 +259,10 @@ def main(args):
     log.info(args)
     np.random.seed(0)  # make random generator determinist
     now = time.strftime("%Hh%M_%Y%m%d")
+    day = time.strftime("%Y%m%d")
+
+    result_dir = Path(args.folder) / day
+    result_dir.makedir(exist_ok=True)
 
     segments.Inventory.initialize(args.segments)
     paradigms, features = prepare_data(args)
@@ -279,16 +283,20 @@ def main(args):
     results = pd.DataFrame(results)
     for info in general_infos:
         results[info] = general_infos[info]
-    results.to_csv("../Results/Patterns/eval_patterns_{}_{}.csv".format(now, "_".join(files)))
+    results.to_csv("Results/Patterns/eval_patterns_{}_{}.csv".format(now, "_".join(files)))
 
     print_summary(results, general_infos)
     figs = to_heatmap(results, paradigms.columns.levels[1].tolist())
     for name, fig in figs:
-        fig.savefig("../Results/Patterns/eval_patterns_heatmap_{}_{}_{}.png".format(now, name, "_".join(files)),
+        fig.savefig("{}/eval_patterns_heatmap_{}_{}_{}.png".format(args.file, now, name, "_".join(files)),
                     dpi=300, bbox_inches='tight', pad_inches=0.5)
 
 
 def eval_command():
+
+    parser = get_default_parser(main.__doc__,
+                                "Results/JointPred", paradigms=True, patterns=True)
+
     usage = main.__doc__
 
     parser = argparse.ArgumentParser(description=usage,

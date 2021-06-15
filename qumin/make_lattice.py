@@ -7,11 +7,13 @@ Author: Sacha Beniamine.
 
 from .clustering import find_microclasses
 from .representations import segments, patterns
-from .utils import get_repository_version
+from .utils import get_repository_version, get_default_parser
 from .lattice.lattice import ICLattice
+
+import time
 import pandas as pd
 import logging
-import argparse
+from pathlib import Path
 
 def main(args):
     r""" Infer Inflection classes as a lattice from alternation patterns.
@@ -24,11 +26,13 @@ def main(args):
       Quantitative modeling of inflection
 
     """
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+    if args.verbose:
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    else:
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
     log = logging.getLogger()
     log.info(args)
-    from os import path, makedirs
-    import time
     now = time.strftime("%Hh%M")
     day = time.strftime("%Y%m%d")
 
@@ -36,12 +40,12 @@ def main(args):
 
     features_file_name = args.segments
     data_file_path = args.patterns
-    data_file_name = path.basename(data_file_path)
+    data_file_name = Path(data_file_path).name.rstrip("_")
     version = get_repository_version().rstrip("_")
 
     # Setting up the output path.
-    result_dir = "../Results/{}/{}".format(args.folder, day)
-    makedirs(result_dir, exist_ok=True)
+    result_dir = Path(args.folder) / day
+    result_dir.makedir(exist_ok=True)
     result_prefix = "{}/{}_{}_{}_{}_{}_{}lattice".format(result_dir, data_file_name, version, day, now,
                                                          "aoc" if args.aoc else "full",
                                                          "bipartite_" if args.bipartite else "_")
@@ -110,21 +114,8 @@ def main(args):
 
 def lattice_command():
 
-    usage = main.__doc__
-
-    parser = argparse.ArgumentParser(description=usage,
-                                     formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument("patterns",
-                        help="patterns file, full path"
-                             " (csv separated by ‘, ’)",
-                        type=str)
-
-    parser.add_argument("segments",
-                        help="segments file, full path"
-                             " (csv separated by '\\t')"
-                             " Enter ORTHO if orthographic data",
-                        type=str)
+    parser = get_default_parser(main.__doc__, "Results/lattice", patterns=True,
+                                paradigms=False)
 
     parser.add_argument('--shorten',
                         help="Drop redundant columns altogether."
@@ -166,12 +157,6 @@ def lattice_command():
     parser.add_argument("--first",
                         help="Write first level",
                         action="store_true", default=False)
-
-    options = parser.add_argument_group('Options')
-
-    options.add_argument("-f", "--folder",
-                         help="Output folder name",
-                         type=str, default="lattice")
 
     args = parser.parse_args()
 
