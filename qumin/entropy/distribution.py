@@ -6,7 +6,6 @@ Encloses distribution of patterns on paradigms.
 """
 
 import pandas as pd
-import numpy as np
 from collections import Counter, defaultdict
 from prettytable import PrettyTable, ALL
 from itertools import combinations
@@ -19,9 +18,11 @@ import logging
 
 log = logging.getLogger()
 
+
 def value_norm(df):
     """ Rounding at 10 significant digits, avoiding negative 0s"""
-    return df.applymap(lambda x:round(x,10)) + 0
+    return df.applymap(lambda x: round(x, 10)) + 0
+
 
 def merge_split_df(dfs):
     merged = {col: reduce(lambda x, y: x + y, [df[col] for df in dfs])
@@ -223,7 +224,6 @@ class PatternDistribution(object):
                                  columns=columns)
         effectifs = pd.DataFrame(index=indexes,
                                  columns=columns)
-        iterations = len(indexes)
 
         for predictors in tqdm(indexes):
 
@@ -257,7 +257,6 @@ class PatternDistribution(object):
                     # Prediction of H(A|B)
                     entropies.at[predictors, out] = cond_entropy(A, B, subset=selector)
                     effectifs.at[predictors, out] = sum(selector)
-
 
         self._register_entropy(n, entropies, effectifs)
 
@@ -598,7 +597,7 @@ class PatternDistribution(object):
                         log.debug("Entropy from the score_matrix: %s", ent)
                         if ent != slow_ent and abs(ent - slow_ent) > 1e-5:
                             log.warning("\n# Distribution of ({}, {}) → {z} \n"
-                                      .format(*predictors, z=out))
+                                        .format(*predictors, z=out))
                             log.warning("Something is wrong"
                                         " in the entropy's calculation."
                                         " Slow and fast methods produce"
@@ -681,9 +680,13 @@ class SplitPatternDistribution(PatternDistribution):
     def mutual_information(self, normalize=False):
         """ Information mutuelle entre les deux systèmes."""
 
-        H, _ = self.distribs[0].entropy_matrix()
-        Hprime, _ = self.distribs[1].entropy_matrix()
-        Hjointe, _ = self.entropy_matrix()
+        self.distribs[0].entropy_matrix()
+        self.distribs[1].entropy_matrix()
+        self.entropy_matrix()
+
+        H = self.distribs[0].entropies[1]
+        Hprime = self.distribs[1].entropies[1]
+        Hjointe = self.entropies[1]
 
         I = H + Hprime - Hjointe
 
@@ -697,7 +700,7 @@ class SplitPatternDistribution(PatternDistribution):
         """
         # For faster access
         log.info("Computing implicative H({}|{})".format(self.names[target],
-                                                      self.names[known]))
+                                                         self.names[known]))
         pats = self.patterns_list[target]
 
         predpats = self.patterns_list[known]
