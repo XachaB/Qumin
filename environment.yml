@@ -1,15 +1,14 @@
 name: Qumin
 dependencies:
-- python>=3.4
+- python>=3.6
 - pandas
 - numpy
 - scipy
 - matplotlib
 - networkx
-- pygraphviz
+- conda-forge::pygraphviz
 - tqdm 
 - seaborn
-- pygraphviz
 - tabulate 
 - pip
 - pip:
