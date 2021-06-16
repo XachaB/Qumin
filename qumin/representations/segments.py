@@ -296,9 +296,21 @@ class Inventory(object):
         if shorthands is not None:
             shorthand_context = table_to_context(shorthands, na_value="-1",
                                                 col_formatter=feature_formatter)
-            shorthands = {cls._lattice[i].intent: e[0].strip("#") for e, i in
-                          shorthand_context.lattice if
-                          e and len(e) == 1}
+
+            stack = shorthands.index.tolist()
+            shorthands = {}
+
+            for e, i in shorthand_context.lattice:
+                full_intent = cls._lattice[i].intent
+                for sh in e:
+                    if sh in stack:
+                        shorthand_name = sh.strip("#")
+                        if shorthand_name:
+                            shorthands[full_intent] = sh.strip("#")
+                            stack.remove(sh)
+                if not stack:
+                    break
+
         else:
             shorthands = {}
 
@@ -310,11 +322,9 @@ class Inventory(object):
                 if len(intent) == 0:
                     shorthand = "X"
                 elif shorthand is None and len(extent) > 1:
-                    lower = set().union(
-                        *(set(x.intent) for x in cls._lattice[extent].upper_neighbors))
-                    minimal = set(intent) - lower
-                    if minimal:
-                        shorthand = "[{}]".format(" ".join(minimal))
+                    minimals = list(cls._lattice[extent].attributes())
+                    if minimals:
+                        shorthand = "[{}]".format(" ".join(minimals[0]))
 
                 concept = cls._lattice[extent]
                 ancestors = ["|".join(sorted(c.extent)) for c in concept.upset()]
