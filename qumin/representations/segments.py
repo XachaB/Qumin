@@ -358,7 +358,7 @@ class Inventory(object):
         cls._legal_str = re.compile("(" + "|".join(all_sounds) + ")+")
 
     @classmethod
-    def init_dissimilarity_matrix(cls, gap_prop=0.24, **kwargs):
+    def init_dissimilarity_matrix(cls, gap_prop=0.5, **kwargs):
         """Computes score matrix with dissimilarity scores."""
         # TODO: should this be delegated to morphalign ?
         # TODO: should this code all on integers ?
@@ -369,7 +369,7 @@ class Inventory(object):
             cls._score_matrix[(a, b)] = cls._score_matrix[(b, a)] = cost
             costs.append(cost)
 
-        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop # TODO: Gap score might need to be different...
+        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop # TODO: update gap score
         for a in simple_sounds:
             cls._score_matrix[(a, a)] = 0
 

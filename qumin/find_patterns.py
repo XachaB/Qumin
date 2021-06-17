@@ -159,7 +159,7 @@ def pat_command():
 
     parser.add_argument("--gap_proportion",
                         help="Proportion of the median similarity cost assigned to the insertion cost.",
-                        type=float, default=.24)
+                        type=float, default=.5)
 
     parser.add_argument("--optim_mem",
                         help="Attempt to optimize RAM usage",
