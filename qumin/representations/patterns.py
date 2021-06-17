@@ -184,7 +184,7 @@ class Pattern(object):
         classes = r"[\[{{](?:{sounds}|\-|,)+[}}\]]".format(sounds="|".join(simple_segs))
 
         def is_class(s):
-            return (len(s)>3 or "-" in s or "," in s) and \
+            return s is not None and (len(s)>3 or "-" in s or "," in s) and \
                   ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}"))
 
         def get_class(s):
@@ -197,7 +197,7 @@ class Pattern(object):
             c1, c2 = cells
             alternation = {c1:[], c2:[]}
 
-            for segs_l, segs_r in zip(left.split("_"),
+            for segs_l, segs_r in zip_longest(left.split("_"),
                                       right.split("_")):
                 segs_l = re.findall(regex, segs_l)
                 segs_r = re.findall(regex, segs_r)
@@ -219,19 +219,24 @@ class Pattern(object):
                         j += 1
 
                 # prepare alternation
-                for sl, sr in zip(segs_l,segs_r):
-                    l_class = is_class(sl)
-                    r_class = is_class(sr)
-
-                    if l_class:
-                        alt_l.append(get_class(sl))
-                    else:
+                for sl, sr in zip_longest(segs_l,segs_r):
+                    if sr is None:
                         alt_l.append(sl)
-
-                    if r_class:
-                        alt_r.append(get_class(sr))
+                    elif sl is None:
+                        alt_l.append(sr)
                     else:
-                        alt_r.append(sr)
+                        l_class = is_class(sl)
+                        r_class = is_class(sr)
+
+                        if l_class:
+                            alt_l.append(get_class(sl))
+                        else:
+                            alt_l.append(sl)
+
+                        if r_class:
+                            alt_r.append(get_class(sr))
+                        else:
+                            alt_r.append(sr)
 
                 alternation[c1].append(tuple(alt_l))
                 alternation[c2].append(tuple(alt_r))
