@@ -181,22 +181,62 @@ class Pattern(object):
         simple_segs = sorted((s for s in Inventory._classes if Inventory.is_leaf(s)),
                              key=len, reverse=True)
         seg = r"(?:{})".format("|".join(simple_segs))
-        classes = r"[\[{{][{sounds}\-,]+[}}\]]".format(sounds=simple_segs)
+        classes = r"[\[{{](?:{sounds}|\-|,)+[}}\]]".format(sounds="|".join(simple_segs))
+
+        def is_class(s):
+            return (len(s)>3 or "-" in s or "," in s) and \
+                  ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}"))
+
+        def get_class(s):
+            segments = s[1:-1].split(",")
+            return frozenset(segments)
 
         def parse_alternation(string, cells):
             regex = r"({seg}|{classes})".format(seg=seg, classes=classes)
-            for c, alt in zip(cells, string.split(" ⇌ ")):
-                alts = []
-                for segs in alt.split("_"):
-                    alts.append([])
-                    for s in re.findall(regex, segs):
-                        if (len(s) > 2 or "-" in s or "," in s) and \
-                                ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}")):
-                            if "," in s:
-                                segments = s[1:-1].split(",")
-                                s = frozenset(segments)
-                        alts[-1].append(s)
-                yield c, [tuple(x) for x in alts]
+            left, right = string.split(" ⇌ ")
+            c1, c2 = cells
+            alternation = {c1:[], c2:[]}
+
+            for segs_l, segs_r in zip(left.split("_"),
+                                      right.split("_")):
+                segs_l = re.findall(regex, segs_l)
+                segs_r = re.findall(regex, segs_r)
+
+                alt_l = []
+                alt_r = []
+
+                # Re-align classes:
+                i,j = 0,0
+                while i < len(segs_l) and j < len(segs_r):
+                    l_class = is_class(segs_l[i]) if i < len(segs_l) else False
+                    r_class = is_class(segs_r[j]) if j < len(segs_r) else False
+                    if l_class and not r_class:
+                        segs_l = [""]+ segs_l
+                    elif r_class and not l_class:
+                        segs_r = [""]+ segs_r
+                    else:
+                        i += 1
+                        j += 1
+
+                # prepare alternation
+                for sl, sr in zip(segs_l,segs_r):
+                    l_class = is_class(sl)
+                    r_class = is_class(sr)
+
+                    if l_class:
+                        alt_l.append(get_class(sl))
+                    else:
+                        alt_l.append(sl)
+
+                    if r_class:
+                        alt_r.append(get_class(sr))
+                    else:
+                        alt_r.append(sr)
+
+                alternation[c1].append(tuple(alt_l))
+                alternation[c2].append(tuple(alt_r))
+
+            return alternation
 
         def parse_context(string):
             regex = r"({seg}|{classes}|_)([+*?]?)".format(seg=seg, classes=classes)
@@ -213,6 +253,8 @@ class Pattern(object):
                 else:
                     yield s, quantities[q]
 
+
+
         new = cls.__new__(cls, cells)
 
         try:
@@ -223,7 +265,7 @@ class Pattern(object):
             raise ValueError(message) from e
 
         new.context = Context(list(parse_context(ctxt_str)))
-        new.alternation = dict(parse_alternation(alt_str, cells))
+        new.alternation = parse_alternation(alt_str, cells)
         new.cells = cells
         new.score = float(score_str)
         new._repr = new._make_str_(features=False)
