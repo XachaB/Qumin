@@ -175,7 +175,9 @@ class Pattern(object):
     def _from_str(cls, cells, string):
         """Parse a repr str to a pattern.
         >>> _ ⇌ E / abEs_ <0.5>
-        Note: Contexts strings are now separated by "-" (because phonemes can be)
+        Note: Phonemes in context classes are now separated by ","
+
+
         """
         quantities = {"": one, "?": optional, "+": some, "*": kleenestar}
         simple_segs = sorted((s for s in Inventory._classes if Inventory.is_leaf(s)),
@@ -188,7 +190,11 @@ class Pattern(object):
                   ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}"))
 
         def get_class(s):
-            segments = s[1:-1].split(",")
+            if "," in s:
+                separator = ","
+            elif "-" in s:
+                separator = "-"
+            segments = s[1:-1].split(separator)
             return frozenset(segments)
 
         def parse_alternation(string, cells):
@@ -251,10 +257,7 @@ class Pattern(object):
                     yield "{}"
                 elif (len(s) > 2 or "-" in s or "," in s) and \
                         ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}")):
-                    if "," in s:
-                        raw_segments = s[1:-1].split(",")
-                        s = frozenset(raw_segments)
-                        yield s, quantities[q]
+                    yield get_class(s), quantities[q]
                 else:
                     yield s, quantities[q]
 
