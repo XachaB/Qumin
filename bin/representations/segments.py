@@ -190,13 +190,12 @@ class Segment(object):
             for x in segs.alias:
                 try:
                     y = cls.get((cls.get(x).features - left) | right)
-                    if y and len(y) == 1:
+                    if y and len(str(y)) == 1:
                         x_back = cls.get((y.features - right) | left)
-                        # print("x :",x,"y:",y,"x_back",x_back.alias)
                         if x == x_back.alias:
                             tmp += x
-                except:
-                    pass
+                except KeyError:
+                    continue
             return _CharClass(tmp)
         a_f = cls.get(a).features
         b_f = cls.get(b).features
