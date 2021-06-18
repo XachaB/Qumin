@@ -33,6 +33,13 @@ class Form(str):
         self = str.__new__(cls, " ".join(tokens) + " ")
         self.tokens = tokens
         return self
+
+    @classmethod
+    def from_segmented_str(cls, segmented):
+        self = str.__new__(cls, segmented)
+        self.tokens = segmented.strip(" ").split()
+        return self
+
     def __repr__(self):
         return "Form("+self+")"
 

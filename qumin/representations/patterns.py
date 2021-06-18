@@ -7,7 +7,7 @@ This module addresses the modeling of inflectional alternation patterns."""
 from os.path import commonprefix
 from itertools import combinations, product
 from . import alignment
-from .segments import Inventory
+from .segments import Inventory, Form
 from .contexts import Context
 from .quantity import one, optional, some, kleenestar
 from .generalize import generalize_patterns, incremental_generalize_patterns
@@ -81,7 +81,7 @@ def _replace_alternation(m, r):
     def iter_replacements(m, r):
         g = m.groups("")
         for i in range(len(g)):
-            yield r[i](g[i])
+            yield r[i](g[i].strip())
 
     return "".join(iter_replacements(m, r))
 
@@ -480,13 +480,13 @@ class BinaryPattern(Pattern):
             return "(?:" + "|".join(x + " " for x in sounds) + ")"
 
         def make_transform_repl(a, b):
-            return lambda x: Inventory.get_from_transform(x, (a, b)).REGEX
+            return lambda x: Inventory.get_from_transform(x, (a, b)) + " "
 
         def make_sub_repl(chars):
             return lambda x: chars
 
         def identity(x):
-            return x
+            return x+" "
 
         def iter_alternation(alt):
             for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)): #TODO: used Charclass
@@ -612,7 +612,7 @@ class BinaryPattern(Pattern):
                                     "".format(self._regex[from_cell].pattern, self, from_cell, to_cell, form))
             else:
                 return None
-        return string
+        return Form.from_segmented_str(string)
 
     def _generalize_alt(self, *others):
         """Use the generalized alternation, using features when possible rather than segments."""
