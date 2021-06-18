@@ -180,8 +180,10 @@ class Pattern(object):
 
         """
         quantities = {"": one, "?": optional, "+": some, "*": kleenestar}
+
         simple_segs = sorted((s for s in Inventory._classes if Inventory.is_leaf(s)),
                              key=len, reverse=True)
+
         seg = r"(?:{})".format("|".join(simple_segs))
         classes = r"[\[{{](?:{sounds}|\-|,)+[}}\]]".format(sounds="|".join(simple_segs))
 
@@ -198,7 +200,7 @@ class Pattern(object):
             return frozenset(segments)
 
         def parse_alternation(string, cells):
-            regex = r"({seg}|{classes})".format(seg=seg, classes=classes)
+            regex = r"({classes}|{seg})".format(seg=seg, classes=classes)
             left, right = string.split(" ⇌ ")
             c1, c2 = cells
             alternation = {c1:[], c2:[]}
@@ -229,7 +231,7 @@ class Pattern(object):
                     if sr is None:
                         alt_l.append(sl)
                     elif sl is None:
-                        alt_l.append(sr)
+                        alt_r.append(sr)
                     else:
                         l_class = is_class(sl)
                         r_class = is_class(sr)
@@ -250,7 +252,7 @@ class Pattern(object):
             return alternation
 
         def parse_context(string):
-            regex = r"({seg}|{classes}|_)([+*?]?)".format(seg=seg, classes=classes)
+            regex = r"({classes}|{seg}|_)([+*?]?)".format(seg=seg, classes=classes)
 
             for s, q in re.findall(regex, string):
                 if (s, q) == ("_", ""):
@@ -473,6 +475,10 @@ class BinaryPattern(Pattern):
         """
         c1, c2 = self.cells
 
+        def make_transform_reg(sounds):
+            sounds = sorted(sounds)
+            return "(?:" + "|".join(x + " " for x in sounds) + ")"
+
         def make_transform_repl(a, b):
             return lambda x: Inventory.get_from_transform(x, (a, b)).REGEX
 
@@ -516,13 +522,18 @@ class BinaryPattern(Pattern):
                         # Transformation replacement make_transform_repl with two segments in argument
                         repl[c1].append(make_transform_repl(chars_2, chars_1))
                         repl[c2].append(make_transform_repl(chars_1, chars_2))
+
+                        # Regex matches these segments as one group
+                        regex[c1] += "({})".format(make_transform_reg(chars_1))
+                        regex[c2] += "({})".format(make_transform_reg(chars_2))
                     else:
                         # Substitution replacement make_subl_repl with target segment as argument
                         repl[c1].append(make_sub_repl(chars_1))
                         repl[c2].append(make_sub_repl(chars_2))
-                    # Regex matches these segments as one group
-                    regex[c1] += "({})".format(chars_1)
-                    regex[c2] += "({})".format(chars_2)
+
+                        # Regex matches these segments as one group
+                        regex[c1] += "({})".format(chars_1)
+                        regex[c2] += "({})".format(chars_2)
                 i += 1
 
         self._saved_regex = {c: re.compile("^" + regex[c] + "$") for c in regex}
