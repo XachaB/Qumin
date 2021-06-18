@@ -13,8 +13,34 @@ class PatternsTestCase(unittest.TestCase):
         segs_file = Path(__file__).parent / "data" / "portuguese_phonemes.csv"
         segments.Inventory.initialize(segs_file, sep=",")
 
+    def test_identity(self):
+        c = ("a", "b")
+        p = patterns.Pattern.new_identity(c)
+        f = segments.Form.from_segmented_str("a b a b ")
+        self.assertTrue(p.applicable(f, "a"))
+        self.assertTrue(p.applicable(f, "b"))
+        self.assertEqual(p.apply(f, c), f)
+        self.assertEqual(p.apply(f, c[::-1]), f)
+        self.assertTrue(p.is_identity())
+
+    def test_find_generalized_alt(self):
+        forms = (segments.Form.from_segmented_str("b a "),
+                 segments.Form.from_segmented_str("b ˈa "))
+        aligned = zip(forms[0].tokens, forms[1].tokens)
+        c = ("a", "b")
+        p = patterns.Pattern(c, aligned, aligned=True)
+        expected = {'a': ((frozenset(
+                 {'ẽ', 'ɔ', 'ɛ', 'aw', 'uj', 'ɐ̃', 'oj', 'iw', 'a', 'i', 'ɐ̃j', 'ɐ̃w', 'ĩ',
+                 'ũ', 'o', 'õ', 'u', 'ɐj', 'e', 'ɐ', 'aj'}),),),
+                    'b': ((frozenset(
+                        {'ˈaw', 'ˈa', 'ˈɐ̃', 'ˈi', 'ˈɐ', 'ˈĩ', 'ˈɔ', 'ˈe', 'ˈɛ', 'ˈuj',
+                         'ˈoj', 'ˈiw', 'ˈũ', 'ˈõ', 'ˈo', 'ˈu', 'ˈɐ̃w', 'ˈɐj', 'ˈɐ̃j',
+                         'ˈẽ', 'ˈaj'}),),)}
+        self.assertDictEqual(p._gen_alt, expected)
+
     def test_applicable(self):
-        p = patterns.Pattern._from_str(c_test,
+        c = ("a", "b")
+        p = patterns.Pattern._from_str(c,
                                         "{a,aj,aw,e,i,iw,o,oj,u,uj,õ,ĩ,ũ,ɐ,ɐj,ɐ̃,ɐ̃j,ɐ̃w"
                                         ",ɔ,ɛ,ẽ}_ˈɐm_ʃ ⇌ {ˈa,ˈaj,ˈaw,ˈe,ˈi,ˈiw,ˈo,ˈoj,"
                                         "ˈu,ˈuj,ˈõ,ˈĩ,ˈũ,ˈɐ,ˈɐj,ˈɐ̃,ˈɐ̃j,ˈɐ̃w,ˈɔ,ˈɛ,ˈẽ}__"
@@ -27,7 +53,25 @@ class PatternsTestCase(unittest.TestCase):
                                         "ˈa,ˈaj,ˈaw,ˈe,ˈew,ˈi,ˈiw,ˈo,ˈoj,ˈu,ˈuj,ˈõ,ˈõj,ˈ"
                                         "ĩ,ˈũ,ˈɐ,ˈɐj,ˈɐ̃,ˈɐ̃j,ˈɐ̃w,ˈɔ,ˈɔj,ˈɛ,ˈẽ,ẽ}+_u_ "
                                         "<2154.0>")
-        form = form
+        self.assertTrue(p.applicable("ɐ k ˈɐ m u ", c[1]))
+
+    def test_apply(self):
+        c = ("a", "b")
+        p = patterns.Pattern._from_str(c,
+                                        "{a,aj,aw,e,i,iw,o,oj,u,uj,õ,ĩ,ũ,ɐ,ɐj,ɐ̃,ɐ̃j,ɐ̃w"
+                                        ",ɔ,ɛ,ẽ}_ˈɐm_ʃ ⇌ {ˈa,ˈaj,ˈaw,ˈe,ˈi,ˈiw,ˈo,ˈoj,"
+                                        "ˈu,ˈuj,ˈõ,ˈĩ,ˈũ,ˈɐ,ˈɐj,ˈɐ̃,ˈɐ̃j,ˈɐ̃w,ˈɔ,ˈɛ,ˈẽ}__"
+                                        " / {a,aj,aw,b,d,e,f,i,iw,j,k,l,m,n,o,oj,p,s,t"
+                                        ",u,uj,v,w,z,õ,ĩ,ũ,ɐ,ɐj,ɐ̃,ɐ̃j,ɐ̃w,ɔ,ə,ɛ,ɡ,ɲ,ɾ,ʀ,ʃ"
+                                        ",ʎ,ʒ,ˈa,ˈaj,ˈaw,ˈe,ˈew,ˈi,ˈiw,ˈo,ˈoj,ˈu,ˈuj,ˈõ"
+                                        ",ˈõj,ˈĩ,ˈũ,ˈɐ,ˈɐj,ˈɐ̃,ˈɐ̃j,ˈɐ̃w,ˈɔ,ˈɔj,ˈɛ,ˈẽ,ẽ}*_"
+                                        "{a,aj,aw,b,d,e,f,i,iw,j,k,l,m,n,o,oj,p,s,t,u,u"
+                                        "j,v,w,z,õ,ĩ,ũ,ɐ,ɐj,ɐ̃,ɐ̃j,ɐ̃w,ɔ,ə,ɛ,ɡ,ɲ,ɾ,ʀ,ʃ,ʎ,ʒ,"
+                                        "ˈa,ˈaj,ˈaw,ˈe,ˈew,ˈi,ˈiw,ˈo,ˈoj,ˈu,ˈuj,ˈõ,ˈõj,ˈ"
+                                        "ĩ,ˈũ,ˈɐ,ˈɐj,ˈɐ̃,ˈɐ̃j,ˈɐ̃w,ˈɔ,ˈɔj,ˈɛ,ˈẽ,ẽ}+_u_ "
+                                        "<2154.0>")
+        self.assertTrue(p.apply("ɐ k ˈɐ m u ", ("b","a"),
+                                "ɐ k ɐ m ˈɐ m u ʃ "))
 
     def test_from_str(self):
         self.maxdiff = 2000

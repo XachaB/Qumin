@@ -165,8 +165,8 @@ class Pattern(object):
     def new_identity(cls, cells):
         """Create a new identity pattern for a given set of cells.
         """
-        p = cls(cells, [""] * len(cells))
-        p.context = [(Inventory._max, kleenestar)]
+        p = cls(cells, [""] * len(cells), aligned=True)
+        p.context = Context([(Inventory._max, kleenestar)])
         p._repr = p._make_str_(features=False)
         p._feat_str = p._make_str_(features=True)
         return p
@@ -375,10 +375,10 @@ class Pattern(object):
         comparables = iter(alignment)
         elements = next(comparables, None)
         while elements is not None:
-            while elements and are_all_identical(elements):
+            while elements is not None and are_all_identical(elements):
                 context.append(elements[0])
                 elements = next(comparables, None)
-            if elements and not are_all_identical(elements):
+            if elements is not None and not are_all_identical(elements):
                 altbuffer = [[x] for x in elements]
                 context.append("{}")
                 elements = next(comparables, None)
