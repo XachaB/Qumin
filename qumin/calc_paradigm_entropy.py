@@ -11,7 +11,7 @@ import logging
 # Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
-from .utils import get_repository_version, get_default_parser
+from .utils import get_version, get_default_parser
 
 
 def main(args):
@@ -42,7 +42,7 @@ def main(args):
 
     result_dir = Path(args.folder) / day
     result_dir.mkdir(exist_ok=True, parents=True)
-    version = get_repository_version()
+    version = get_version()
     preds = sorted(args.nPreds)
     onePred = preds[0] == 1
     if onePred:

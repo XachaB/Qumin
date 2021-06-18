@@ -7,7 +7,7 @@ Author: Sacha Beniamine.
 
 from .clustering import find_microclasses
 from .representations import segments, patterns
-from .utils import get_repository_version, get_default_parser
+from .utils import get_version, get_default_parser
 from .lattice.lattice import ICLattice
 
 import time
@@ -41,7 +41,7 @@ def main(args):
     features_file_name = args.segments
     data_file_path = args.patterns
     data_file_name = Path(data_file_path).name.rstrip("_")
-    version = get_repository_version().rstrip("_")
+    version = get_version().rstrip("_")
 
     # Setting up the output path.
     result_dir = Path(args.folder) / day

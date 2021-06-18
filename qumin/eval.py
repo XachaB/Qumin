@@ -9,7 +9,7 @@ import numpy as np
 from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
 import argparse
-from .utils import get_repository_version, get_default_parser
+from .utils import get_version, get_default_parser
 from itertools import combinations, chain
 from multiprocessing import Pool
 import time
@@ -271,7 +271,7 @@ def main(args):
 
     files = [Path(file).stem for file in args.paradigms]
 
-    general_infos = {"Qumin_version": get_repository_version(), "lexemes": paradigms.shape[0],
+    general_infos = {"Qumin_version": get_version(), "lexemes": paradigms.shape[0],
                      "paradigms": ";".join(files), "day_time": now}
 
     tasks = prepare_arguments(paradigms, args.iterations, args.methods, features)

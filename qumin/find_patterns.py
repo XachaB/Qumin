@@ -4,7 +4,7 @@
 
 Author: Sacha Beniamine.
 """
-from .utils import get_repository_version, get_default_parser
+from .utils import get_version, get_default_parser
 from .representations import patterns, segments, create_paradigms
 from .clustering import find_microclasses
 from itertools import combinations
@@ -43,7 +43,7 @@ def main(args):
     data_file_path = args.paradigms
     data_file_name = Path(data_file_path).name.rstrip("_")
 
-    version = get_repository_version()
+    version = get_version()
     # Setting up the output path.
     result_dir = Path(args.folder)
     result_dir.mkdir(exist_ok=True, parents=True)

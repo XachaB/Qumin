@@ -2,10 +2,10 @@
 # !/usr/bin/python3
 import argparse
 from collections import defaultdict
-import subprocess
 from tqdm import tqdm
 import logging
 log = logging.getLogger()
+from .. import __version__
 
 def snif_separator(filename):
     with open(filename, "r", encoding="utf-8") as f:
@@ -16,7 +16,7 @@ def snif_separator(filename):
             return ","
         raise ValueError("File {} should be comma or tab separated".format(filename))
 
-def get_repository_version():
+def get_version():
     """Return an ID for the current git or svn revision.
 
     If the directory isn't under git or svn, the function returns an empty str.
@@ -24,12 +24,7 @@ def get_repository_version():
      Returns:
         (str): svn/git version or ''.
      """
-    try:
-        kwargs = {"universal_newlines": True}
-        version = subprocess.check_output(["git", "describe", "--tags"], **kwargs)
-        return version.strip("\n ")
-    except:
-        return ''
+    return __version__
 
 
 def merge_duplicate_columns(df, sep=";", keep_names=True):

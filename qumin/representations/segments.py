@@ -117,7 +117,7 @@ class Inventory(object):
         Args:
             sound: identifier of a sound
             end: whether this regex is at the end of a word
-                (this is intended to later get rid of trailing spaces in Form)
+                TODO: this is intended to later get rid of trailing spaces in Form
 
         Returns:
             (str): regex string

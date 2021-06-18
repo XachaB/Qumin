@@ -14,7 +14,7 @@ try:
 except ImportError:
     MATPLOTLIB_LOADED = False
 
-from .utils import get_repository_version, get_default_parser
+from .utils import get_version, get_default_parser
 from .representations import segments, patterns
 from .clustering import algorithms, descriptionlength, find_min_attribute
 import pandas as pd
@@ -51,7 +51,7 @@ def main(args):
     features_file_name = args.segments
     data_file_path = args.patterns
     data_file_name = Path(data_file_path).name.rstrip("_")
-    version = get_repository_version()
+    version = get_version()
 
     pattern_type_match = re.match(r".+_(.+)\.csv", data_file_name)
     if pattern_type_match is None:
