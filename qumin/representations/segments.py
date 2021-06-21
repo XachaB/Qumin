@@ -36,8 +36,9 @@ class Form(str):
 
     @classmethod
     def from_segmented_str(cls, segmented):
-        self = str.__new__(cls, segmented)
-        self.tokens = segmented.strip(" ").split()
+        stripped = segmented.strip(" ")
+        self = str.__new__(cls, stripped+" ")
+        self.tokens = stripped.split()
         return self
 
     def __repr__(self):

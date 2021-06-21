@@ -269,7 +269,7 @@ class Context(object):
                     if buffer_segments:
                         s1, q1 = Inventory.meet(*buffer_segments), quantity_sum(buffer_quantities)
 
-                        log.debug(buffer_sources, "->", s1, q1)
+                        log.debug(str(buffer_sources) + "->" + str((s1, q1)))
                         context_members.append((s1, q1))
                         # re-init buffer
                         buffer_segments = []
@@ -279,7 +279,7 @@ class Context(object):
                     segments, quantities = zip(*aligned_segments)
                     segment = Inventory.meet(*[s for s in segments if s])
                     quantity = quantity_largest(quantities)
-                    log.debug(aligned_segments, "->", (segment, quantity))
+                    log.debug(str(aligned_segments) + "->" + str((segment, quantity)))
                     context_members.append((segment, quantity))
             if buffer_segments:
                 context_members.append((Inventory.meet(*buffer_segments),

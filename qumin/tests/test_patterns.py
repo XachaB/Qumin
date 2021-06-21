@@ -115,3 +115,18 @@ class PatternsTestCase(unittest.TestCase):
         for old_str, new_str in zip(strs_old_format, old_as_str):
             new = patterns.Pattern._from_str(("a", "b"), old_str)
             self.assertEqual(repr(new), new_str)
+
+    def test_from_alignment(self):
+        c = ("a", "b")
+        alignment = [('ɐ', 'ɐ'), ('f', 'f'), ('ə', ''), ('ɾ', ''), ('ˈi', 'ˈi'), ('m', ''), ('', 'ɾ'), ('u', 'u'), ('ʃ', '')]
+        p = patterns.Pattern(c, alignment, aligned=True)
+        expected = {'a': [('ə', 'ɾ'), ('m',), ('ʃ',)], 'b': [('',), ('ɾ',), ('',)]}
+        self.assertDictEqual(p.alternation, expected)
+
+        alignment = [('ɐ', 'ɐ'), ('k', 'k'), ('u', ''), ('', 'ˈu'), ('d', 'd'), ('ˈi', ''), ('m', ''),
+         ('u', 'u'), ('ʃ', '')]
+        p = patterns.Pattern(c, alignment, aligned=True)
+        expected = {'a': [('u',), ('ˈi', 'm'), ('ʃ',)], 'b': [('ˈu',), ('',), ('',)]}
+
+        self.assertDictEqual(p.alternation, expected)
+

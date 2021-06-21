@@ -885,15 +885,17 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                     collection[alt][t].append(new_rule)
                 else:
                     done = []
-                    # print("All alignments of {}, {}".format(a,b))
+                    log.debug("All alignments of {}, {}".format(a,b))
                     for aligned in alignment.align_auto(a.tokens, b.tokens, insert_cost, sub_cost):
-                        # print((aligned))
+                        log.debug((aligned))
                         new_rule = Pattern(cells, aligned, aligned=True)
                         new_rule.lexemes = {(row.name, a, b)}
+                        log.debug("pattern: "+str(new_rule))
                         if str(new_rule) not in done:
                             done.append(str(new_rule))
                             if new_rule._gen_alt:
                                 alt = new_rule.to_alt(exhaustive_blanks=False, use_gen=True)
+                                log.debug("gen alt: "+str(alt))
                             else:
                                 alt = new_rule.to_alt(exhaustive_blanks=False)
                             t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
@@ -917,6 +919,8 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                     if (l, a, b) in p.lexemes:
                         correct += 1
                     else:
+                        B = p.apply(a, cells, raiseOnFail=False)
+                        A = p.apply(b, cells[::-1], raiseOnFail=False)
                         correct_one = (p.apply(a, cells, raiseOnFail=False) == b) and (
                                 p.apply(b, cells[::-1], raiseOnFail=False) == a)
                         if correct_one:
@@ -939,13 +943,13 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         sorted_collection = []
 
         for alt in collection:
-            # print("\n\n####Considering alt:",alt)
+            log.debug("\n\n####Considering alt:"+str(alt))
             # Attempt to generalize
             types = list(collection[alt])
             pats = []
-            # print("1.Generalizing in each type")
+            log.debug("1.Generalizing in each type")
             for j in collection[alt]:
-                # print("\tlooking at :",collection[alt][j])
+                log.debug("\tlooking at :"+str(collection[alt][j]))
                 if _compatible_context_type(j):
                     collection[alt][j] = [generalize_patterns(collection[alt][j])]
                     # print("\t\tcontexts compatible",collection[alt][j])
@@ -953,14 +957,14 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                     collection[alt][j] = incremental_generalize_patterns(*collection[alt][j])
                     # print("\t\tcontexts not compatibles:",collection[alt][j])
                 pats.extend(collection[alt][j])
-            # print("2.Generalizing across types")
+            log.debug("2.Generalizing across types")
             if _compatible_context_type(*types):
-                # print("\tlooking at compatible:",pats)
+                log.debug("\tlooking at compatible:"+str(pats))
                 collection[alt] = [generalize_patterns(pats)]
             else:
-                # print("\tlooking at incompatible:",pats)
+                log.debug("\tlooking at incompatible:"+str(pats))
                 collection[alt] = incremental_generalize_patterns(*pats)
-            # print("Result:",collection[alt])
+            log.debug("Result:"+str(collection[alt]))
             # Score
             for p in collection[alt]:
                 p.score = _score(p, (c1, c2), forms, index)
