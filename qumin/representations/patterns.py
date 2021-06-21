@@ -384,7 +384,9 @@ class Pattern(object):
                 elements = next(comparables, None)
                 while elements and not are_all_identical(elements):
                     for buffer, new in zip(altbuffer, elements):
-                        if not (buffer == [""] and new == ""):
+                        if buffer[-1] == "":
+                            buffer[-1] = new
+                        elif new != "":
                             buffer.append(new)
                     elements = next(comparables, None)
                 alternation.append(altbuffer)
