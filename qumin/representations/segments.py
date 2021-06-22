@@ -242,6 +242,7 @@ class Inventory(object):
             filename: path to a csv or tsv file with distinctive features
             sep: separator in the file
         """
+        # TODO: this is now much slower !
         log.info("Reading table %s",filename)
 
         table = pd.read_table(filename, header=0, dtype=str,
@@ -330,9 +331,9 @@ class Inventory(object):
                 if len(intent) == 0:
                     shorthand = "X"
                 elif shorthand is None and len(extent) > 1:
-                    minimals = list(cls._lattice[extent].attributes())
+                    minimals = next(cls._lattice[extent].attributes())
                     if minimals:
-                        shorthand = "[{}]".format(" ".join(minimals[0]))
+                        shorthand = "[{}]".format(" ".join(minimals))
 
                 concept = cls._lattice[extent]
                 ancestors = ["|".join(sorted(c.extent)) for c in concept.upset()]
