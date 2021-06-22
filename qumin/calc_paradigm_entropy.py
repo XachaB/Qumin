@@ -51,7 +51,7 @@ def main(args):
                                              now)
 
     # Define logging levels (different depending on verbosity)
-    if args.verbose:
+    if args.verbose or args.debug:
         logfile_name = result_prefix + ".log"
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG,
                             filename=logfile_name, filemode='w')

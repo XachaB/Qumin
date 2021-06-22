@@ -91,7 +91,8 @@ class PatternDistribution(object):
         log.info("Looking for classes of applicable patterns")
         self.classes = representations.patterns.find_applicable(self.paradigms,
                                                                 self.pat_dict)
-
+        log.debug("Classes:")
+        log.debug(self.classes)
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
         self.entropies = [None] * 10
         self.effectifs = [None] * 10
