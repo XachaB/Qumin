@@ -1027,6 +1027,8 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
     def _iter_applicable_patterns(form, local_patterns, cell):
         log.debug("########### Applicable to {} in {}".format(form, cell))
         known_regexes = set()
+        if type(form) is tuple: # if overabundant
+            form = form[0] # from tuple to Form
         for pattern in local_patterns:
             log.debug("\t{} ?".format(pattern))
             regex = pattern._regex[cell]
