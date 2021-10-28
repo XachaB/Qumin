@@ -10,6 +10,39 @@ from .segments import  Inventory
 import logging
 log = logging.getLogger()
 
+def _pairstr(s,q):
+    if s:
+        return Inventory.shortest(s)+str(q)
+    else:
+        return s+str(q)
+
+def _pretty_print_aligned_seq(aligned_seqs):
+    for s,q in aligned_seqs:
+        yield _pairstr(s,q)
+
+def _pretty_print_ctxt(ctxt_part):
+    for aligned_seqs in ctxt_part:
+        yield from _pretty_print_aligned_seq(aligned_seqs)
+
+def _pretty_print_aligned(aligned, l ):
+
+    aligned = list(aligned)
+    strs = [[] for _ in range(l)]
+    for ctxt_part, optional, right_blank in aligned:
+        for aligned_seqs in ctxt_part:
+            for i in range(len(aligned_seqs)):
+                s,q = aligned_seqs[i]
+                strs[i].append(_pairstr(s,q))
+
+        if optional:
+            for i in range(l):
+                strs[i].append("<?>")
+
+        if right_blank:
+            for i in range(l):
+                strs[i].append("_")
+    return "\n" + "\n".join(["\t".join(x) for x in strs])
+
 def _align_edges(*args, **kwargs):
     """Align at both edges.
 
@@ -38,9 +71,6 @@ def _align_edges(*args, **kwargs):
     if center:
         center.add(("", Quantity(min(center_lens), max(center_lens))))
 
-    log.debug("Aligned center: %s", list(zip(*left)))
-    log.debug("\t%s", [tuple(center)])
-    log.debug("\t%s", list(zip(*right)))
     return list(zip(*left)) + [tuple(center)] + list(zip(*right))
 
 
@@ -247,7 +277,11 @@ class Context(object):
         """
         new_context = []
         log.debug("Alignigning %s", contexts)
-        log.debug("result: %s", list(cls._align(contexts)))
+
+        aligned = cls._align(contexts)
+
+        #log.debug(_pretty_print_aligned(cls._align(contexts), len(contexts)))
+
         for group, opt, blank in cls._align(contexts):
             context_members = []
 
@@ -269,7 +303,9 @@ class Context(object):
                     if buffer_segments:
                         s1, q1 = Inventory.meet(*buffer_segments), quantity_sum(buffer_quantities)
 
-                        log.debug(str(buffer_sources) + "->" + str((s1, q1)))
+                        # log.debug(" | ".join(_pretty_print_ctxt(buffer_sources))
+                        #           + " -> " + "".join(_pairstr(s1, q1)))
+
                         context_members.append((s1, q1))
                         # re-init buffer
                         buffer_segments = []
@@ -279,11 +315,14 @@ class Context(object):
                     segments, quantities = zip(*aligned_segments)
                     segment = Inventory.meet(*[s for s in segments if s])
                     quantity = quantity_largest(quantities)
-                    log.debug(str(aligned_segments) + "->" + str((segment, quantity)))
+                    # log.debug(" | ".join(_pretty_print_aligned_seq(aligned_segments))
+                    #           + " -> " + "".join(_pairstr(segment, quantity)))
                     context_members.append((segment, quantity))
             if buffer_segments:
-                context_members.append((Inventory.meet(*buffer_segments),
-                                        quantity_sum(buffer_quantities)))
+                s1, q1 = Inventory.meet(*buffer_segments), quantity_sum(buffer_quantities)
+                context_members.append((s1, q1))
+                # log.debug(" | ".join(_pretty_print_ctxt(buffer_sources))
+                #           + " -> " + "".join(_pairstr(s1, q1)))
             new_context_member = _ContextMember(context_members, blank=blank, opt=opt)
             new_context_member.simplify()
             new_context.append(new_context_member)

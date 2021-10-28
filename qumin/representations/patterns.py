@@ -1025,21 +1025,15 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
     """
 
     def _iter_applicable_patterns(form, local_patterns, cell):
-        log.debug("########### Applicable to {} in {}".format(form, cell))
         known_regexes = set()
         if type(form) is tuple: # if overabundant
             form = form[0] # from tuple to Form
         for pattern in local_patterns:
-            log.debug("\t{} ?".format(pattern))
             regex = pattern._regex[cell]
-            log.debug("Regex: {}".format(regex))
-            log.debug("Form: {}".format(repr(form)))
             if regex in known_regexes:
-                log.debug("applicable")
                 yield pattern
 
             elif pattern.applicable(form, cell):
-                log.debug("applicable")
                 known_regexes.add(regex)
                 yield pattern
 
@@ -1057,9 +1051,6 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
 
     for a, b in tqdm(pat_dict, leave=False, disable=disable_tqdm):
         local_patterns = pat_dict[(a, b)]
-
-        log.debug("local patterns:")
-        log.debug(local_patterns)
 
         # Iterate on paradigms' rows of corresponding columns to fill with the
         # result
