@@ -69,7 +69,7 @@ def main(args):
     # Inflectional paradigms: columns are cells, rows are lexemes.
     paradigms = create_paradigms(paradigms_file_path, defective=True, overabundant=False,
                                  merge_cols=args.cols_merged,
-                                 segcheck=True, long=args.long,
+                                 segcheck=True,
                                  col_names=args.cols_names)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
                                            overabundant=False)
@@ -97,7 +97,6 @@ def main(args):
         paradigms2 = create_paradigms(args.bipartite[1], defective=True,
                                       overabundant=False,
                                       merge_cols=args.cols_merged, segcheck=True,
-                                      long=args.long,
                                       col_names=args.cols_names)
         pat_table2, pat_dic2 = patterns.from_csv(args.bipartite[0], defective=True,
                                                  overabundant=False)

@@ -92,13 +92,9 @@ def get_default_parser(usage, default_output, patterns=False, paradigms=True, ):
                         type=str)
 
     if paradigms:
-        parser.add_argument("-l", "--long",
-                            help="Use this option if the data is in long form",
-                            action="store_true", default=False)
-
         parser.add_argument("-c", "--cols_names",
                             help="In long form, specify the name of respectively the lexeme, cell and form columns.",
-                            nargs=3, type=str, default=["lexeme", "cell", "form"])
+                            nargs=3, type=str, default=["lexeme", "cell", "phon_form"])
 
     options = parser.add_argument_group('Options')
 

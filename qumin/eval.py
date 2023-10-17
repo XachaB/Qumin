@@ -190,8 +190,7 @@ def prepare_data(args):
     # Read all files
     for file in args.paradigms:
         table = create_paradigms(file, segcheck=True, fillna=False, merge_cols=True,
-                                 overabundant=False, defective=True, long=args.long,
-                                 col_names=args.cols_names)
+                                 overabundant=False, defective=True, col_names=args.cols_names)
         paradigms.append(table)
 
     # Keep only common indexes

@@ -73,8 +73,7 @@ def main(args):
         merge_cols = True
 
     paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols,
-                                 segcheck=segcheck, long=args.long,
-                                 col_names=args.cols_names)
+                                 segcheck=segcheck, col_names=args.cols_names)
 
     log.info("Looking for patterns...")
     if kind.startswith("endings"):

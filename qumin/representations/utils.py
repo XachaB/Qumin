@@ -48,7 +48,7 @@ def create_paradigms(data_file_name,
                      cols=None, verbose=False, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
-                     long=False, col_names=("lexeme","cell","form")):
+                     col_names=("lexeme","cell","form")):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
     Arguments:
@@ -63,7 +63,6 @@ def create_paradigms(data_file_name,
         defective (bool): Defaults to False. Should I keep rows with defective forms ?
         overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
         merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
-        long (bool): is the dataset in long form ?
         cols (tuple): names of the lexeme, cells and form columns (in this order).
     Returns:
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
@@ -79,10 +78,16 @@ def create_paradigms(data_file_name,
     # Reading the paradigms.
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False)
 
-    if long:
+    def aggregator(s):
+        if s.shape[0] == 1 and pd.isna(s.iloc[0]):
+            return None
+        return ";".join(s.values)
+
+    # Long form
+    if set(col_names) < set(paradigms.columns):
         lexemes, cell_col, form_col = col_names
         paradigms = paradigms.pivot_table(values=form_col, index=lexemes, columns=cell_col,
-                              aggfunc=lambda x: ";".join(set(x)))
+                              aggfunc=aggregator)
         paradigms.reset_index(inplace=True, drop=False)
 
     else:

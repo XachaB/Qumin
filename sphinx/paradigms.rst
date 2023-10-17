@@ -58,14 +58,14 @@ Long format
 ~~~~~~~~~~~~
 
 - each row represents an inflected form;
-- three columns are necessary: lexeme identifier, form and cell. By convention, Qumin expects them to be called "lexeme", "form" and "cell".
+- three columns are necessary: lexeme identifier, form and cell. By convention, Qumin expects them to be called "lexeme", "phon_form" and "cell".
 - the order of these three columns does not matter;
 - All other columns are ignored
 
 Example:
 
  =========== ========= =========
-  lexeme       cell     form
+  lexeme       cell     phon_form
  =========== ========= =========
   peler       prs.1sg     pɛl
   peler       prs.2sg     pɛl
