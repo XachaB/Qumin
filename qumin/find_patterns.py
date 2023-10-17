@@ -112,7 +112,7 @@ def main(args):
                     "Please report this as a bug !")
         log.warning(patterns_df[patterns_df.isnull().values])
 
-    microclasses = find_microclasses(patterns_df.applymap(str))
+    microclasses = find_microclasses(patterns_df.map(str))
     filename = result_prefix + "_microclasses.txt"
     log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
     with open(filename, "w", encoding="utf-8") as flow:

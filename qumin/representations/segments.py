@@ -26,10 +26,10 @@ class Form(str):
     They have a tokens attribute, which is a tuple of phonemes.
     """
     def __new__(cls, string):
-        if Inventory._legal_str.fullmatch(string) is None:
-            raise ValueError("Unknown sound in: " + repr(string))
         tokens = Inventory._segmenter.findall(string)
         tokens = tuple(Inventory._normalization.get(c, c) for c in tokens)
+        if Inventory._legal_str.fullmatch("".join(tokens)) is None:
+            raise ValueError("Unknown sound in: " + repr(string))
         self = str.__new__(cls, " ".join(tokens) + " ")
         self.tokens = tokens
         return self
@@ -249,39 +249,43 @@ class Inventory(object):
                               index_col=False, sep=sep or snif_separator(filename),
                               encoding="utf-8")
         shorten_feature_names(table)
-        table["Seg."] = table["Seg."].astype(str)
+        sound_id = "sound_id"  # name in Paralex
+        if sound_id not in table.columns: # backward compatibility
+            sound_id = "Seg."
+
+        table[sound_id] = table[sound_id].astype(str)
         na_vals = {c: "-1" for c in table.columns}
-        na_vals["Seg."] = ""
+        na_vals[sound_id] = ""
         na_vals["UNICODE"] = ""
         na_vals["ALIAS"] = ""
         na_vals["value"] = ""
         table = table.fillna(na_vals)
 
         # Checking segments names legality
-        for seg in table["Seg."]:
+        for seg in table[sound_id]:
             if seg == "":
                 raise ValueError("One of your segments doesn't have a name !")
             if seg.strip("#") == "":
                 raise ValueError("The symbol \"#\" is reserved and can only "
                                  "be used in a shorthand name (#V# for a vowel, etc)")
 
-        # Legacy columns
-        if "value" in table.columns:
-            table.drop("value", axis=1, inplace=True)
-        if "UNICODE" in table.columns:
-            table.drop("UNICODE", axis=1, inplace=True)
-        if "ALIAS" in table.columns:
-            table.drop("ALIAS", axis=1, inplace=True)
+
+        drop = {"value", "UNICODE", "ALIAS", # Legacy columns
+                "label", "tier"              # Unused Paralex columns
+                }
+        for col in drop:
+            if col in table.columns:
+                table.drop(col, axis=1, inplace=True)
 
         # Separate shorthand table
-        shorthand_selection = table["Seg."].str.match("^#.+#$")
+        shorthand_selection = table[sound_id].str.match("^#.+#$")
         shorthands = None
         if shorthand_selection.any():
             shorthands = table[shorthand_selection]
             table = table[~shorthand_selection]
-            shorthands.set_index("Seg.", inplace=True)
-            shorthands = shorthands.applymap(str)  # Why is this necessary ?
-        table.set_index("Seg.", inplace=True)
+            shorthands.set_index(sound_id, inplace=True)
+            shorthands = shorthands.map(str)  # Why is this necessary ?
+        table.set_index(sound_id, inplace=True)
 
         log.info("Normalizing identical rows")
         attributes = list(table.columns)
@@ -297,7 +301,7 @@ class Inventory(object):
                 key, val = c.split("=")
                 yield signs[int(float(val))] + key.replace(" ", "_")
 
-        table = table.applymap(lambda x: str(x))
+        table = table.map(lambda x: str(x))
 
         context = table_to_context(table, na_value="-1", col_formatter=feature_formatter)
         cls._lattice = context.lattice
@@ -598,7 +602,8 @@ def shorten_feature_names(table):
 
     short_features_names = []
     for name in table.columns:
-        if name in ["Seg.", "UNICODE", "ALIAS", "value"] or len(name) <= 3:
+        if name in ["sound_id", "Seg.", "UNICODE", "ALIAS",
+                    "value", "label", "tier"] or len(name) <= 3:
             short_features_names.append(name)
         else:
             names = [name[:i] for i in range(3, len(name) + 1)]

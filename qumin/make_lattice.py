@@ -58,7 +58,7 @@ def main(args):
 
         log.info("Reading patterns...")
         pat_table, _ = patterns.from_csv(data_file_path)
-        # pat_table = pat_table.applymap(str)
+        # pat_table = pat_table.map(str)
         # pat_table.columns = [x+" ~ "+y for x,y in pat_table.columns]
         collections = True
         comp = None
@@ -76,7 +76,7 @@ def main(args):
         pat_table = pd.read_csv(data_file_path, index_col=0)
         collections = False
 
-    microclasses = find_microclasses(pat_table.applymap(str))
+    microclasses = find_microclasses(pat_table.map(str))
 
     log.info("Building the lattice...")
     lattice = ICLattice(pat_table.loc[list(microclasses), :], microclasses,

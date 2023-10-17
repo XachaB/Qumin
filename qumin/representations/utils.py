@@ -69,10 +69,14 @@ def create_paradigms(data_file_name,
     """
 
     def get_unknown_segments(forms, unknowns, name):
+        known_sounds = set(Inventory._classes) | set(Inventory._normalization) | {";", ""}
         for form in forms.split(";"):
-            tokens = Inventory._segmenter.split(form)
+            if " " in form:
+                tokens = form.split(" ")
+            else:
+                tokens = Inventory._segmenter.split(form)
             for char in tokens:
-                if char not in Inventory._classes and char not in {";", ""}:
+                if char not in known_sounds:
                     unknowns[char].append(form + " " + name)
 
     # Reading the paradigms.
@@ -116,7 +120,6 @@ def create_paradigms(data_file_name,
     paradigms.set_index(lexemes, inplace=True)
 
     paradigms.fillna(value="", inplace=True)
-
     if merge_duplicates:
         agenda = list(paradigms.columns)
         while agenda:
@@ -151,7 +154,7 @@ def create_paradigms(data_file_name,
             forms = (forms[0], )
         return forms
 
-    paradigms = paradigms.applymap(parse_cell)
+    paradigms = paradigms.map(parse_cell)
 
     log.info("Merging identical columns...")
     if merge_cols:

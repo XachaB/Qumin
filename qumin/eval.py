@@ -204,7 +204,7 @@ def prepare_data(args):
     features = None
     if features is not None:
         features = create_features(args.features)
-        features, _ = pd.DataFrame.sum(features.applymap(lambda x: (str(x),)), axis=1).factorize()
+        features, _ = pd.DataFrame.sum(features.map(lambda x: (str(x),)), axis=1).factorize()
         features = features[indexes].apply(lambda x: (x,))
 
     if args.randomsample:

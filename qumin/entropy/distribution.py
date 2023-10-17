@@ -21,7 +21,7 @@ log = logging.getLogger()
 
 def value_norm(df):
     """ Rounding at 10 significant digits, avoiding negative 0s"""
-    return df.applymap(lambda x: round(x, 10)) + 0
+    return df.map(lambda x: round(x, 10)) + 0
 
 
 def merge_split_df(dfs):
@@ -72,15 +72,15 @@ class PatternDistribution(object):
             features:
                 optional table of features
         """
-        self.paradigms = paradigms.applymap(lambda x: x[0])
+        self.paradigms = paradigms.map(lambda x: x[0])
         self.pat_dict = pat_dic
-        self.patterns = patterns.applymap(lambda x: (str(x),))
+        self.patterns = patterns.map(lambda x: (str(x),))
 
         if features is not None:
             # Add feature names
             features = features.apply(lambda x: x.name + "=" + x.apply(str), axis=0)
             # To tuples
-            features = features.applymap(lambda x: (str(x),))
+            features = features.map(lambda x: (str(x),))
             self.features_len = features.shape[1]
             self.features = pd.DataFrame.sum(features, axis=1)
         else:
@@ -337,7 +337,7 @@ class PatternDistribution(object):
         log.debug("Logging one predictor probabilities")
         log.debug(" P(x → y) = P(x~y | Class(x))")
 
-        patterns = self.patterns.applymap(lambda x: x[0])
+        patterns = self.patterns.map(lambda x: x[0])
 
         for column in patterns:
 
@@ -658,7 +658,7 @@ class SplitPatternDistribution(PatternDistribution):
         self.names = names
         self.paradigms = merge_split_df(paradigms_list)
 
-        patterns_list = [p.applymap(lambda x: (str(x),)) for p in patterns_list]
+        patterns_list = [p.map(lambda x: (str(x),)) for p in patterns_list]
         self.patterns = merge_split_df(patterns_list)
         log.info("Looking for classes of applicable patterns")
         classes_list = [d.classes for d in self.distribs]

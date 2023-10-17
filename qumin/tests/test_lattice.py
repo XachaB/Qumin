@@ -74,7 +74,7 @@ class AOCTestCase(unittest.TestCase):
                              [1, 1, 2],
                              [2, 1, 1],
                              [1, 2, 2],
-                             ], index=self.idx[:4], columns=self.cols[:3]).applymap(str)
+                             ], index=self.idx[:4], columns=self.cols[:3]).map(str)
         l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
 
         self.conformity_check(l)
@@ -118,7 +118,7 @@ class AOCTestCase(unittest.TestCase):
                              [1, 1, 1],
                              [1, 1, 2],
                              [2, 1, 2]
-                             ], index=self.idx[:4], columns=self.cols[:3]).applymap(str)
+                             ], index=self.idx[:4], columns=self.cols[:3]).map(str)
         l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
 
         self.conformity_check(l)
@@ -144,7 +144,7 @@ class AOCTestCase(unittest.TestCase):
                              [2, 1, 1, 1, 1, 1],
                              [2, 3, 2, 1, 4, 1],
                              [3, 3, 1, 4, 5, 2]
-                             ], index=self.idx[:6], columns=self.cols[:6]).applymap(str)
+                             ], index=self.idx[:6], columns=self.cols[:6]).map(str)
         l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
 
         self.conformity_check(l)
@@ -210,7 +210,7 @@ class AOCTestCase(unittest.TestCase):
             values = np.random.randint(0, high=10, size=shape)
             indexes = [id_str(i, 4, "l") for i in range(shape[0])]
             columns = [id_str(i, 4, "f").upper() for i in range(shape[1])]
-            data = pd.DataFrame(values, index=indexes, columns=columns).applymap(str)
+            data = pd.DataFrame(values, index=indexes, columns=columns).map(str)
             data = data.drop_duplicates()
             l = ICLattice(data, {f: (f,) for f in indexes}, aoc=True)
             self.conformity_check(l)

@@ -799,8 +799,8 @@ def _with_deterministic_alignment(paradigms, method="suffix", disable_tqdm=False
     pat_dict = {}
 
     def generate_rules(row, cells, collection):
-        if row[0] == row[1]:  # If the lists are identical, do not compute product
-            pairs = [(x, x) for x in row[0]]
+        if row.iloc[0] == row.iloc[1]:  # If the lists are identical, do not compute product
+            pairs = [(x, x) for x in row.iloc[0]]
         else:
             pairs = product(*row)
 
@@ -870,8 +870,8 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
     pat_dict = {}
 
     def generate_rules(row, cells, collection):
-        if row[0] == row[1]:  # If the lists are identical, do not compute product
-            pairs = [(x, x) for x in row[0]]
+        if row.iloc[0] == row.iloc[1]:  # If the lists are identical, do not compute product
+            pairs = [(x, x) for x in row.iloc[0]]
         else:
             pairs = product(*row)
 
@@ -1225,7 +1225,7 @@ def make_pairs(paradigms):
 def to_csv(dataframe, filename, pretty=False):
     """Export a Patterns DataFrame to csv."""
     export_fun = str if pretty else repr
-    dataframe.applymap(export_fun).to_csv(filename, sep=",")
+    dataframe.map(export_fun).to_csv(filename, sep=",")
 
 
 def from_csv(filename, defective=True, overabundant=True):
@@ -1264,9 +1264,9 @@ def from_csv(filename, defective=True, overabundant=True):
     collection = {}
     table = pd.read_csv(filename, sep=",", header=0, index_col=0)
     table.columns = [format_header(item) for item in table.columns]
-    table = table.applymap(lambda x: None if x == "None" else x)
+    table = table.map(lambda x: None if x == "None" else x)
 
-    is_alt_str = table.applymap(lambda x: x and "/" not in x).all().all()
+    is_alt_str = table.map(lambda x: x and "/" not in x).all().all()
     if is_alt_str:
         log.warning("These are not patterns but alternation strings")
         return table, {}

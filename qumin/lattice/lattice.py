@@ -119,14 +119,14 @@ def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
         concepts.Context: the created Context
     """
     if na_value is not None:
-        dataframe = dataframe.applymap(lambda x: None if x == na_value else x)
+        dataframe = dataframe.map(lambda x: None if x == na_value else x)
     if overabundant:
         dummies = to_dummies_overabundant(dataframe, keep_names=keep_names)
     elif dummy_formatter:
         dummies = dummy_formatter(dataframe)
     else:
         dummies = pd.get_dummies(dataframe, prefix_sep="=")
-        dummies = dummies.applymap(lambda x: "X" if x == 1 else "")
+        dummies = dummies.map(lambda x: "X" if x == 1 else "")
     if col_formatter:
         dummies.columns = col_formatter(dummies.columns)
     context_str = dummies.to_csv()
