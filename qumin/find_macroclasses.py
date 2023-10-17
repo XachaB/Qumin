@@ -23,6 +23,7 @@ from pathlib import Path
 import time
 import re
 
+
 def main(args):
     r"""Cluster lexemes in macroclasses according to alternation patterns.
 
@@ -110,12 +111,12 @@ def main(args):
     flow.write("\n" + experiment_id)
     flow.close()
 
+
 def macroclasses_command():
-    parser = get_default_parser(main.__doc, "Results/Clustering",
-                                patterns=True, paradigms=False)
+    parser = get_default_parser(main.__doc, patterns=True, paradigms=False)
     args = parser.parse_args()
     main(args)
 
+
 if __name__ == '__main__':
     macroclasses_command()
-

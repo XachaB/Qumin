@@ -89,7 +89,6 @@ def main(args):
 
 def heatmap_command():
     parser = get_default_parser(main.__doc__,
-                                "Results/microclasses",
                                 paradigms=False, patterns=True)
 
     parser.add_argument("-l", "--labels",

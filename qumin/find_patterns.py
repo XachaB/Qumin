@@ -135,7 +135,7 @@ def main(args):
 
 def pat_command():
 
-    parser = get_default_parser(main.__doc__, "./Results/Patterns/", paradigms=True, patterns=False)
+    parser = get_default_parser(main.__doc__, paradigms=True, patterns=False)
 
 
     parser.add_argument('-k', '--kind',

@@ -6,6 +6,7 @@ from tqdm import tqdm
 import logging
 log = logging.getLogger()
 from .. import __version__
+import os
 
 def snif_separator(filename):
     with open(filename, "r", encoding="utf-8") as f:
@@ -68,7 +69,7 @@ class ArgumentDefaultsRawTextHelpFormatter(argparse.RawDescriptionHelpFormatter)
                     help += ' (default: %(default)s)'
         return help
 
-def get_default_parser(usage, default_output, patterns=False, paradigms=True, ):
+def get_default_parser(usage, patterns=False, paradigms=True, ):
 
     parser = argparse.ArgumentParser(description=usage,
                                      formatter_class=ArgumentDefaultsRawTextHelpFormatter)
@@ -104,6 +105,6 @@ def get_default_parser(usage, default_output, patterns=False, paradigms=True, ):
 
     options.add_argument("-f", "--folder",
                         help="Output folder name",
-                        type=str, default=default_output)
+                        type=str, default=os.getcwd())
 
     return parser

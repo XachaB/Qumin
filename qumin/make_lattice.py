@@ -114,7 +114,7 @@ def main(args):
 
 def lattice_command():
 
-    parser = get_default_parser(main.__doc__, "Results/lattice", patterns=True,
+    parser = get_default_parser(main.__doc__,  patterns=True,
                                 paradigms=False)
 
     parser.add_argument('--shorten',

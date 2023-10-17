@@ -210,8 +210,7 @@ def main(args):
 
 
 def H_command():
-    parser = get_default_parser(main.__doc__,
-                                "Results/JointPred", paradigms=True, patterns=True)
+    parser = get_default_parser(main.__doc__, paradigms=True, patterns=True)
 
     parser.add_argument('-b', '--bipartite',
                         help="Add a second paradigm dataset, for bipartite systems.",

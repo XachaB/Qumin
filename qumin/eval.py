@@ -284,7 +284,7 @@ def main(args):
     results = pd.DataFrame(results)
     for info in general_infos:
         results[info] = general_infos[info]
-    results.to_csv("Results/Patterns/eval_patterns_{}_{}.csv".format(now, "_".join(files)))
+    results.to_csv("{}/eval_patterns_{}_{}.csv".format(args.folder, now, "_".join(files)))
 
     print_summary(results, general_infos)
     figs = to_heatmap(results, paradigms.columns.levels[1].tolist())
@@ -295,8 +295,7 @@ def main(args):
 
 def eval_command():
 
-    parser = get_default_parser(main.__doc__,
-                                "Results/JointPred", paradigms=True, patterns=True)
+    parser = get_default_parser(main.__doc__, paradigms=True, patterns=True)
 
     usage = main.__doc__
 
