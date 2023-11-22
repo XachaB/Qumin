@@ -72,7 +72,7 @@ class PatternDistribution(object):
             features:
                 optional table of features
         """
-        self.paradigms = paradigms.map(lambda x: x[0])
+        self.paradigms = paradigms.map(lambda x: x[0] if x else x)
         self.pat_dict = pat_dic
         self.patterns = patterns.map(lambda x: (str(x),))
 

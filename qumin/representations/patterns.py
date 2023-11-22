@@ -1237,7 +1237,7 @@ def from_csv(filename, defective=True, overabundant=True):
 
     def read_pattern(raw_value, names, collection):
         result = []
-        if raw_value:
+        if raw_value and not pd.isnull(raw_value):
             for string in raw_value.split(";"):
                 if string in collection[names]:
                     result.append(collection[names][string])
@@ -1266,7 +1266,7 @@ def from_csv(filename, defective=True, overabundant=True):
     table.columns = [format_header(item) for item in table.columns]
     table = table.map(lambda x: None if x == "None" else x)
 
-    is_alt_str = table.map(lambda x: x and "/" not in x).all().all()
+    is_alt_str = table.map(lambda x: type(x) is str and "/" not in x).all().all()
     if is_alt_str:
         log.warning("These are not patterns but alternation strings")
         return table, {}
