@@ -143,24 +143,26 @@ def main(args):
                                       features=features)
 
     if onePred:
+<<<<<<< HEAD:src/qumin/calc_paradigm_entropy.py
         computation = 'onePredEntropies'
-        
         ent_file = md.register_file('entropies.csv',
                                     {'computation': computation,
                                      'content': 'entropies'})
-        acc_file = md.register_file('accuracies.csv',
-                                    {'computation': computation,
-                                     'content': 'accuracies'})
         effectifs_file = md.register_file('effectifs.csv',
                                           {'computation': computation,
                                            'content': 'effectifs'})
+
+        distrib.entropy_matrix()
+=======
+        ent_file = "{}onePredEntropies.csv".format(result_prefix)
+        acc_file = "{}onePredAccuracies.csv".format(result_prefix)
+        effectifs_file = "{}onePredEntropiesEffectifs.csv".format(result_prefix)
         if overabundant:
             distrib.entropy_matrix_OA()
         else:
-                                           'content': 'effectifs'})
-
             distrib.entropy_matrix()
         accuracies = distrib.accuracies[1]
+>>>>>>> 4ddddcc (Take overabundance into account (for out cell)):qumin/calc_paradigm_entropy.py
         entropies = distrib.entropies[1]
         effectifs = distrib.effectifs[1]
 

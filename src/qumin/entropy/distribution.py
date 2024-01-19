@@ -6,12 +6,15 @@ Encloses distribution of patterns on paradigms.
 """
 
 import pandas as pd
+import numpy as np
 from collections import Counter, defaultdict
 from prettytable import PrettyTable, ALL
 from itertools import combinations
+# TODO replace sklearn with some lighter solution
+from sklearn.feature_extraction.text import CountVectorizer
 
 from functools import reduce
-from . import cond_entropy, entropy, P
+from . import cond_entropy, entropy, P, cond_entropy_OA, matrix_analysis
 from .. import representations
 from tqdm import tqdm
 import logging
@@ -95,6 +98,7 @@ class PatternDistribution(object):
         log.debug(self.classes)
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
         self.entropies = [None] * 10
+        self.accuracies = [None] * 10
         self.effectifs = [None] * 10
 
     def add_features(self, series):
@@ -133,16 +137,23 @@ class PatternDistribution(object):
 
         self._register_entropy(n, entropies, None)
 
-    def _register_entropy(self, n, entropy, effectifs):
+    def _register_entropy(self, n, entropy, effectifs, accuracies=None):
         """Register an entropy score_matrix for n predictors.
 
         Arguments:
             n (int): number of predictors
             entropy  (:class:`pandas:pandas.DataFrame`):
                 Entropy score_matrix to register.
+            accuracies  (:class:`pandas:pandas.DataFrame`):
+                Accuracy score_matrix to register.
         """
         entropy = value_norm(entropy)
+        if accuracies is not None:
+            accuracies = value_norm(accuracies)
+
         try:
+            if accuracies is not None:
+                self.accuracies[n] = accuracies
             self.entropies[n] = entropy
             self.effectifs[n] = effectifs
         except IndexError:
@@ -150,6 +161,9 @@ class PatternDistribution(object):
             self.effectifs.append([None] * n)
             self.entropies[n] = entropy
             self.effectifs[n] = effectifs
+            if accuracies is not None:
+                self.accuracies.append([None] * n)
+                self.accuracies[n] = accuracies
 
     def n_preds_entropy_matrix(self, n):
         r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies, and one with counts of lexemes.
@@ -261,6 +275,278 @@ class PatternDistribution(object):
 
         self._register_entropy(n, entropies, effectifs)
 
+    def entropy_matrix_OA(self, silent=False, **kwargs):
+        r"""Creates a :class:`pandas:pandas.DataFrame`
+        with unary entropies, and one with counts of lexemes.
+
+        The result contains entropy :math:`H(c_{1} \to c_{2})`.
+
+        Values are computed for all unordered combinations
+        of :math:`(c_{1}, c_{2})`
+        in the :attr:`PatternDistribution.paradigms`'s columns.
+        Indexes are predictor cells :math:`c{1}`
+        and columns are the predicted cells :math:`c{2}`.
+
+        Example:
+            For two cells c1, c2, entropy of c1 → c2,
+            noted :math:`H(c_{1} \to c_{2})` is:
+
+            .. math::
+
+                H( patterns_{c1, c2} | classes_{c1, c2} )
+
+        Arguments:
+            **kwargs: optional keyword arguments.
+
+        Note:
+            As opposed to :func:`entropy_matrix`, this function allows overabundant forms.
+
+        Todo:
+            Merge with :func:`entropy_matrix`.
+        """
+
+        if not silent:
+            log.info("\n\nComputing c1 → c2 entropies")
+
+        # For faster access
+        patterns = self.patterns
+        classes = self.classes
+        rows = list(self.paradigms.columns)
+
+        entropies = pd.DataFrame(index=rows, columns=rows)
+        accuracies = pd.DataFrame(index=rows, columns=rows)
+        effectifs = pd.DataFrame(index=rows, columns=rows)
+        for a, b in patterns.columns:
+            selector = self.hasforms[a] & self.hasforms[b]
+            if selector[selector].size != 0:
+                known_ab = self.add_features(classes[(a, b)])
+                known_ba = self.add_features(classes[(b, a)])
+
+                _ = cond_entropy_OA(patterns[(a, b)],
+                                    known_ab, subset=selector,
+                                    **kwargs)
+
+                entropies.at[a, b] = _[0, 0]
+                accuracies.at[a, b] = _[0, 1]
+
+                _ = cond_entropy_OA(patterns[(a, b)],
+                                    known_ba, subset=selector,
+                                    **kwargs)
+
+                entropies.at[b, a] = _[0, 0]
+                accuracies.at[b, a] = _[0, 1]
+
+                effectifs.at[a, b] = sum(selector)
+                effectifs.at[b, a] = sum(selector)
+        self._register_entropy(1, entropies, effectifs, accuracies=accuracies)
+
+    def one_pred_distrib_log_OA(self, sanity_check=False, detailed=False):
+        r"""Print a log of the probability distribution for
+        one predictor with overabundance.
+
+        Writes down the distributions
+        :math:`P( patterns_{c1, c2} | classes_{c1, c2} )`
+        for all unordered combinations of two column
+        names in :attr:`PatternDistribution.paradigms`.
+        Also writes the entropy of the distributions.
+
+        Arguments:
+            sanity_check (bool): Default to False. Use a slower calculation to check that the results are exact.
+            detailed (bool): Default to False. Whether to display or not each individual lexeme in the log.
+
+        Note:
+            As opposed to :func:`one_pred_distrib_log`, this function allows
+            overabundant forms.
+
+        Todo:
+            Enable sanity_check here also.
+            Handling of overabundant source forms (not correct yet)
+        """
+
+        def count_with_examples(row, counter, examples, paradigms, cells):
+            c1, c2 = cells
+            lemma, pattern = row
+            example = "{}: {} → {}".format(lemma,
+                                           paradigms.at[lemma, c1],
+                                           paradigms.at[lemma, c2])
+            counter[pattern] += 1
+            examples[pattern] = example
+
+        log.debug("\n\nPrinting log for P(c1 → c2).")
+
+        if sanity_check:
+            rows = list(self.paradigms.columns)
+            entropies_check = pd.DataFrame(index=rows,
+                                            columns=rows)
+
+        log.debug("Logging one predictor probabilities")
+        log.debug(" P(x → y) = P(x~y | Class(x))")
+
+        patterns = self.patterns  # .map(lambda x: x[0])
+
+        for column in patterns:
+            for pred, out in [column, column[::-1]]:
+                selector = self.hasforms[pred] & self.hasforms[out]
+                log.debug("\n# Distribution of {}→{} \n".format(pred, out))
+                A = patterns[column][selector]
+                B = self.add_features(self.classes[(pred, out)][selector])
+                cond_events = A.groupby(B, sort=False)
+
+                # I disable the sanity_check, but I may add it later.
+                # if sanity_check:
+                #     classes_p = P(B)
+                #     cond_p = P(cond_events)
+
+                #     surprisal = cond_p.groupby(levlevelel=0).apply(entropy)
+                #     slow_ent = (classes_p * surprisal).sum()
+                #     entropies_check.at[pred, out] = slow_ent
+                #     print("Entropy from this distribution: ",
+                #           slow_ent)
+
+                #     if self.entropies[1] is not None:
+                #         ent = self.entropies[1].at[pred, out]
+                #         print("Entropy from the score_matrix: ", ent)
+
+                #         if not isclose(ent, slow_ent):
+                #             print("\n# Distribution of {}→{}".format(pred, out))
+                #             print("WARNING: Something is wrong"
+                #                   " in the entropy's calculation. "
+                #                   "Slow and fast methods produce "
+                #                   "different results: slow {}, fast {}"
+                #                   "".format(slow_ent, ent))
+
+                log.debug("Showing distributions for %s classes",
+                          len(cond_events))
+                population = selector.shape[0]
+                results = []
+                myform = "{:5.2f}"
+                myform2 = ".2f"
+                for i, (classe, members) in enumerate(
+                        sorted(cond_events,
+                               key=lambda x: len(x[1]),
+                               reverse=True)):
+                    phi = "soft"
+                    beta = 10
+
+                    # Tableau des patterns (init).
+                    ptable = pd.DataFrame(
+                        columns=["ID", "pattern",
+                                 "P(p) ["+phi+"," + "beta = "+str(beta)+"]"])
+
+                    # On analyse chaque groupe
+                    cv = CountVectorizer(tokenizer=lambda x: x,
+                                         lowercase=False,
+                                         token_pattern=None)
+
+                    m = cv.fit_transform([_[0].split(";")
+                                          for _ in members]).todense()
+
+                    # Compute P(success) for each row.
+                    (accuracy, entropy,
+                     row_proba, pat_proba) = matrix_analysis(m,
+                                                             phi=phi,
+                                                             beta=beta)
+
+                    pat_proba_dic = defaultdict(
+                        int, {str(e): pat_proba[0, n] for n, e in enumerate(
+                                    cv.get_feature_names_out())})
+                    # This must return 0 if pattern not available
+
+                    m = np.concatenate((m, row_proba), axis=1)
+                    results.append([accuracy, entropy, members.shape[0]])
+
+                    # Log
+                    # Table of patterns
+
+                    log.debug("\n## Class n°" + str(i) + " ("+str(len(members))
+                              + " members).\n")
+                    log.debug("Accuracy : "+myform.format(accuracy))
+                    log.debug("Entropy  : "+myform.format(entropy))
+
+                    pat_dic = {}
+                    pat_list = []
+                    n = 0
+                    for n, my_pattern in enumerate(classe):
+                        id = "p"+str(n)
+                        s = str(my_pattern)
+                        pat_dic[s] = id
+                        pat_list.append(my_pattern)
+                        ptable.loc[len(ptable)] = [id, s, myform.format(pat_proba_dic[s])]
+                    ptable = ptable.set_index(["ID"])
+
+                    source_oa = False
+                    try:
+                        # Table of results
+                        titles = [pat_dic[str(e)]
+                                  for e in cv.get_feature_names_out()]
+                        titles_fmt = [".0f"]+[".0f" for e in
+                                              cv.get_feature_names_out()]
+                        titles_fmt.extend([myform2, myform2])
+                        titles.append("P(success)")
+                    except:
+                        # TODO brute-force handling of exceptions
+                        source_oa = True
+
+                    log.debug("List of patterns for this class is:\n")
+                    log.debug("\n" + ptable.to_markdown())
+
+                    # Only if source cell is not overabundant.
+                    if not source_oa:
+                        display = pd.DataFrame(m, columns=titles,
+                                               index=members.index)
+
+                        # Regrouper les sous-catégories similaires
+                        # et compter leur fréquence
+                        if not detailed:
+                            display_words = display.copy().drop_duplicates().reset_index()
+                            display = display.value_counts(normalize=True).reset_index()
+                            display = display.merge(display_words).set_index("lexeme")
+                        counter = Counter()
+                        examples = defaultdict()
+                        members.reset_index().apply(count_with_examples,
+                                                    args=(counter,
+                                                          examples,
+                                                          self.paradigms,
+                                                          (pred, out)),
+                                                    axis=1)
+                        # total = sum(list(counter.values()))
+                        if self.features is not None:
+                            log.debug("Features: %s", *classe[-self.features_len:])
+                            classe = classe[:-self.features_len]
+
+                        # for my_pattern in classe:
+                        #     if my_pattern in counter:
+                        #         row = (str(my_pattern),
+                        #                examples[my_pattern],
+                        #                counter[my_pattern],
+                        #                counter[my_pattern] / total)
+                            # else:
+                                # row = (str(my_pattern), "-", 0, 0)
+                            # table.add_row(row)
+
+                        log.debug("\nMatrix of available patterns:\n")
+                        log.debug("\n"+display.to_markdown(floatfmt=titles_fmt))
+                        log.debug("\n")
+                    else:
+                        # TODO Handle this differently
+                        log.debug("""\n!!! Source cell is overabundant !!!
+                            Skip.""")
+
+                results = np.matrix(results)
+                global_res = results[:, 2].T@(results[:, 0:2]/population)
+                df_res = pd.DataFrame(results, columns=["Accuracy",
+                                                        "Entropy",
+                                                        "Size"])
+                log.debug("\n# Global results")
+                log.debug("\nGlobal accuracy is: %s", global_res[0, 0])
+                log.debug("Global entropy  is: %s", global_res[0, 1])
+                log.debug("\n## Detailed overview of results\n")
+                log.debug(df_res.to_markdown(
+                    floatfmt=[".3f", ".3f", ".3f", ".0f"]))
+
+        if sanity_check:
+            return value_norm(entropies_check)
+
     def entropy_matrix(self):
         r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies, and one with counts of lexemes.
 
@@ -279,6 +565,10 @@ class PatternDistribution(object):
             .. math::
 
                 H( patterns_{c1, c2} | classes_{c1, c2} )
+
+        Note:
+            As opposed to :func:`entropy_matrix_OA`, this won't work
+            with overabundant forms.
         """
         log.info("Computing c1 → c2 entropies")
 
@@ -316,6 +606,9 @@ class PatternDistribution(object):
 
         Arguments:
             sanity_check (bool): Use a slower calculation to check that the results are exact.
+        Note:
+            As opposed to :func:`one_pred_distrib_log_OA`, this won't work
+            with overabundant forms.
         """
 
         def count_with_examples(row, counter, examples, paradigms, cells):

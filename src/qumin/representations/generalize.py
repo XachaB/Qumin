@@ -31,7 +31,7 @@ def generalize_patterns(pats):
 
     # Generalize the alternation if possible
     if new._gen_alt is not None:
-            new._generalize_alt(*pats)
+        new._generalize_alt(*pats)
 
     # Generalize the context if possible
     if not new._is_max_gen():
