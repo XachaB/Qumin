@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter, defaultdict
 from prettytable import PrettyTable, ALL
-from itertools import combinations
+from itertools import combinations, product
 # TODO replace sklearn with some lighter solution
 from sklearn.feature_extraction.text import CountVectorizer
 
@@ -62,7 +62,8 @@ class PatternDistribution(object):
             for the distribution :math:`P(c_{1}, ..., c_{n} → c_{n+1})`.
     """
 
-    def __init__(self, paradigms, patterns, pat_dic, features=None):
+    def __init__(self, paradigms, patterns, pat_dic, overabundant=False,
+                 features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -75,10 +76,21 @@ class PatternDistribution(object):
             features:
                 optional table of features
         """
-        self.paradigms = paradigms.map(lambda x: x[0] if x else x)
+        if not overabundant:
+            # Keep the first form for each cell
+            self.paradigms = paradigms.map(lambda x: x[0] if x else x)
+        else:
+            # Expand the paradigms
+            self.paradigms = paradigms
+            # self.paradigms = dict()
+            # for cell in paradigms.columns:
+                # self.paradigms[cell] = paradigms[cell].explode()
+            # Is this necessary ?
+            # for c in paradigms.columns:
+                # self.paradigms = self.paradigms.explode(c)
+
         self.pat_dict = pat_dic
         self.patterns = patterns.map(lambda x: (str(x),))
-
         if features is not None:
             # Add feature names
             features = features.apply(lambda x: x.name + "=" + x.apply(str), axis=0)
@@ -92,8 +104,12 @@ class PatternDistribution(object):
             self.add_features = lambda x: x
 
         log.info("Looking for classes of applicable patterns")
-        self.classes = representations.patterns.find_applicable(self.paradigms,
-                                                                self.pat_dict)
+        if overabundant:
+            self.classes = representations.patterns.find_applicable_OA(self.paradigms,
+                                                                       self.pat_dict)
+        else:
+            self.classes = representations.patterns.find_applicable(self.paradigms,
+                                                                    self.pat_dict)
         log.debug("Classes:")
         log.debug(self.classes)
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
@@ -306,35 +322,100 @@ class PatternDistribution(object):
         """
 
         if not silent:
-            log.info("\n\nComputing c1 → c2 entropies")
+            log.info("Computing c1 → c2 entropies")
 
         # For faster access
         patterns = self.patterns
+        patterns_dic = {}
+        col_names = set(self.paradigms.columns)
+
+        # For each cell, we have a DF, where the index is composed
+        # of (lexeme, wordform) pairs, the columns correspond to
+        # the remaining cells, and the values are the applicable rules
+
+        for cell in tqdm(self.paradigms.columns):
+            _ = self.paradigms[cell].explode()
+            patterns_dic[cell] = pd.DataFrame(columns=list(col_names-{cell}),
+                                              index=[_.index, _])
+
+        def dispatch_patterns(row, a, b, reverse=False):
+            """ This function reassigns the patterns to their forms.
+            This step is necessary to compute source-cell overabundance
+
+            Arguments:
+                row (:class:`pandas:pandas.Series`) : a row of the patterns table
+                a (str) : first column name.
+                b (str) : second column name.
+                reverse (bool) : whether to compute for A->B of B->A. The function is not symmetric.
+
+            Note:
+                As opposed to :func:`entropy_matrix`, this function allows overabundant forms.
+
+            Todo:
+                Merge with :func:`entropy_matrix`."""
+
+            lex = row.lexeme.iloc[0]
+            if reverse:
+                forms = self.paradigms.at[lex, b], self.paradigms.at[lex, a]
+            else:
+                forms = self.paradigms.at[lex, a], self.paradigms.at[lex, b]
+
+            nullset = {''}
+            if forms != (nullset, nullset):
+                if forms[0] == forms[1]:  # If the lists are identical, do not compute product
+                    pairs = [(x, x) for x in forms[0]]
+                    lpatterns = row[(a, b)][0].split(";")
+                elif forms[0] == '':
+                    pairs = [('', x) for x in forms[1]]
+                    lpatterns = ['' for i in forms[1]]
+                elif forms[1] == '':
+                    pairs = [(x, '') for x in forms[0]]
+                    lpatterns = ['' for i in forms[0]]
+                else:
+                    pairs = product(*forms)
+                    lpatterns = row[(a, b)][0].split(";")
+
+            return pd.Series([[p for p, _ in pairs], lpatterns])
+
+        for a, b in tqdm(patterns.columns):
+            z = patterns[(a, b)].reset_index().apply(
+                lambda x: dispatch_patterns(x, a, b), axis=1).explode([0,1])
+            z = z.reset_index().groupby(['index', 0], dropna=False).agg({1: lambda x: (';'.join(x),)})
+            z.index = patterns_dic[a][b].index
+            patterns_dic[a][b] = z
+
+            z = patterns[(a, b)].reset_index().apply(
+                lambda x: dispatch_patterns(x, a, b, reverse=True), axis=1).explode([0,1])
+            z = z.reset_index().groupby(['index', 0], dropna=False).agg({1: lambda x: (';'.join(x),)})
+            z.index = patterns_dic[b][a].index
+            patterns_dic[b][a] = z
+
         classes = self.classes
         rows = list(self.paradigms.columns)
 
         entropies = pd.DataFrame(index=rows, columns=rows)
         accuracies = pd.DataFrame(index=rows, columns=rows)
         effectifs = pd.DataFrame(index=rows, columns=rows)
+
         for a, b in patterns.columns:
             selector = self.hasforms[a] & self.hasforms[b]
             if selector[selector].size != 0:
-                known_ab = self.add_features(classes[(a, b)])
-                known_ba = self.add_features(classes[(b, a)])
+                known_ab = self.add_features(classes[a][b])
+                known_ba = self.add_features(classes[b][a])
 
-                _ = cond_entropy_OA(patterns[(a, b)],
+                _ = cond_entropy_OA(patterns_dic[a][b],
                                     known_ab, subset=selector,
                                     **kwargs)
 
-                entropies.at[a, b] = _[0, 0]
-                accuracies.at[a, b] = _[0, 1]
+                entropies.at[a, b] = _[0, 1]
+                accuracies.at[a, b] = _[0, 0]
 
-                _ = cond_entropy_OA(patterns[(a, b)],
+                _ = cond_entropy_OA(patterns_dic[b][a],
                                     known_ba, subset=selector,
                                     **kwargs)
 
-                entropies.at[b, a] = _[0, 0]
-                accuracies.at[b, a] = _[0, 1]
+                entropies.at[b, a] = _[0, 1]
+                accuracies.at[b, a] = _[0, 0]
 
                 effectifs.at[a, b] = sum(selector)
                 effectifs.at[b, a] = sum(selector)
@@ -372,7 +453,7 @@ class PatternDistribution(object):
             counter[pattern] += 1
             examples[pattern] = example
 
-        log.debug("\n\nPrinting log for P(c1 → c2).")
+        log.debug("Printing log for P(c1 → c2).")
 
         if sanity_check:
             rows = list(self.paradigms.columns)

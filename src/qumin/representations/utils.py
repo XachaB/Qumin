@@ -48,6 +48,7 @@ def create_paradigms(data_file_name,
                      cols=None, verbose=False, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
+                     cells=[],
                      col_names=("lexeme","cell","form")):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
@@ -61,6 +62,7 @@ def create_paradigms(data_file_name,
         fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ? Otherwise they are filled with empty strings ("").
         segcheck (bool): Defaults to False. Should I check that all the phonological segments in the table are defined in the segments table ?
         defective (bool): Defaults to False. Should I keep rows with defective forms ?
+        cells (List[str]): List of cell names to consider. Defaults to all.
         overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
         merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
         cols (tuple): names of the lexeme, cells and form columns (in this order).
@@ -89,9 +91,14 @@ def create_paradigms(data_file_name,
 
     # Long form
     if set(col_names) < set(paradigms.columns):
+        log.info("Pivoting long format paradigm...")
         lexemes, cell_col, form_col = col_names
-        paradigms = paradigms.pivot_table(values=form_col, index=lexemes, columns=cell_col,
-                              aggfunc=aggregator)
+        if cells != []:
+            log.info('Dropping unnecessary cells.')
+            paradigms = paradigms[(paradigms[cell_col].isin(cells))]
+        paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
+                                          columns=cell_col,
+                                          aggfunc=aggregator)
         paradigms.reset_index(inplace=True, drop=False)
 
     else:
@@ -99,6 +106,13 @@ def create_paradigms(data_file_name,
         if "variants" in paradigms.columns:
             log.info("Dropping the columns named 'variants'")
             paradigms.drop("variants", axis=1, inplace=True)
+        if cells != []:
+            par_cols = paradigms.columns
+            cells.append('lexeme')
+            todrop = list(set(par_cols)-set(cells))
+            if len(todrop) > 0:
+                log.info('Dropping unnecessary columns : '+", ".join(todrop))
+                paradigms.drop(todrop, axis=1, inplace=True)
 
         # First column has to be lexemes
         lexemes = paradigms.columns[0]

@@ -135,8 +135,11 @@ def main(args):
     else:
         patterns_df.to_csv(patfilename, sep=",")
 
+<<<<<<< HEAD:src/qumin/find_patterns.py
     md.save_metadata()
 
+=======
+>>>>>>> 8924d7c (Take overabundance into account (for pred cell)):qumin/find_patterns.py
 
 def pat_command():
 
@@ -172,9 +175,13 @@ def pat_command():
                         help="Whether to merge identical columns before looking for patterns.",
                         action="store_true", default=False)
 
+<<<<<<< HEAD:src/qumin/find_patterns.py
+=======
     parser.add_argument("--cells",
                         help="List of cells to use. Defaults to all.",
                         nargs='+', default=False)
+
+>>>>>>> 8924d7c (Take overabundance into account (for pred cell)):qumin/find_patterns.py
     args = parser.parse_args()
 
     main(args)

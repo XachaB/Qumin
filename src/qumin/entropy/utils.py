@@ -95,23 +95,46 @@ def cond_entropy_OA(A, B, subset=None, **kwargs):
     """
 
     # On regroupe les données de A selon celles de B
-    grouped_A = A[subset].groupby(B[subset], sort=False)
+    # A : patterns that can in fact be applied to each form
+    # B : patterns that are potentially applicable to each form
+
+    def weight(index):
+        """If no weight is given, this function suggests a
+        uniform weight for OA source cells"""
+        w = index.to_frame()
+        w.rename_axis(['lex', 'a'], inplace=True)
+        c = w.value_counts('lex')
+        w = w['lexeme'].apply(lambda x: 1/c[x])
+        return w
+
+    iname = A.index.names[-1]
+    A = A.reset_index(level=iname)[subset].set_index(iname, append=True)
+    B = B.reset_index(level=iname)[subset].set_index(iname, append=True)
+    A['w'] = weight(A.index)
+
+    # We need to align first to add the wordform index to A (patterns)
+    colname = B.columns[0]
+    grouped_A = A.groupby(B[colname], sort=False)
     population = subset.shape[0]
+    results = []
 
     # On analyse chaque groupe
-    results = []
-    for name, group in grouped_A:
+    def group_analysis(group):
         cv = CountVectorizer(tokenizer=lambda x: x,
-                            lowercase=False, token_pattern=None)
-        m = cv.fit_transform([_[0].split(";") for _ in group])
-        results.append([i*(group.shape[0]/population)
-                        for i in matrix_analysis(m.todense(), **kwargs)[0:2]])
+                             lowercase=False, token_pattern=None)
+        m = cv.fit_transform([_[0].split(";") for _ in group.iloc[:,0]])
+        weight = np.matrix(list(group['w'])).T
+        return [i*(np.sum(weight)/population)
+                for i in matrix_analysis(m.todense(), weight=weight,
+                                         **kwargs)[0:2]]
+
+    results = list(grouped_A.apply(group_analysis))
     sums = np.sum(np.matrix(results), axis=0)
 
     return sums
 
 
-def matrix_analysis(matrix, phi="soft", beta=1, with_proba=False, verbose=False):
+def matrix_analysis(matrix, weight=None, phi="soft", beta=1, with_proba=False, verbose=False):
     """Given an overabundance matrix and a function, computes the probability of
     each individual pattern and the accuracy for each lexeme.
 
@@ -131,9 +154,14 @@ def matrix_analysis(matrix, phi="soft", beta=1, with_proba=False, verbose=False)
     def _apply_phi(phi_fn):
         phi_pat = phi_fn(pat_freq)
         row_proba = matrix@phi_pat.T
-        accuracy = np.mean(row_proba)
-        # +0 to avoid displaying results as "-0"
-        entropy = -np.sum(np.log2(row_proba)*1/row_proba.shape[0]) + 0
+        if weight is None:
+            accuracy = np.mean(row_proba)
+            # +0 to avoid displaying results as "-0"
+            entropy = -np.sum(np.log2(row_proba)/row_proba.shape[0]) + 0
+        else:
+            # If weights are provided, use them
+            accuracy = np.average(row_proba, weights=weight)
+            entropy = -np.sum(np.average(np.log2(row_proba), weights=weight)) + 0
         if verbose:
             print("Phi_pat:", phi_pat)
             print("Pat_freq:", pat_freq)

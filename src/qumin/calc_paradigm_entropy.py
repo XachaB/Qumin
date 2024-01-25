@@ -37,6 +37,10 @@ def main(args):
 
     preds = sorted(args.nPreds)
     overabundant = args.overabundant
+    cells = args.cells
+    if not cells:
+        cells = []
+
     onePred = preds[0] == 1
     if onePred:
         preds.pop(0)
@@ -62,6 +66,7 @@ def main(args):
                                  overabundant=overabundant,
                                  merge_cols=args.cols_merged,
                                  segcheck=True,
+                                 cells=cells,
                                  col_names=args.cols_names)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
                                            overabundant=overabundant)
@@ -140,6 +145,7 @@ def main(args):
         distrib = PatternDistribution(paradigms,
                                       pat_table,
                                       pat_dic,
+                                      overabundant=overabundant,
                                       features=features)
 
     if onePred:
@@ -155,7 +161,7 @@ def main(args):
                                           {'computation': computation,
                                            'content': 'effectifs'})
         if overabundant:
-            distrib.entropy_matrix_OA()
+            distrib.entropy_matrix_OA(beta=args.beta)
         else:
                                            'content': 'effectifs'})
 
@@ -268,6 +274,11 @@ def H_command():
                         type=str,
                         default=None)
 
+    parser.add_argument('--weights',
+                        help="Weights for overabundant forms",
+                        type=str,
+                        default=None)
+
     parser.add_argument('--names',
                         help="Ordered names of bipartite systems (-b argument is 2nd)",
                         nargs=2,
@@ -295,6 +306,10 @@ def H_command():
                         help="Use overabundant entries for computation.",
                         action="store_true", default=False)
 
+    parser.add_argument("--beta",
+                        help="Value of beta to use for softmax.",
+                        type=int, default=10)
+
     actions = parser.add_argument_group('actions')
 
     actions.add_argument("--comp",
@@ -315,6 +330,12 @@ def H_command():
                          help="Export result as only one column.",
                          action="store_true",
                          default=False)
+
+    parser.add_argument("--cells",
+                        help="List of cells to use. Defaults to all.",
+                        nargs='+', default=False)
+
+
 
     args = parser.parse_args()
 
