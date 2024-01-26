@@ -5,13 +5,12 @@
 Compute conditional entropies in inflectional patterns.
 """
 
-from pathlib import Path
 import logging
 
 # Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
-from .utils import get_version, get_default_parser
+from .utils import get_default_parser, Metadata
 
 
 def main(args):
@@ -29,30 +28,21 @@ def main(args):
           Quantitative modeling of inflection
 
     """
+
+    md = Metadata(args, __file__)
+
     patterns_file_path = args.patterns
     paradigms_file_path = args.paradigms
-    data_file_name = Path(patterns_file_path).name.rstrip("_")
-
     features_file_name = args.segments
 
-    import time
-
-    now = time.strftime("%Hh%M")
-    day = time.strftime("%Y%m%d")
-
-    result_dir = Path(args.folder) / day
-    result_dir.mkdir(exist_ok=True, parents=True)
-    version = get_version()
     preds = sorted(args.nPreds)
     onePred = preds[0] == 1
     if onePred:
         preds.pop(0)
-    result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day,
-                                             now)
 
     # Define logging levels (different depending on verbosity)
     if args.verbose or args.debug:
-        logfile_name = result_prefix + ".log"
+        logfile_name = md.register_file('debug.log', {'content': 'log'})
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG,
                             filename=logfile_name, filemode='w')
         console = logging.StreamHandler()
@@ -91,9 +81,6 @@ def main(args):
         features = None
 
     if args.bipartite:
-
-        result_prefix = "{}/{}_{}_{}_{}_bipartite".format(result_dir, data_file_name,
-                                                          version, day, now)
         paradigms2 = create_paradigms(args.bipartite[1], defective=True,
                                       overabundant=False,
                                       merge_cols=args.cols_merged, segcheck=True,
@@ -107,10 +94,22 @@ def main(args):
                                            args.names,
                                            features=features)
         if args.comp:
-            ent_file1 = "{}onepredEntropies-{}.csv".format(result_prefix, args.names[0])
-            ent_file2 = "{}onepredEntropies-{}.csv".format(result_prefix, args.names[1])
-            I = "{}EntropiesI-{}{}.csv".format(result_prefix, *args.names)
-            NMI = "{}EntropiesNMI-{}{}.csv".format(result_prefix, *args.names)
+            computation = 'bipartiteEntropies'
+            ent_file1 = md.register_file('bipartite1.csv',
+                                         {'computation': computation,
+                                          'source': args.name[0],
+                                          'content': 'entropies'})
+            ent_file2 = md.register_file('bipartite2.csv', *
+                                         {'computation': computation,
+                                          'source': args.name[1],
+                                          'content': 'entropies'})
+            I = md.register_file('I.csv', {'computation': computation,
+                                           'source': args.names,
+                                           'content': 'I'})
+            NMI = md.register_file('NMI.csv',
+                                   {'computation': computation,
+                                    'source': args.names,
+                                    'content': 'NMI'})
 
             distrib.distribs[0].entropy_matrix()
             entropies1 = distrib.distribs[0].entropies[1]
@@ -142,8 +141,14 @@ def main(args):
                                       features=features)
 
     if onePred:
-        ent_file = "{}onePredEntropies.csv".format(result_prefix)
-        effectifs_file = "{}onePredEntropiesEffectifs.csv".format(result_prefix)
+        computation = 'onePredEntropies'
+        ent_file = md.register_file('entropies.csv',
+                                    {'computation': computation,
+                                     'content': 'entropies'})
+        effectifs_file = md.register_file('effectifs.csv',
+                                          {'computation': computation,
+                                           'content': 'effectifs'})
+
         distrib.entropy_matrix()
         entropies = distrib.entropies[1]
         effectifs = distrib.effectifs[1]
@@ -164,10 +169,11 @@ def main(args):
             check = distrib.one_pred_distrib_log(sanity_check=sanity_check)
 
             if sanity_check:
-                scsuffix = "{}onePredEntropies_slow_method.csv"
-                check_file = scsuffix.format(result_prefix)
+                check_file = md.register_file('entropies_slow_method.csv',
+                                              {'computation': computation,
+                                               'content': 'entropies_slow_method'})
 
-                log.info("Writing slowly computed entropies to: {}".format(check_file))
+                log.info("Writing slowly computed entropies to: %s", check_file)
 
                 check.to_csv(check_file, sep="\t")
 
@@ -177,8 +183,16 @@ def main(args):
             distrib.read_entropy_from_file(args.importFile)
 
         for n in preds:
-            n_ent_file = "{}{}PredsEntropies.csv".format(result_prefix, n)
-            effectifs_file = "{}{}PredsEntropiesEffectifs.csv".format(result_prefix, n)
+            computation = 'nPredsEntropies'
+            n_ent_file = md.register_file('npreds{}_entropies.csv'.format(n),
+                                          {'computation': computation,
+                                           'content': 'entropies',
+                                           'n': n})
+            effectifs_file = md.register_file('npreds{}_effectifs.csv'.format(n),
+                                              {'computation': computation,
+                                               'content': 'effectifs',
+                                               'n': n})
+
             distrib.n_preds_entropy_matrix(n)
             n_entropies = distrib.entropies[n]
             effectifs = distrib.effectifs[n]
@@ -196,8 +210,11 @@ def main(args):
                 n_check = distrib.n_preds_distrib_log(n, sanity_check=sanity_check)
 
                 if sanity_check:
-                    scsuffix = "{}{}PredsEntropies_slow_method.csv"
-                    n_check_file = scsuffix.format(result_prefix, n)
+                    n_check_file = md.register_file('npreds{}_entropies_slow.csv',
+                                                    {'computation': computation,
+                                                     'content': 'entropies_slow_method',
+                                                     'n': n})
+
                     log.info("Writing slowly computed"
                              " entropies to: {}".format(n_check_file))
                     n_check.to_csv(n_check_file, sep="\t")
@@ -207,6 +224,8 @@ def main(args):
 
     if args.debug:
         log.info("Wrote log to: {}".format(logfile_name))
+
+    md.save_metadata()
 
 
 def H_command():

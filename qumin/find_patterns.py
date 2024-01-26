@@ -4,14 +4,13 @@
 
 Author: Sacha Beniamine.
 """
-from .utils import get_version, get_default_parser
+from .utils import get_default_parser, Metadata
 from .representations import patterns, segments, create_paradigms
 from .clustering import find_microclasses
 from itertools import combinations
 import logging
 import argparse
-from pathlib import Path
-import time
+
 
 def main(args):
     r"""Find pairwise alternation patterns from paradigms.
@@ -26,14 +25,14 @@ def main(args):
       Quantitative modeling of inflection
 
     """
+
     if args.verbose:
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     else:
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     log = logging.getLogger()
     log.info(args)
-    now = time.strftime("%Hh%M")
-    day = time.strftime("%Y%m%d")
+    md = Metadata(args, __file__)
 
     # Loading files and paths
     kind = args.kind
@@ -41,13 +40,6 @@ def main(args):
     overabundant = args.overabundant
     features_file_name = args.segments
     data_file_path = args.paradigms
-    data_file_name = Path(data_file_path).name.rstrip("_")
-
-    version = get_version()
-    # Setting up the output path.
-    result_dir = Path(args.folder)
-    result_dir.mkdir(exist_ok=True, parents=True)
-    result_prefix = "{}/{}_{}_{}_{}_".format(result_dir, data_file_name, version, day, now)
 
     is_of_pattern_type = kind.startswith("patterns")
     segcheck = True
@@ -113,13 +105,15 @@ def main(args):
         log.warning(patterns_df[patterns_df.isnull().values])
 
     microclasses = find_microclasses(patterns_df.map(str))
-    filename = result_prefix + "_microclasses.txt"
+    filename = md.register_file("microclasses.txt",
+                                {'computation': args.kind, 'content': 'microclasses'})
     log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
-    patfilename = result_prefix + "_" + kind + ".csv"
+    patfilename = md.register_file(kind+".csv",
+                                   {'computation': args.kind, 'content': 'patterns'})
     log.info("Writing patterns (importable by other scripts) to %s", patfilename)
     if is_of_pattern_type:
         if args.optim_mem:
@@ -127,16 +121,19 @@ def main(args):
             log.warning("Since you asked for args.optim_mem, I will not export the human_readable file ")
         else:
             patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
-            pathumanfilename = result_prefix + "_human_readable_" + kind + ".csv"
+            pathumanfilename = md.register_file("human_readable_"+kind+".csv",
+                                                {'computation': args.kind, 'content': 'patterns_human'})
             log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
             patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
     else:
         patterns_df.to_csv(patfilename, sep=",")
 
+    md.save_metadata()
+
+
 def pat_command():
 
     parser = get_default_parser(main.__doc__, paradigms=True, patterns=False)
-
 
     parser.add_argument('-k', '--kind',
                         help="Kind of patterns to infer:"
@@ -167,7 +164,6 @@ def pat_command():
     parser.add_argument("-m", "--merge_cols",
                         help="Whether to merge identical columns before looking for patterns.",
                         action="store_true", default=False)
-
 
     args = parser.parse_args()
 
