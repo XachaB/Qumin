@@ -569,7 +569,7 @@ def normalize(ipa, features):
             translation table from the segment's nameto its normalized name.
     """
 
-    def find_indentical_rows(segment, table):
+    def find_identical_rows(segment, table):
         seg_features = table.loc[segment, :]
         try:
             same_features_as_seg = (table == seg_features).all(axis=1)
@@ -583,7 +583,7 @@ def normalize(ipa, features):
     ipa["Normalized"] = ""
 
     for segment in ipa[features].drop_duplicates().index:
-        same_features_as_seg = find_indentical_rows(segment, ipa[features])
+        same_features_as_seg = find_identical_rows(segment, ipa[features])
 
         if (ipa.loc[same_features_as_seg, "Normalized"] == "").all():
             ipa.loc[same_features_as_seg, "Normalized"] = segment
