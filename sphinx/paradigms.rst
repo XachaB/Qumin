@@ -19,7 +19,7 @@ Wide format
 As an example of valid data, Qumin is shipped with a paradigm table in wide format from the French inflectional lexicon `Flexique <http://www.llf.cnrs.fr/fr/flexique-fr.php>`__. Here is a sample of the first 10 columns for 10 randomly picked verbs from Flexique:
 
 -  each row represents a lexeme, and each column represents a cell.
--  The first column indicates a unique identifier for each lexeme. It is usually convenient to use orthographic citation forms for this purpose (e.g. infinitive for verbs).
+-  The first column indicates a unique identifier for each lexeme. It is usually convenient to use orthographic citation forms for this purpose (e.g. infinitive for verbs).
 -  In Vlexique, there is a second column with orthographic variants for lexeme names, which is called “variants”. You do not need to add a “variant” column, and if it is there, it will be ignored.
 -  the very first row indicates the names of the cells as column headers. Columns headers shouldn’t contain the character “#”.
 
@@ -137,13 +137,13 @@ Here are some examples from French verbs:
   endêver        #DEF#     #DEF#     #DEF#     #DEF#     #DEF#     #DEF#     #DEF#      #DEF#     
  ============== ========= ========= ========= ========= ========= ========= ========== ========== 
 
-In long format, it is possible either to skip the corresponding row entirely, or to write it as "#DEF#".
+In long format, defectives are marked as "#DEF#" too, eg:
 
  ========= ========== ============
   lexeme    form        cell
  ========= ========== ============
+ advenir      #DEF#      prs.1sg
+ advenir      #DEF#      prs.2sg
  advenir      advjɛ̃      prs.3sg
- advenir      advjɛn     prs.3pl
- ardre        aʁdE       ipfv.1sg
- ardre        aʁdE       ipfv.2sg
  ========= ========== ============
+
