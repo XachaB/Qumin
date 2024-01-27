@@ -26,7 +26,7 @@ class Metadata():
     Arguments:
         args (:class:`pandas:pandas.DataFrame`):
             arguments passed to the script
-        file (str): name of the main script
+        filename (str): name of the main script
         relative (bool) : whether to use absolute or relative paths. Relative refers to working_dir
 
     Attributes:
@@ -159,7 +159,8 @@ class ArgumentDefaultsRawTextHelpFormatter(argparse.RawDescriptionHelpFormatter)
                     help += ' (default: %(default)s)'
         return help
 
-def get_default_parser(usage, patterns=False, paradigms=True, ):
+
+def get_default_parser(usage, patterns=False, paradigms=True, multipar=True):
 
     parser = argparse.ArgumentParser(description=usage,
                                      formatter_class=ArgumentDefaultsRawTextHelpFormatter)
@@ -170,13 +171,17 @@ def get_default_parser(usage, patterns=False, paradigms=True, ):
                                  " (csv separated by ‘, ’)",
                             type=str)
 
-    if paradigms:
+    if paradigms and multipar:
+        parser.add_argument("paradigms",
+                            help="paradigm file, full path"
+                                 " (csv separated by ‘, ’)",
+                            nargs="+",
+                            type=str)
+    elif paradigms:
         parser.add_argument("paradigms",
                             help="paradigms file, full path"
                                  " (csv separated by ‘, ’)",
                             type=str)
-
-
 
     parser.add_argument("segments",
                         help="segments file, full path (csv or tsv)",
@@ -194,7 +199,7 @@ def get_default_parser(usage, patterns=False, paradigms=True, ):
                          action="store_true", default=False)
 
     options.add_argument("-f", "--folder",
-                        help="Output folder name",
-                        type=str, default=os.getcwd())
+                         help="Output folder name",
+                         type=str, default=os.getcwd())
 
     return parser

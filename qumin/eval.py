@@ -9,17 +9,18 @@ import numpy as np
 from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
 import argparse
-from .utils import get_version, get_default_parser
+from .utils import get_default_parser, Metadata
 from itertools import combinations, chain
 from multiprocessing import Pool
-import time
 from pathlib import Path
 from tqdm import tqdm
-import seaborn as sns; sns.set()
+import seaborn as sns
 from matplotlib import pyplot as plt
 import logging
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 log = logging.getLogger()
+sns.set()
+
 
 def prepare_arguments(paradigms, iterations, methods, features):
     """Generate argument tuples for each evaluation task.
@@ -94,7 +95,7 @@ def evaluate(task):
             ba_predictions &= pred_ba
         counts += count
 
-    a, b = test_items[id].columns # any of the previous values for table id would work
+    a, b = test_items[id].columns  # any of the previous values for table id would work
     row["count"] = counts
     row["total_train"] = train_items.shape[0]
     row["total_test"] = test_items.shape[0]
@@ -160,7 +161,6 @@ def predict_two_directions(test_items, train_items, method, features=None):
         A = A[A.columns[0]]
 
     classes = patterns.find_applicable(train_items.append(test_items), dic, disable_tqdm=True)
-
 
     B = classes[(a, b)]
 
@@ -244,6 +244,7 @@ def to_heatmap(results, cells):
         yield method, fig
         plt.close(fig)
 
+
 def main(args):
     r"""Evaluate pattern's accuracy with 10 folds.
 
@@ -258,22 +259,22 @@ def main(args):
 
     """
     log.info(args)
+    md = Metadata(args, __file__)
+    now = md.day+"_"+md.now
     np.random.seed(0)  # make random generator determinist
-    now = time.strftime("%Hh%M_%Y%m%d")
-    day = time.strftime("%Y%m%d")
-
-    result_dir = Path(args.folder) / day
-    result_dir.mkdir(exist_ok=True, parents=True)
 
     segments.Inventory.initialize(args.segments)
     paradigms, features = prepare_data(args)
 
     files = [Path(file).stem for file in args.paradigms]
 
-    general_infos = {"Qumin_version": get_version(), "lexemes": paradigms.shape[0],
-                     "paradigms": ";".join(files), "day_time": now}
+    general_infos = {"Qumin_version": md.version,
+                     "lexemes": paradigms.shape[0],
+                     "paradigms": ";".join(files),
+                     "day_time": now}
 
-    tasks = prepare_arguments(paradigms, args.iterations, args.methods, features)
+    tasks = prepare_arguments(paradigms, args.iterations,
+                              args.methods, features)
     if args.workers == 1:
         results = list(chain(*(evaluate(t) for t in tqdm(tasks))))
     else:
@@ -284,34 +285,31 @@ def main(args):
     results = pd.DataFrame(results)
     for info in general_infos:
         results[info] = general_infos[info]
-    results.to_csv("{}/eval_patterns_{}_{}.csv".format(args.folder, now, "_".join(files)))
+
+    computation = 'evalPatterns'
+    filename = md.register_file("eval_patterns.csv",
+                                {"computation": computation,
+                                 "content": "scores",
+                                 "source": files})
+    results.to_csv(filename)
 
     print_summary(results, general_infos)
     figs = to_heatmap(results, paradigms.columns.levels[1].tolist())
     for name, fig in figs:
-        fig.savefig("{}/eval_patterns_heatmap_{}_{}_{}.png".format(args.file, now, name, "_".join(files)),
-                    dpi=300, bbox_inches='tight', pad_inches=0.5)
+        figname = md.register_file("eval_patterns_{}.png".format(name),
+                                   {"computation": computation,
+                                    "content": "heatmap",
+                                    "name": name,
+                                    "source": files})
+        fig.savefig(figname, dpi=300, bbox_inches='tight', pad_inches=0.5)
+
+    md.save_metadata()
 
 
 def eval_command():
 
-    parser = get_default_parser(main.__doc__, paradigms=True, patterns=True)
-
-    usage = main.__doc__
-
-    parser = argparse.ArgumentParser(description=usage,
-                                     formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument("paradigms",
-                        help="paradigm file, full path"
-                             " (csv separated by ‘, ’)",
-                        nargs="+",
-                        type=str)
-
-    parser.add_argument("segments",
-                        help="segments file, full path"
-                             " (csv separated by '\\t')",
-                        type=str)
+    parser = get_default_parser(main.__doc__, paradigms=True,
+                                patterns=False, multipar=True)
 
     parser.add_argument('-i', '--iterations',
                         help="How many test/train folds to do. Defaults to full cross validation.",
@@ -343,6 +341,7 @@ def eval_command():
 
     args = parser.parse_args()
     main(args)
+
 
 if __name__ == '__main__':
     eval_command()

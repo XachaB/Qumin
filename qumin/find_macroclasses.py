@@ -14,13 +14,12 @@ try:
 except ImportError:
     MATPLOTLIB_LOADED = False
 
-from .utils import get_version, get_default_parser
+from .utils import get_default_parser, Metadata
 from .representations import segments, patterns
 from .clustering import algorithms, descriptionlength, find_min_attribute
 import pandas as pd
 import logging
 from pathlib import Path
-import time
 import re
 
 
@@ -44,15 +43,12 @@ def main(args):
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     log = logging.getLogger()
     log.info(args)
-
-    now = time.strftime("%Hh%M")
-    day = time.strftime("%Y%m%d")
+    md = Metadata(args, __file__)
 
     # Loading files and paths
     features_file_name = args.segments
     data_file_path = args.patterns
     data_file_name = Path(data_file_path).name.rstrip("_")
-    version = get_version()
 
     pattern_type_match = re.match(r".+_(.+)\.csv", data_file_name)
     if pattern_type_match is None:
@@ -61,11 +57,6 @@ def main(args):
         kind = "unknown"
     else:
         kind = pattern_type_match.groups()[0]
-
-    # Setting up the output path.
-    result_dir = Path(args.folder) / day
-    result_dir.mkdir(exist_ok=True, parents=True)
-    result_prefix = "{}/{}_{}_{}_{}_BU_DL".format(result_dir, data_file_name, version, day, now)
 
     # Initializing segments
 
@@ -76,7 +67,7 @@ def main(args):
     else:
         pat_table = pd.read_csv(data_file_path, index_col=0)
 
-    preferences = {"prefix": result_prefix}
+    preferences = {"md": md}
 
     # if args.randomised:
     #     func = preferences["clustering_algorithm"]
@@ -86,12 +77,15 @@ def main(args):
     node = algorithms.hierarchical_clustering(pat_table, descriptionlength.BUDLClustersBuilder, **preferences)
 
     DL = "Min :" + str(find_min_attribute(node, "DL"))
-    experiment_id = " ".join(["Bottom-up DL clustering on ", kind, DL, "(", version, day, now, ")", ])
+    experiment_id = " ".join(["Bottom-up DL clustering on ", kind, DL])
 
+    computation = "macroclasses"
     # Saving png figure
     if MATPLOTLIB_LOADED:
         fig = plt.figure(figsize=(10, 20))
-        figname = result_prefix + "_figure.png"
+        figname = md.register_file("figure.png",
+                                   {"computation": computation,
+                                    "content": "figure"})
         log.info("Drawing figure to: {}".format(figname))
         node.draw(horizontal=True,
                   square=True,
@@ -101,19 +95,24 @@ def main(args):
                   keep_above_macroclass=True)
 
         fig.suptitle(experiment_id)
-        fig.savefig(result_prefix + "_figure.png",
+        fig.savefig(figname,
                     bbox_inches='tight', pad_inches=.5)
 
     # Saving text tree
-    log.info("Printing tree to: {}".format(result_prefix + "_tree.txt"))
-    flow = open(result_prefix + "_tree.txt", "w", encoding="utf8")
+    treename = md.register_file("tree.txt",
+                                {"computation": computation,
+                                 "content": "tree"})
+    log.info("Printing tree to: {}".format(treename))
+    flow = open(treename, "w", encoding="utf8")
     flow.write(node.tree_string())
     flow.write("\n" + experiment_id)
     flow.close()
 
+    md.save_metadata()
+
 
 def macroclasses_command():
-    parser = get_default_parser(main.__doc, patterns=True, paradigms=False)
+    parser = get_default_parser(main.__doc__, patterns=True, paradigms=False)
     args = parser.parse_args()
     main(args)
 

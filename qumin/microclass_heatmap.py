@@ -11,12 +11,12 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
 import logging
-from .utils import get_default_parser
+from .utils import get_default_parser, Metadata
 
 log = logging.getLogger()
 
 
-def microclass_heatmap(distances, path, labels=None, cmap_name="BuPu", exhaustive_labels=False):
+def microclass_heatmap(distances, md, labels=None, cmap_name="BuPu", exhaustive_labels=False):
     """Make a heatmap of microclasses distances"""
     index = list(distances.index)
     tick_value = "auto"
@@ -39,9 +39,10 @@ def microclass_heatmap(distances, path, labels=None, cmap_name="BuPu", exhaustiv
     else:
         sns.clustermap(distances, method="average", xticklabels=tick_value, yticklabels=tick_value,
                        linewidths=0, cmap=plt.get_cmap(cmap_name), rasterized=True)
-
-    name = path + "_microclassHeatmap.pdf"
-    log.info("Saving file to: "+ name)
+    name = md.register_file("microclassHeatmap.pdf",
+                            {"computation": "microclass_heatmap",
+                             "content": "figure"})
+    log.info("Saving file to: " + name)
     plt.savefig(name, bbox_inches='tight', pad_inches=0, transparent=True)
 
 
@@ -73,6 +74,9 @@ def main(args):
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     log.info(args)
     log.info("Reading files")
+
+    md = Metadata(args, __file__)
+
     categories = None
     if args.labels:
         categories = pd.read_csv(args.labels, index_col=0, squeeze=True)
@@ -82,9 +86,10 @@ def main(args):
     log.info("Computing distances")
     distances = distance_matrix(pat_table, microclasses)
     log.info("Drawing")
-    microclass_heatmap(distances, args.folder, labels=categories,
+    microclass_heatmap(distances, md, labels=categories,
                        cmap_name=args.cmap,
                        exhaustive_labels=args.exhaustive_labels)
+    md.save_metadata()
 
 
 def heatmap_command():
@@ -110,6 +115,7 @@ def heatmap_command():
     args = parser.parse_args()
 
     main(args)
+
 
 if __name__ == '__main__':
     heatmap_command()
