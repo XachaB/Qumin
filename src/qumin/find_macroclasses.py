@@ -3,6 +3,7 @@
 """Cluster lemmas according to their paradigms.
 
 Author: Sacha Beniamine.
+
 """
 try:
     import matplotlib
@@ -29,13 +30,14 @@ def main(args):
 
     We strongly recommend the default setting for the measure (-m) and the algorithm (-a)
     For a detailed explanation, see the html doc.::
-      ____
-     / __ \                    /)
-    | |  | | _   _  _ __ ___   _  _ __
-    | |  | || | | || '_ ` _ \ | || '_ \
-    | |__| || |_| || | | | | || || | | |
-     \___\_\ \__,_||_| |_| |_||_||_| |_|
-      Quantitative modeling of inflection
+
+          ____
+         / __ \                    /)
+        | |  | | _   _  _ __ ___   _  _ __
+        | |  | || | | || '_ ` _ \ | || '_ \
+        | |__| || |_| || | | | | || || | | |
+         \___\_\ \__,_||_| |_| |_||_||_| |_|
+          Quantitative modeling of inflection
 
     """
     if args.verbose:

@@ -5,8 +5,7 @@ This file relates phonological forms to their lexemes and paradigm cells.
 There are two possible formats for this file, either `wide or long format <https://en.wikipedia.org/wiki/Wide_and_narrow_data>`:
 
 -  In **wide format**, there is one row per lexeme, and forms are given in successive columns. The entire paradigms fits on the row.
--  In **long format**, there is one row per inflected form.
-There are three useful columns: the lexeme identifier, the form itself, and the paradigm cell.
+-  In **long format**, there is one row per inflected form. There are three useful columns: the lexeme identifier, the form itself, and the paradigm cell.
 
 The wide format is kept for backward compatibility, but I recommend using the long format for future work.
 

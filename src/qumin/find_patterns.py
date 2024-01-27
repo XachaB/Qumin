@@ -16,13 +16,14 @@ def main(args):
     r"""Find pairwise alternation patterns from paradigms.
 
     For a detailed explanation, see the html doc.::
-      ____
-     / __ \                    /)
-    | |  | | _   _  _ __ ___   _  _ __
-    | |  | || | | || '_ ` _ \ | || '_ \
-    | |__| || |_| || | | | | || || | | |
-     \___\_\ \__,_||_| |_| |_||_||_| |_|
-      Quantitative modeling of inflection
+
+          ____
+         / __ \                    /)
+        | |  | | _   _  _ __ ___   _  _ __
+        | |  | || | | || '_ ` _ \ | || '_ \
+        | |__| || |_| || | | | | || || | | |
+         \___\_\ \__,_||_| |_| |_||_||_| |_|
+          Quantitative modeling of inflection
 
     """
 

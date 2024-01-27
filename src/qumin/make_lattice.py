@@ -16,14 +16,18 @@ import logging
 from pathlib import Path
 
 def main(args):
-    r""" Infer Inflection classes as a lattice from alternation patterns.
-      ____
-     / __ \                    /)
-    | |  | | _   _  _ __ ___   _  _ __
-    | |  | || | | || '_ ` _ \ | || '_ \
-    | |__| || |_| || | | | | || || | | |
-     \___\_\ \__,_||_| |_| |_||_||_| |_|
-      Quantitative modeling of inflection
+    r"""Infer Inflection classes as a lattice from alternation patterns.
+
+    For a detailed explanation, see the html doc.::
+
+          ____
+         / __ \                    /)
+        | |  | | _   _  _ __ ___   _  _ __
+        | |  | || | | || '_ ` _ \ | || '_ \
+        | |__| || |_| || | | | | || || | | |
+         \___\_\ \__,_||_| |_| |_||_||_| |_|
+           Quantitative modeling of inflection
+
 
     """
     if args.verbose:

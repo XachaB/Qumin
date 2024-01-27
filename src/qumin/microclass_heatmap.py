@@ -61,13 +61,14 @@ def main(args):
     r"""Draw a clustermap of microclass similarities using seaborn.
 
     For a detailed explanation, see the html doc.::
-      ____
-     / __ \                    /)
-    | |  | | _   _  _ __ ___   _  _ __
-    | |  | || | | || '_ ` _ \ | || '_ \
-    | |__| || |_| || | | | | || || | | |
-     \___\_\ \__,_||_| |_| |_||_||_| |_|
-      Quantitative modeling of inflection
+
+          ____
+         / __ \                    /)
+        | |  | | _   _  _ __ ___   _  _ __
+        | |  | || | | || '_ ` _ \ | || '_ \
+        | |__| || |_| || | | | | || || | | |
+         \___\_\ \__,_||_| |_| |_||_||_| |_|
+          Quantitative modeling of inflection
 
     """
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)

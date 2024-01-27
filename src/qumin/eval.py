@@ -15,11 +15,15 @@ from multiprocessing import Pool
 import time
 from pathlib import Path
 from tqdm import tqdm
-import seaborn as sns; sns.set()
+import seaborn as sns;
+
+sns.set()
 from matplotlib import pyplot as plt
 import logging
+
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 log = logging.getLogger()
+
 
 def prepare_arguments(paradigms, iterations, methods, features):
     """Generate argument tuples for each evaluation task.
@@ -94,7 +98,7 @@ def evaluate(task):
             ba_predictions &= pred_ba
         counts += count
 
-    a, b = test_items[id].columns # any of the previous values for table id would work
+    a, b = test_items[id].columns  # any of the previous values for table id would work
     row["count"] = counts
     row["total_train"] = train_items.shape[0]
     row["total_test"] = test_items.shape[0]
@@ -160,7 +164,6 @@ def predict_two_directions(test_items, train_items, method, features=None):
         A = A[A.columns[0]]
 
     classes = patterns.find_applicable(train_items.append(test_items), dic, disable_tqdm=True)
-
 
     B = classes[(a, b)]
 
@@ -244,17 +247,19 @@ def to_heatmap(results, cells):
         yield method, fig
         plt.close(fig)
 
+
 def main(args):
     r"""Evaluate pattern's accuracy with 10 folds.
 
-    For a detailed explanation, see the html doc.::
-      ____
-     / __ \                    /)
-    | |  | | _   _  _ __ ___   _  _ __
-    | |  | || | | || '_ ` _ \ | || '_ \
-    | |__| || |_| || | | | | || || | | |
-     \___\_\ \__,_||_| |_| |_||_||_| |_|
-      Quantitative modeling of inflection
+    For a detailed explanation, see the html doc. ::
+
+          ____
+         / __ \                    /)
+        | |  | | _   _  _ __ ___   _  _ __
+        | |  | || | | || '_ ` _ \ | || '_ \
+        | |__| || |_| || | | | | || || | | |
+         \___\_\ \__,_||_| |_| |_||_||_| |_|
+          Quantitative modeling of inflection
 
     """
     log.info(args)
@@ -294,7 +299,6 @@ def main(args):
 
 
 def eval_command():
-
     parser = get_default_parser(main.__doc__, paradigms=True, patterns=True)
 
     usage = main.__doc__
@@ -343,6 +347,7 @@ def eval_command():
 
     args = parser.parse_args()
     main(args)
+
 
 if __name__ == '__main__':
     eval_command()

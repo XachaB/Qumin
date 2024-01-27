@@ -11,7 +11,6 @@ Subpackages
    qumin.entropy
    qumin.lattice
    qumin.representations
-   qumin.tests
    qumin.utils
 
 Submodules
