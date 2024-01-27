@@ -41,6 +41,9 @@ def main(args):
     overabundant = args.overabundant
     features_file_name = args.segments
     data_file_path = args.paradigms
+    cells = args.cells
+    if len(cells) == 1:
+        raise argparse.ArgumentTypeError("You can't provide only one cell.")
 
     is_of_pattern_type = kind.startswith("patterns")
     segcheck = True
@@ -66,7 +69,7 @@ def main(args):
         merge_cols = True
 
     paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols,
-                                 segcheck=segcheck, col_names=args.cols_names)
+                                 segcheck=segcheck, col_names=args.cols_names, cells=cells)
 
     log.info("Looking for patterns...")
     if kind.startswith("endings"):
@@ -164,6 +167,11 @@ def pat_command():
     parser.add_argument("-m", "--merge_cols",
                         help="Whether to merge identical columns before looking for patterns.",
                         action="store_true", default=False)
+
+    parser.add_argument("--cells",
+                        help="List of cells to use. Defaults to all.",
+                        nargs='+', default=[])
+
 
     args = parser.parse_args()
 
