@@ -14,3 +14,9 @@ build:
 
 sphinx:
   configuration: sphinx/conf.py
+
+
+python:
+  install:
+    - method: pip
+      path: ./

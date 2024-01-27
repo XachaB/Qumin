@@ -6,8 +6,7 @@ Documentation index
 --------------------
 
 .. toctree::
-   :maxdepth: 5
-   :numbered:
+   :maxdepth: 3
 
    Quick start <self>
    The paradigms file <paradigms>
