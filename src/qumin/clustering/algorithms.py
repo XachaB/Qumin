@@ -9,14 +9,17 @@ from . import find_microclasses
 import logging
 log = logging.getLogger()
 
+
 def choose(iterable):
     """Choose a random element in an iterable of iterable."""
     i = np.random.choice(len(iterable), 1)
     return iterable[int(i)]
 
 
-def log_classes(classes, prefix, suffix):
-    filename = prefix + "_" + suffix + ".txt"
+def log_classes(classes, md, suffix):
+    filename = md.register_file(suffix + ".txt",
+                                {"computation": "macroclasses",
+                                 "content": "log"})
     log.info("Found %s %s", len(classes), suffix)
     log.info("Printing log to %s", filename)
     with open(filename, "w", encoding="utf-8") as flow:
@@ -49,7 +52,7 @@ def hierarchical_clustering(patterns, Clusters, **kwargs):
         Clusters : a cluster class to use in clustering.
         clustering_algorithm (func): a clustering algorithm.
         kwargs: any keywords arguments to pass to Clusters. Some keywords are mandatory :
-          "prefix" should be the log file prefix, "patterns" should be a function for pattern finding
+          "md" should be the Metadata register, "patterns" should be a function for pattern finding
     """
 
     # Clustering
@@ -66,7 +69,7 @@ def hierarchical_clustering(patterns, Clusters, **kwargs):
     # Export macroclasses
     macroclasses = node.macroclasses()
     if macroclasses:
-        log_classes(macroclasses, kwargs["prefix"], "macroclasses")
+        log_classes(macroclasses, kwargs['md'], "macroclasses")
     else:
         log.warning("No macroclasses could be found "
                     " this is not necessarily a bug, but it is surprising !")
