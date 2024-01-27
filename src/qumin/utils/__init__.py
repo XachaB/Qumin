@@ -160,7 +160,7 @@ class ArgumentDefaultsRawTextHelpFormatter(argparse.RawDescriptionHelpFormatter)
         return help
 
 
-def get_default_parser(usage, patterns=False, paradigms=True, multipar=True):
+def get_default_parser(usage, patterns=False, paradigms=True, multipar=False):
 
     parser = argparse.ArgumentParser(description=usage,
                                      formatter_class=ArgumentDefaultsRawTextHelpFormatter)
