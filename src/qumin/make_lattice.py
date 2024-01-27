@@ -7,13 +7,12 @@ Author: Sacha Beniamine.
 
 from .clustering import find_microclasses
 from .representations import segments, patterns
-from .utils import get_version, get_default_parser
+from .utils import get_default_parser, Metadata
 from .lattice.lattice import ICLattice
 
-import time
 import pandas as pd
 import logging
-from pathlib import Path
+
 
 def main(args):
     r"""Infer Inflection classes as a lattice from alternation patterns.
@@ -34,25 +33,14 @@ def main(args):
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     else:
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
     log = logging.getLogger()
     log.info(args)
-    now = time.strftime("%Hh%M")
-    day = time.strftime("%Y%m%d")
+
+    md = Metadata(args, __file__)
 
     # Loading files and paths
-
     features_file_name = args.segments
     data_file_path = args.patterns
-    data_file_name = Path(data_file_path).name.rstrip("_")
-    version = get_version().rstrip("_")
-
-    # Setting up the output path.
-    result_dir = Path(args.folder) / day
-    result_dir.mkdir(exist_ok=True, parents=True)
-    result_prefix = "{}/{}_{}_{}_{}_{}_{}lattice".format(result_dir, data_file_name, version, day, now,
-                                                         "aoc" if args.aoc else "full",
-                                                         "bipartite_" if args.bipartite else "_")
 
     if features_file_name != "ORTHO":
 
@@ -85,35 +73,48 @@ def main(args):
     log.info("Building the lattice...")
     lattice = ICLattice(pat_table.loc[list(microclasses), :], microclasses,
                         overabundant=collections, comp_prefix=comp, aoc=args.aoc, keep_names=(not args.shorten))
+    computation = "lattice"
 
     if args.stat:
-        with open(result_prefix + "_stats.txt", "w", encoding="utf-8") as flow:
+        statname = md.register_file('stats.txt', {"computation": computation,
+                                                  "content": "stats"})
+        with open(statname, "w", encoding="utf-8") as flow:
             flow.write(lattice.stats().to_frame().T.to_latex())
             log.info(lattice.stats().to_frame().T.to_latex())
 
     if args.png:
-        lattice.draw(result_prefix + ".png", figsize=(20, 10), title=None, point=True)
+        lattpng = md.register_file('lattice.png', {'computation': computation,
+                                                   'content': 'figure'})
+        lattice.draw(lattpng, figsize=(20, 10), title=None, point=True)
 
     if args.pdf:
-        lattice.draw(result_prefix + ".pdf", figsize=(20, 10), title=None, point=True)
+        lattpdf = md.register_file('lattice.pdf', {'computation': computation,
+                                                   'content': 'figure'})
+        lattice.draw(lattpdf, figsize=(20, 10), title=None, point=True)
 
     if args.html:
-        log.info("Exporting to html: " + result_prefix + ".html")
-        lattice.to_html(result_prefix + ".html")
+        latthtml = md.register_file('lattice.html', {'computation': computation,
+                                                     'content': 'figure'})
+        log.info("Exporting to html: " + latthtml)
+        lattice.to_html(latthtml)
 
     if args.cxt:
-        log.info(" ".join("Exporting context to file:", result_prefix + ".cxt"))
-        lattice.context.tofile(result_prefix + ".cxt", frmat='cxt')
+        lattcxt = md.register_file('lattice.cxt', {'computation': computation,
+                                                   'content': 'figure'})
+        log.info(" ".join("Exporting context to file:", lattcxt))
+        lattice.context.tofile(lattcxt, frmat='cxt')
 
     if args.first:
         log.info("Here is the first level of the hierarchy:")
         log.info("Root:")
         obj, common = lattice.nodes.attributes["objects"], lattice.nodes.attributes["common"]
         if obj or common:
-            log.info("\tdefines: "+ str(obj) + str(common))
+            log.info("\tdefines: " + str(obj) + str(common))
         for child in lattice.nodes.children:
             extent, common = child.labels, child.attributes["common"]
             log.info(" ".join("extent:", extent, "\n\tdefines:", common, ">"))
+
+    md.save_metadata()
 
 
 def lattice_command():
@@ -165,6 +166,7 @@ def lattice_command():
     args = parser.parse_args()
 
     main(args)
+
 
 if __name__ == '__main__':
     lattice_command()
