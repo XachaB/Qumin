@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 import pandas as pd
-from ..representations import patterns, segments
+from representations import patterns, segments
 from pathlib import Path
 
 

@@ -1,0 +1,11 @@
+pandas
+numpy
+scipy
+matplotlib
+networkx
+pydot
+tqdm
+seaborn
+tabulate
+concepts
+prettytable

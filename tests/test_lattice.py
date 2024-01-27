@@ -5,8 +5,8 @@ import unittest
 import pandas as pd
 import numpy as np
 import random
-from ..lattice import ICLattice, to_dummies_overabundant
-from ..clustering import Node
+from lattice import ICLattice, to_dummies_overabundant
+from clustering import Node
 from . import TestCaseWithPandas
 from itertools import combinations
 

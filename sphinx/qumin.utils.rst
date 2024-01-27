@@ -1,10 +1,10 @@
-utils package
-=============
+qumin.utils package
+===================
 
 Module contents
 ---------------
 
-.. automodule:: utils
+.. automodule:: qumin.utils
    :members:
    :undoc-members:
    :show-inheritance:

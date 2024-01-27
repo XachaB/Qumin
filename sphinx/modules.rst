@@ -4,8 +4,9 @@ bin
 .. toctree::
    :maxdepth: 4
 
-   clustering
-   entropy
-   lattice
-   representations
-   utils
+   qumin
+   qumin.clustering
+   qumin.entropy
+   qumin.lattice
+   qumin.representations
+   qumin.utils

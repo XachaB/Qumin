@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from ..entropy import utils
+from entropy import utils
 
 class UtilsTestCase(unittest.TestCase):
 

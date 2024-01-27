@@ -29,7 +29,7 @@ The segments file is also written in wide format, with each row describing a pho
 Some conventions:
 
 -  The first column must be called ``Seg.``.
--  The phonological symbols, in the ``Seg.`` column cannot be one of the reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
+-  The phonological symbols, in the ``Seg.`` column cannot be one of he reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
 -  If the file contains a “value” column, it will be ignored. This is used to provide a human-readable description of segments, which can be useful when preparing the data.
 -  In order to provide short names for the features, as in [+nas] rather than [+nasal], you can add a second level of header, also beginning by ``Seg.``, which gives abbreviated names:
 

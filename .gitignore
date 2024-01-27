@@ -46,3 +46,6 @@ desktop.ini
 
 Results/
 doc/
+*.egg-info/
+build/
+TODO
