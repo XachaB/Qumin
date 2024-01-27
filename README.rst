@@ -62,6 +62,7 @@ Alternation patterns serve as a basis for all the other scripts. The algorithm t
     bin/$ qumin.patterns -d -o <paradigm.csv> <segments.csv>
 
 The option -k allows one to choose the algorithm for inferring alternation patterns.
+
 ====================== ====================== ==================================================================================
  Option                 Description            Strategy
 ====================== ====================== ==================================================================================
