@@ -12,5 +12,4 @@ Documentation index
    Quick start <self>
    The paradigms file <paradigms>
    The segments file <segments>
-   How to use the scripts <usages>
    API <modules>

@@ -61,6 +61,38 @@ Alternation patterns serve as a basis for all the other scripts. The algorithm t
 
     bin/$ qumin.patterns -d -o <paradigm.csv> <segments.csv>
 
+The option -k allows one to choose the algorithm for inferring alternation patterns.
+====================== ====================== ==================================================================================
+ Option                 Description            Strategy
+====================== ====================== ==================================================================================
+`endings`              Affixes                 Removes the longest common initial string for each row.
+`endingsPairs`         Pairs of affixes        Endings, tabulated as pairs for all combinations of columns.
+`endingsDisc`          Discontinuous endings   Removes the longest common substring, left aligned
+
+**....Alt**            **Alternations**       **Alternations have no contextes. These were used for comparing macroclass**
+                                              **strategies on French and European Portuguese.**
+
+`globalAlt`            Alternations            As `EndingsDisc`, tabulated as pairs for all combinations of columns.
+`localAlt`             Alternations            Inferred from local pairs of cells, left aligned.
+
+**patterns...**        **Binary Patterns**     **All patterns have alternations and generalized contexts. Various alignment**
+                                               **strategies are offered for comparison. Arbitrary number of changes supported.**
+
+`patternsLevenshtein`  Patterns                Aligned with simple edit distance.
+`patternsPhonsim`      Patterns                Aligned with edit distances based on phonological similarity.
+`patternsSuffix`       Patterns                Fixed left alignment, only interesting for suffixal languages.
+`patternsPrefix`       Patterns                Fixed right alignment, only interesting for prefixal languages.
+`patternsBaseline`     Patterns                Baseline alignment, follows Albright & Hayes 2002.
+                                               A single change, with a priority order:
+                                               Suffixation > Prefixation > Stem-internal alternation (ablaut/infixation)
+====================== ====================== ==================================================================================
+
+Most of these were implemented for comparison purposes. I recommend to use the default `patternsPhonsim` in most cases. To avoid relying on your phonological features files for alignment scores, use `patternsLevenshtein`. Only these two are full patterns with generalization both in the context and alternation.
+
+For lattices, we keep defective and overabundant entries. We do not usually keep them for other applications.
+The latest code for entropy can handle defective entries.
+The file you should use as input for the below scripts has a name that ends in "_patterns". The "_human_readable_patterns" file is nicer to review but is only meant for human usage.
+
 **Full usage and more details:**::
 
     bin/$ qumin.patterns --help
@@ -106,6 +138,8 @@ This script was used in:
 **Add a file with features to help prediction** (for example gender -- features will be added to the known information when predicting) ::
 
     bin/$ qumin.H -n 2 --features <features.csv> -- <patterns.csv> <paradigm.csv> <segments.csv>
+
+With `-n` and N>2 the computation can get quite long on large datasets.
 
 **Full usage and more details:**::
 

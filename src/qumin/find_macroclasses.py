@@ -113,7 +113,7 @@ def main(args):
 
 
 def macroclasses_command():
-    parser = get_default_parser(main.__doc, patterns=True, paradigms=False)
+    parser = get_default_parser(main.__doc__, patterns=True, paradigms=False)
     args = parser.parse_args()
     main(args)
 
