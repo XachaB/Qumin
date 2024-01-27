@@ -1,7 +1,0 @@
-[console_scripts]
-qumin.H = qumin.calc_paradigm_entropy:H_command
-qumin.eval = qumin.eval:eval_command
-qumin.heatmap = qumin.microclass_heatmap:heatmap_command
-qumin.lattice = qumin.make_lattice:lattice_command
-qumin.macroclasses = qumin.find_macroclasses:macroclasses_command
-qumin.patterns = qumin.find_patterns:pat_command
