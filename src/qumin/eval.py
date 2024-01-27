@@ -164,7 +164,7 @@ def predict_two_directions(test_items, train_items, method, features=None):
     except AttributeError:
         A = A[A.columns[0]]
 
-    classes = patterns.find_applicable(train_items.append(test_items), dic, disable_tqdm=True)
+    classes = patterns.find_applicable(pd.concat([train_items, test_items]), dic, disable_tqdm=True)
 
     B = classes[(a, b)]
 
@@ -328,7 +328,7 @@ def eval_command():
                         default=["suffix", "prefix", "baseline", "levenshtein",
                                  "similarity"])
 
-    parser.add_argument('--workers',
+    parser.add_argument('-w', '--workers',
                         help="number of workers",
                         type=int,
                         default=1)
