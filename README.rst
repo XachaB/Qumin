@@ -2,15 +2,20 @@
 Qumin: Quantitative modelling of inflection
 ********************************************
 
-Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <xachab.github.io>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . 
+Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was initially developed for `my PhD dissertation <https://tel.archives-ouvertes.fr/tel-01840448>`_.
 
-**The documentation has moved to ReadTheDocs** at: https://qumin.readthedocs.io/
+Contributors: Sacha Beniamine, Jules Bouton.
+Documentation: https://qumin.readthedocs.io/
+Github: https://github.com/XachaB/Qumin
 
-This is version 2, which was significatively updated since the below publications.
+
+This is version 2, which was significantly updated since the below publications.
 
 For more detail, you can refer to my dissertation (in French):
 
 `Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français. <https://tel.archives-ouvertes.fr/tel-01840448>`_
+
+If you use(d) Qumin in a publication, send me an email with the reference at s.<last name>@surrey.ac.uk
 
 
 Quick Start
@@ -34,8 +39,6 @@ Data
 
 The scripts expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
 
-To provide a data sample in
-
 For compatible data, see the [Paralex datasets](http://www.paralex-standard.org). The sounds files may sometimes require edition, as Qumin as more constraints on sound definitions.
 
 
@@ -46,8 +49,14 @@ Scripts
 Patterns
 ^^^^^^^^^
 
-Alternation patterns serve as a basis for all the other scripts. The algorithm to find the patterns was presented in: Sacha Beniamine. `Un algorithme universel pour l'abstraction automatique d'alternances morphophonologiques
+Alternation patterns serve as a basis for all the other scripts. An early version of the algorithm to find the patterns was presented in:
+
+- Sacha Beniamine. `Un algorithme universel pour l'abstraction automatique d'alternances morphophonologiques
 24e Conférence sur le Traitement Automatique des Langues Naturelles <https://halshs.archives-ouvertes.fr/hal-01615899>`_ (TALN), Jun 2017, Orléans, France. 2 (2017), 24e Conférence sur le Traitement Automatique des Langues Naturelles.
+
+An updated description of the algorithm figures in:
+
+- Sacha Beniamine, Olivier Bonami, Ana R. Luís (2021). The fine implicative structure of European Portuguese conjugation. In: Isogloss. Open Journal of Romance Linguistics. DOI:  ` 10.5565/rev/isogloss.109 <https://doi.org/10.5565/rev/isogloss.109>`_
 
 **Computing automatically aligned patterns** for  macroclass (ignore defective lexemes and overabundant forms)::
 
@@ -126,6 +135,7 @@ Paradigm entropy
 This script was used in:
 
 - Bonami, Olivier, and S. Beniamine. "`Joint predictiveness in inflectional paradigms <http://www.llf.cnrs.fr/fr/node/4789>`_." Word Structure 9, no. 2 (2016): 156-182. Some improvements have been implemented since then.
+- Sacha Beniamine, Olivier Bonami, Ana R. Luís (2021). The fine implicative structure of European Portuguese conjugation. In: Isogloss. Open Journal of Romance Linguistics. DOI:  ` 10.5565/rev/isogloss.109 <https://doi.org/10.5565/rev/isogloss.109>`_
 
 
 **Computing entropies from one cell** ::
@@ -167,7 +177,7 @@ Lattices
 
 This script was used in:
 
-- Beniamine, Sacha. (in press) "`One lexeme, many classes: inflection class systems as lattices <https://xachab.github.io/papers/Beniamine2019.pdf>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
+- Beniamine, Sacha. (2021) "`One lexeme, many classes: inflection class systems as lattices <https://langsci-press.org/catalog/book/262>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
 
 **Inferring a lattice of inflection classes, with html output** ::
 
