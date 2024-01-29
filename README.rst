@@ -1,5 +1,5 @@
 ********************************************
-Qumin: Quantitative modelling of inflection
+Quantitative modelling of inflection
 ********************************************
 
 ![tests](https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg) [![Documentation Status](https://readthedocs.org/projects/qumin/badge/?version=dev)](https://qumin.readthedocs.io/dev/?badge=latest)
