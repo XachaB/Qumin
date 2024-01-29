@@ -102,6 +102,6 @@ In wide format, the most explicit way to indicate these missing values is to wri
  ========= ========== ============
  advenir      #DEF#      prs.1sg
  advenir      #DEF#      prs.2sg
- advenir      advjɛ̃      prs.3sg
+ advenir    a d v j ɛ̃    prs.3sg
  ========= ========== ============
 
