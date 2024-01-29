@@ -2,11 +2,15 @@
 Qumin: Quantitative modelling of inflection
 ********************************************
 
+![tests](https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg) [![Documentation Status](https://readthedocs.org/projects/qumin/badge/?version=dev)](https://qumin.readthedocs.io/dev/?badge=latest)
+
 Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was initially developed for `my PhD dissertation <https://tel.archives-ouvertes.fr/tel-01840448>`_.
 
-Contributors: Sacha Beniamine, Jules Bouton.
-Documentation: https://qumin.readthedocs.io/
-Github: https://github.com/XachaB/Qumin
+**Contributors**: Sacha Beniamine, Jules Bouton.
+
+**Documentation**: https://qumin.readthedocs.io/
+
+**Github**: https://github.com/XachaB/Qumin
 
 
 This is version 2, which was significantly updated since the publications cited below.
