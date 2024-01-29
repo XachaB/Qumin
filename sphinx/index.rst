@@ -11,4 +11,5 @@ Documentation index
    Quick start <self>
    The paradigms file <paradigms>
    The segments file <segments>
+   Publications <publications>
    API <modules>

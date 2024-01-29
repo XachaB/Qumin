@@ -9,13 +9,9 @@ Documentation: https://qumin.readthedocs.io/
 Github: https://github.com/XachaB/Qumin
 
 
-This is version 2, which was significantly updated since the below publications.
+This is version 2, which was significantly updated since the publications cited below.
 
-For more detail, you can refer to my dissertation (in French):
-
-`Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français. <https://tel.archives-ouvertes.fr/tel-01840448>`_
-
-If you use(d) Qumin in a publication, send me an email with the reference at s.<last name>@surrey.ac.uk
+For more detail, you can refer to my dissertation (in French, `Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_). If you use(d) Qumin in a publication, send me an email with the reference at s.<last name>@surrey.ac.uk
 
 
 Quick Start
@@ -49,14 +45,7 @@ Scripts
 Patterns
 ^^^^^^^^^
 
-Alternation patterns serve as a basis for all the other scripts. An early version of the algorithm to find the patterns was presented in:
-
-- Sacha Beniamine. `Un algorithme universel pour l'abstraction automatique d'alternances morphophonologiques
-24e Conférence sur le Traitement Automatique des Langues Naturelles <https://halshs.archives-ouvertes.fr/hal-01615899>`_ (TALN), Jun 2017, Orléans, France. 2 (2017), 24e Conférence sur le Traitement Automatique des Langues Naturelles.
-
-An updated description of the algorithm figures in:
-
-- Sacha Beniamine, Olivier Bonami, Ana R. Luís (2021). The fine implicative structure of European Portuguese conjugation. In: Isogloss. Open Journal of Romance Linguistics. DOI:  ` 10.5565/rev/isogloss.109 <https://doi.org/10.5565/rev/isogloss.109>`_
+Alternation patterns serve as a basis for all the other scripts. An early version of the algorithm to find the patterns was presented in `Beniamine (2017) <https://halshs.archives-ouvertes.fr/hal-01615899>`_. An updated description of the algorithm figures in `Beniamine, Bonami and  Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_.
 
 **Computing automatically aligned patterns** for  macroclass (ignore defective lexemes and overabundant forms)::
 
@@ -132,11 +121,7 @@ Paradigm entropy
 ^^^^^^^^^^^^^^^^^^
 
 
-This script was used in:
-
-- Bonami, Olivier, and S. Beniamine. "`Joint predictiveness in inflectional paradigms <http://www.llf.cnrs.fr/fr/node/4789>`_." Word Structure 9, no. 2 (2016): 156-182. Some improvements have been implemented since then.
-- Sacha Beniamine, Olivier Bonami, Ana R. Luís (2021). The fine implicative structure of European Portuguese conjugation. In: Isogloss. Open Journal of Romance Linguistics. DOI:  ` 10.5565/rev/isogloss.109 <https://doi.org/10.5565/rev/isogloss.109>`_
-
+This script was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_,  `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
 
 **Computing entropies from one cell** ::
 
@@ -161,7 +146,7 @@ With `-n` and N>2 the computation can get quite long on large datasets.
 Macroclass inference
 ^^^^^^^^^^^^^^^^^^^^^
 
-Our work on automatical inference of macroclasses was published in Beniamine, Sacha, Olivier Bonami, and Benoît Sagot. "`Inferring Inflection Classes with Description Length. <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_" Journal of Language Modelling (2018).
+Our work on automatical inference of macroclasses was published in `Beniamine, Bonami and Sagot (2018) <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_".
 
 **Inferring macroclasses** ::
 
@@ -175,9 +160,7 @@ Our work on automatical inference of macroclasses was published in Beniamine, Sa
 Lattices
 ^^^^^^^^^
 
-This script was used in:
-
-- Beniamine, Sacha. (2021) "`One lexeme, many classes: inflection class systems as lattices <https://langsci-press.org/catalog/book/262>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
+This script was used in `Beniamine (2021) <https://langsci-press.org/catalog/book/262>`_".
 
 **Inferring a lattice of inflection classes, with html output** ::
 

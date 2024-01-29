@@ -6,6 +6,7 @@ Qumin works from the assumption that your paradigms are written in phonemic nota
 
 To create a new segments file, the best is usually to refer to an authoritative description, and adapt it to the needs of the specific dataset. In the absence of such a description, I suggest to make use of `Bruce Hayes’ spreadsheet <https://linguistics.ucla.edu/people/hayes/120a/index.htm#features>`__ as a starting point (he writes ``+``, ``-`` and ``0`` for our ``1``,\ ``0`` and ``-1``).
 
+
 Format
 ~~~~~~
 
