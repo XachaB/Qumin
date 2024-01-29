@@ -4,7 +4,8 @@ Qumin bibliography
 
 Here are publications which made use of Qumin. If you use Qumin in a publication, send me an email at with the reference at s.<last name>@surrey.ac.uk in order to be cited here !
 
-
+- Herce, Borja & Bogdan Pricop. Accepted. VeLeRo: An inflected verbal lexicon of Standard Romanian and a quantitative analysis of morphological predictability. Language Resources and Evaluation.
+- Herce, Borja. Submitted. VeLePa: Central Pame verbal inflection in a quantitative perspective.
 - Beniamine, Sacha. (2021) "`One lexeme, many classes: inflection class systems as lattices <https://langsci-press.org/catalog/book/262>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
 - Beniamine, Sacha, Olivier Bonami, Ana R. Luís (2021). The fine implicative structure of European Portuguese conjugation. In: Isogloss. Open Journal of Romance Linguistics. DOI:  ` 10.5565/rev/isogloss.109 <https://doi.org/10.5565/rev/isogloss.109>`_
 -  Olivier Bonami, Sacha Beniamine (2021). Leaving the stem by itself. In: Marcia Haag, Sedigheh Moradi, Andrija Petrovic, Janie Rees-Miller (eds.), All Things Morphology: Its independence and its interfaces
