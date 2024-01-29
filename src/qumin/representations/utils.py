@@ -129,8 +129,8 @@ def create_paradigms(data_file_name,
                 log.info('Dropping unnecessary columns : '+", ".join(sorted(todrop)))
                 paradigms.drop(todrop, axis=1, inplace=True)
 
-            # First column has to be lexemes
-            lexemes = paradigms.columns[0]
+        # First column has to be lexemes
+        lexemes = paradigms.columns[0]
 
     if not defective:
         paradigms.dropna(axis=0, inplace=True)
