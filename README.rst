@@ -34,9 +34,9 @@ Data
 
 The scripts expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
 
-To provide a data sample in the correct format, Qumin includes a subset of the French `flexique lexicon <http://www.llf.cnrs.fr/fr/flexique-fr.php>`_, distributed under a `Creative Commons Attribution-NonCommercial-ShareAlike license <http://creativecommons.org/licenses/by-nc-sa/3.0/>`_.
+To provide a data sample in
 
-For more data, see the [Paralex datasets](http://www.paralex-standard.org).
+For compatible data, see the [Paralex datasets](http://www.paralex-standard.org). The sounds files may sometimes require edition, as Qumin as more constraints on sound definitions.
 
 
 Scripts
