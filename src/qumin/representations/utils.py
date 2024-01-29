@@ -93,9 +93,17 @@ def create_paradigms(data_file_name,
     # Long form
     if set(col_names) < set(paradigms.columns):
         lexemes, cell_col, form_col = col_names
-        if cells != []:
-            log.info('Dropping unnecessary cells.')
+
+        # Filter cells before pivoting for speed reasons
+        if cells is not None:
+            par_cols = paradigms[cell_col].unique()
+            todrop = list(set(par_cols)-set(cells))
+            log.info('Dropping rows with following cell values: '+", ".join(sorted(todrop)))
+            for checkname in cells:
+                if checkname not in par_cols:
+                    raise ValueError(f"It's impossible to keep the rows {checkname}, since there is no such row.")
             paradigms = paradigms[(paradigms[cell_col].isin(cells))]
+
         paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
                                           columns=cell_col,
                                           aggfunc=aggregator)
@@ -109,16 +117,20 @@ def create_paradigms(data_file_name,
             log.info("Dropping the columns named 'variants'")
             paradigms.drop("variants", axis=1, inplace=True)
 
-        if cells != []:
+        if cells is not None:
             par_cols = paradigms.columns
+            for checkname in cells:
+                if checkname not in par_cols:
+                    raise ValueError(f"It's impossible to keep the \
+                                    column {checkname}, since it doesn't exist.")
             cells.append('lexeme')
             todrop = list(set(par_cols)-set(cells))
             if len(todrop) > 0:
-                log.info('Dropping unnecessary columns : '+", ".join(todrop))
+                log.info('Dropping unnecessary columns : '+", ".join(sorted(todrop)))
                 paradigms.drop(todrop, axis=1, inplace=True)
 
-        # First column has to be lexemes
-        lexemes = paradigms.columns[0]
+            # First column has to be lexemes
+            lexemes = paradigms.columns[0]
 
     if not defective:
         paradigms.dropna(axis=0, inplace=True)

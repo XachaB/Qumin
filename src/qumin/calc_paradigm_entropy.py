@@ -274,7 +274,7 @@ def H_command():
 
     parser.add_argument("--cells",
                         help="List of cells to use. Defaults to all.",
-                        nargs='+', default=[])
+                        nargs='+', default=None)
 
     actions = parser.add_argument_group('actions')
 

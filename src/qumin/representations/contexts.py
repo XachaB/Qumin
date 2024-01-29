@@ -32,13 +32,13 @@ def _pretty_print_ctxt(ctxt_part):
 def _pretty_print_aligned(aligned, l):
     aligned = list(aligned)
     strs = [[] for _ in range(l)]
-    for ctxt_part, option, right_blank in aligned:
+    for ctxt_part, is_optional, right_blank in aligned:
         for aligned_seqs in ctxt_part:
             for i in range(len(aligned_seqs)):
                 s, q = aligned_seqs[i]
                 strs[i].append(_pairstr(s, q))
 
-        if optional:
+        if is_optional:
             for i in range(l):
                 strs[i].append("<?>")
 

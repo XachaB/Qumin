@@ -170,7 +170,7 @@ def pat_command():
 
     parser.add_argument("--cells",
                         help="List of cells to use. Defaults to all.",
-                        nargs='+', default=[])
+                        nargs='+', default=None)
 
 
     args = parser.parse_args()
