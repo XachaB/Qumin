@@ -15,19 +15,22 @@ log = logging.getLogger()
 
 class Metadata():
     """Metadata manager for Qumin scripts. Basic usage :
-    1) Register Metadata manager;
-    2) Before saving a file, register it with a short name;
-    3) Save all metadata in a secure place
 
-        md = Metadata(args, __file__)
-        filename = md.register_file(name, suffix)
-        # Now, you can open an IO stream and write to ``filename``.
-        md.save_metadata(path)
+        1. Register Metadata manager;
+        2. Before writing any important file, register it with a short name;
+        3. Save all metadata in a secure place::
+
+
+            md = Metadata(args, __file__)
+            filename = md.register_file(name, suffix)
+            # Now, you can open an IO stream and write to ``filename``.
+            md.save_metadata(path)
+
 
     Arguments:
         args (:class:`pandas:pandas.DataFrame`):
             arguments passed to the script
-        filename (str): name of the main script
+        filename (str): name of the main script, passing __file__ is fine.
         relative (bool) : whether to use absolute or relative paths. Relative refers to working_dir
 
     Attributes:
