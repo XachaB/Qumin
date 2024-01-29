@@ -88,12 +88,12 @@ class Metadata():
     def register_file(self, suffix, properties=None):
         """ Register a file to save. Returns a normalized name.
 
-        Arguments :
+        Arguments:
             suffix (str): the suffix to append to the normalized prefix
             properties (dict): optional set of properties to keep along
 
         Returns:
-            (str) : the full registered path"""
+            (str): the full registered path"""
 
         filename = self.prefix + "_" + suffix
         self.output.append({'filename': filename,
@@ -116,7 +116,7 @@ def get_version():
 
     If the directory isn't under git or svn, the function returns an empty str.
 
-     Returns:
+    Returns:
         (str): svn/git version or ''.
      """
     return __version__
