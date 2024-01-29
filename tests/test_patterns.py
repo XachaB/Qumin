@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 import pandas as pd
-from representations import patterns, segments
+from qumin.representations import patterns, segments
 from pathlib import Path
 
 
