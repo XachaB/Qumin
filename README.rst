@@ -1,6 +1,6 @@
 ![tests](https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg) [![Documentation Status](https://readthedocs.org/projects/qumin/badge/?version=dev)](https://qumin.readthedocs.io/dev/?badge=latest)
 
-Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was initially developed for `my PhD dissertation <https://tel.archives-ouvertes.fr/tel-01840448>`_.
+Qumin (QUantitative Modelling of INflection) is a package for the computational modelling of the inflectional morphology of languages. It was initially developed for `my PhD dissertation <https://tel.archives-ouvertes.fr/tel-01840448>`_.
 
 **Contributors**: Sacha Beniamine, Jules Bouton.
 
@@ -33,7 +33,7 @@ Install the Qumin package: ::
 Data
 -----
 
-The scripts expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
+The package expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
 
 For compatible data, see the [Paralex datasets](http://www.paralex-standard.org). The sounds files may sometimes require edition, as Qumin as more constraints on sound definitions.
 
@@ -89,9 +89,7 @@ The file you should use as input for the below scripts has a name that ends in "
 Microclasses
 ^^^^^^^^^^^^^
 
-To visualize the microclasses and their similarities, you can use the new script `microclass_heatmap.py`:
-
-**Computing a microclass heatmap**::
+To visualize the microclasses and their similarities, one can compute a **microclass heatmap**::
 
     bin/$ qumin.heatmap <paradigm.csv> <output_path>
 
@@ -99,7 +97,7 @@ To visualize the microclasses and their similarities, you can use the new script
 
     bin/$ qumin.heatmap -l  <labels.csv> -- <paradigm.csv> <output_path>
 
-The labels file is a csv file. The first column give lexemes names, the second column provides inflection class labels. This allows to visually compare a manual classification with pattern-based similarity. This script relies heavily on `seaborn's clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ function.
+The labels file is a csv file. The first column give lexemes names, the second column provides inflection class labels. This allows to visually compare a manual classification with pattern-based similarity. This command relies heavily on `seaborn's clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ function.
 
 **Full usage and more details:**::
 
@@ -110,7 +108,7 @@ Paradigm entropy
 ^^^^^^^^^^^^^^^^^^
 
 
-This script was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_,  `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
+This software was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_,  `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
 
 **Computing entropies from one cell** ::
 
@@ -149,7 +147,7 @@ Our work on automatical inference of macroclasses was published in `Beniamine, B
 Lattices
 ^^^^^^^^^
 
-This script was used in `Beniamine (2021) <https://langsci-press.org/catalog/book/262>`_".
+This software was used in `Beniamine (2021) <https://langsci-press.org/catalog/book/262>`_".
 
 **Inferring a lattice of inflection classes, with html output** ::
 
