@@ -12,4 +12,5 @@ Documentation index
    The paradigms file <paradigms>
    The segments file <segments>
    Publications <publications>
+   Paralex datasets <http://www.paralex-standard.org>
    API <qumin>
