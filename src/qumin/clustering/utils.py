@@ -312,7 +312,7 @@ class Node(object):
                 for feature in node.attributes["common"]:
                     a, b = feature.split("=")
                     table.append("\\textsc{" + a + "} & " + b + " \\\\")
-                table.append("\end{tabular}")
+                table.append("\\end{tabular}")
             return "".join(table)
 
         def scale(m, max_obs, max_target):

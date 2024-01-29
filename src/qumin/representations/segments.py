@@ -224,7 +224,7 @@ class Inventory(object):
         """Computes phonological similarity  (Frisch, 2004)
 
         Measure from "Similarity avoidance and the OCP" , Frisch, S. A.; Pierrehumbert, J. B. & Broe,
-        M. B. *Natural Language \& Linguistic Theory*, Springer, 2004, 22, 179-228, p. 198.
+        M. B. *Natural Language & Linguistic Theory*, Springer, 2004, 22, 179-228, p. 198.
 
         We compute similarity by comparing the number of shared and unshared natural classes
         of two consonants, using the equation in (7). This equation is a direct extension
@@ -232,7 +232,8 @@ class Inventory(object):
 
         (7) :math:`Similarity = \\frac{\\text{Shared natural classes}}{\\text{Shared natural classes } + \\text{Non-shared natural classes}}`
         """
-        if a == b: return 1
+        if a == b:
+            return 1
         ca = cls._classes[a]
         cb = cls._classes[b]
         return len(ca & cb) / len(ca | cb)

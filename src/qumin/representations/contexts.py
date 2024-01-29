@@ -32,7 +32,7 @@ def _pretty_print_ctxt(ctxt_part):
 def _pretty_print_aligned(aligned, l):
     aligned = list(aligned)
     strs = [[] for _ in range(l)]
-    for ctxt_part, optional, right_blank in aligned:
+    for ctxt_part, option, right_blank in aligned:
         for aligned_seqs in ctxt_part:
             for i in range(len(aligned_seqs)):
                 s, q = aligned_seqs[i]
@@ -108,7 +108,8 @@ class _ContextMember(object):
 
     def to_str(self, mode=2, last=False):
         def to_features(s):
-            if Inventory.is_leaf(s): return s
+            if Inventory.is_leaf(s):
+                return s
             return Inventory.features_str(s)
 
         # Format modes:

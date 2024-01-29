@@ -18,14 +18,15 @@ class Metadata():
 
         1. Register Metadata manager;
         2. Before writing any important file, register it with a short name;
-        3. Save all metadata in a secure place::
+        3. Save all metadata in a secure place
 
+    Examples:
+        .. code-block:: python
 
             md = Metadata(args, __file__)
             filename = md.register_file(name, suffix)
             # Now, you can open an IO stream and write to ``filename``.
             md.save_metadata(path)
-
 
     Arguments:
         args (:class:`pandas:pandas.DataFrame`):

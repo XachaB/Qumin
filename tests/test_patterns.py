@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import unittest
-import pandas as pd
 from qumin.representations import patterns, segments
 from pathlib import Path
 
@@ -129,4 +128,3 @@ class PatternsTestCase(unittest.TestCase):
         expected = {'a': [('u',), ('ˈi', 'm'), ('ʃ',)], 'b': [('ˈu',), ('',), ('',)]}
 
         self.assertDictEqual(p.alternation, expected)
-
