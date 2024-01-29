@@ -6,33 +6,37 @@ This module implements patterns' contexts, which are series of phonological rest
 
 from .quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
 from .alignment import align_right, align_left, align_multi
-from .segments import  Inventory
+from .segments import Inventory
 import logging
+
 log = logging.getLogger()
 
-def _pairstr(s,q):
+
+def _pairstr(s, q):
     if s:
-        return Inventory.shortest(s)+str(q)
+        return Inventory.shortest(s) + str(q)
     else:
-        return s+str(q)
+        return s + str(q)
+
 
 def _pretty_print_aligned_seq(aligned_seqs):
-    for s,q in aligned_seqs:
-        yield _pairstr(s,q)
+    for s, q in aligned_seqs:
+        yield _pairstr(s, q)
+
 
 def _pretty_print_ctxt(ctxt_part):
     for aligned_seqs in ctxt_part:
         yield from _pretty_print_aligned_seq(aligned_seqs)
 
-def _pretty_print_aligned(aligned, l ):
 
+def _pretty_print_aligned(aligned, l):
     aligned = list(aligned)
     strs = [[] for _ in range(l)]
     for ctxt_part, optional, right_blank in aligned:
         for aligned_seqs in ctxt_part:
             for i in range(len(aligned_seqs)):
-                s,q = aligned_seqs[i]
-                strs[i].append(_pairstr(s,q))
+                s, q = aligned_seqs[i]
+                strs[i].append(_pairstr(s, q))
 
         if optional:
             for i in range(l):
@@ -42,6 +46,7 @@ def _pretty_print_aligned(aligned, l ):
             for i in range(l):
                 strs[i].append("_")
     return "\n" + "\n".join(["\t".join(x) for x in strs])
+
 
 def _align_edges(*args, **kwargs):
     """Align at both edges.
@@ -107,10 +112,10 @@ class _ContextMember(object):
             return Inventory.features_str(s)
 
         # Format modes:
-        format_modes = [Inventory.regex ,  # str (0):      ([Ei]...) - with parenthesis, regex
+        format_modes = [Inventory.regex,  # str (0):      ([Ei]...) - with parenthesis, regex
                         Inventory.pretty_str,  # pretty  (1):  {e, i}
                         Inventory.shortest,  # display (2): shortest possible string
-                        to_features]         # features: [+syll, -open]
+                        to_features]  # features: [+syll, -open]
         format_blanks = ["{}", "_", "_", "_"]
         format_segment = format_modes[mode]
         blankchar = format_blanks[mode]
@@ -231,7 +236,7 @@ class Context(object):
         return self.to_str(mode=2)
 
     def to_str(self, mode=2):
-        l = len(self.elements)-1
+        l = len(self.elements) - 1
         return "".join(member.to_str(mode=mode, last=i == l) for i, member in enumerate(self.elements))
 
     @classmethod
@@ -280,7 +285,7 @@ class Context(object):
 
         aligned = cls._align(contexts)
 
-        #log.debug(_pretty_print_aligned(cls._align(contexts), len(contexts)))
+        # log.debug(_pretty_print_aligned(cls._align(contexts), len(contexts)))
 
         for group, opt, blank in cls._align(contexts):
             context_members = []

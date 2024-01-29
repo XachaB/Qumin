@@ -39,6 +39,7 @@ def cond_P(A, B, subset=None):
         cond_events = A[subset].groupby(B[subset], sort=False)
     return P(cond_events)
 
+
 def cond_entropy(A, B, **kwargs):
     """Calculate the conditional entropy between two series of data points.
        Presupposes that values in the series are of the same type, typically tuples.

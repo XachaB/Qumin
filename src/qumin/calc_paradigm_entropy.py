@@ -100,9 +100,9 @@ def main(args):
                                           'source': args.name[0],
                                           'content': 'entropies'})
             ent_file2 = md.register_file('bipartite2.csv', *
-                                         {'computation': computation,
-                                          'source': args.name[1],
-                                          'content': 'entropies'})
+            {'computation': computation,
+             'source': args.name[1],
+             'content': 'entropies'})
             I = md.register_file('I.csv', {'computation': computation,
                                            'source': args.names,
                                            'content': 'I'})

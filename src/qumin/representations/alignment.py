@@ -65,8 +65,9 @@ def align_multi(*strings, **kwargs):
         for a, b in alignment:
             try:
                 yield a | {b}
-            except TypeError: # a is the fillvalue
+            except TypeError:  # a is the fillvalue
                 yield {a, b}
+
     first_seq = [{s} for s in strings[0]]
     aligned = first_seq
 

@@ -8,8 +8,9 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 from ..utils import merge_duplicate_columns
-from .segments import  Inventory, Form
+from .segments import Inventory, Form
 import logging
+
 log = logging.getLogger()
 
 
@@ -43,12 +44,11 @@ def create_features(data_file_name):
     return features
 
 
-
 def create_paradigms(data_file_name,
                      cols=None, verbose=False, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
-                     col_names=("lexeme","cell","form")):
+                     col_names=("lexeme", "cell", "form")):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
     Arguments:
@@ -91,7 +91,7 @@ def create_paradigms(data_file_name,
     if set(col_names) < set(paradigms.columns):
         lexemes, cell_col, form_col = col_names
         paradigms = paradigms.pivot_table(values=form_col, index=lexemes, columns=cell_col,
-                              aggfunc=aggregator)
+                                          aggfunc=aggregator)
         paradigms.reset_index(inplace=True, drop=False)
 
     else:
@@ -151,7 +151,7 @@ def create_paradigms(data_file_name,
         if overabundant:
             forms = tuple(sorted(forms))
         else:
-            forms = (forms[0], )
+            forms = (forms[0],)
         return forms
 
     paradigms = paradigms.map(parse_cell)
@@ -159,7 +159,6 @@ def create_paradigms(data_file_name,
     log.info("Merging identical columns...")
     if merge_cols:
         merge_duplicate_columns(paradigms, sep="#")
-
 
     if not fillna:
         paradigms = paradigms.replace("", np.NaN)

@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 from .. import __version__
+
 log = logging.getLogger()
 
 
@@ -91,7 +92,7 @@ class Metadata():
         Returns:
             (str) : the full registered path"""
 
-        filename = self.prefix+"_"+suffix
+        filename = self.prefix + "_" + suffix
         self.output.append({'filename': filename,
                             'properties': properties})
         return filename
@@ -161,7 +162,6 @@ class ArgumentDefaultsRawTextHelpFormatter(argparse.RawDescriptionHelpFormatter)
 
 
 def get_default_parser(usage, patterns=False, paradigms=True, multipar=False):
-
     parser = argparse.ArgumentParser(description=usage,
                                      formatter_class=ArgumentDefaultsRawTextHelpFormatter)
 

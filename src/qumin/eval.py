@@ -25,7 +25,6 @@ log = logging.getLogger()
 sns.set()
 
 
-
 def prepare_arguments(paradigms, iterations, methods, features):
     """Generate argument tuples for each evaluation task.
 
@@ -265,7 +264,7 @@ def main(args):
     """
     log.info(args)
     md = Metadata(args, __file__)
-    now = md.day+"_"+md.now
+    now = md.day + "_" + md.now
     np.random.seed(0)  # make random generator determinist
 
     segments.Inventory.initialize(args.segments)
@@ -311,7 +310,6 @@ def main(args):
 
 
 def eval_command():
-
     parser = get_default_parser(main.__doc__, paradigms=True,
                                 patterns=False, multipar=True)
 

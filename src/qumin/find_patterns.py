@@ -113,7 +113,7 @@ def main(args):
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
-    patfilename = md.register_file(kind+".csv",
+    patfilename = md.register_file(kind + ".csv",
                                    {'computation': args.kind, 'content': 'patterns'})
     log.info("Writing patterns (importable by other scripts) to %s", patfilename)
     if is_of_pattern_type:
@@ -122,7 +122,7 @@ def main(args):
             log.warning("Since you asked for args.optim_mem, I will not export the human_readable file ")
         else:
             patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
-            pathumanfilename = md.register_file("human_readable_"+kind+".csv",
+            pathumanfilename = md.register_file("human_readable_" + kind + ".csv",
                                                 {'computation': args.kind, 'content': 'patterns_human'})
             log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
             patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
@@ -133,7 +133,6 @@ def main(args):
 
 
 def pat_command():
-
     parser = get_default_parser(main.__doc__, paradigms=True, patterns=False)
 
     parser.add_argument('-k', '--kind',

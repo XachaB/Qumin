@@ -9,7 +9,6 @@ from collections import defaultdict
 from ..clustering import Node
 from os.path import join, dirname
 import logging
-import heapq
 
 log = logging.getLogger()
 try:
@@ -98,7 +97,7 @@ def to_dummies_overabundant(table, **kwargs):
     dummies = pd.DataFrame(dic_dummies)
     dummies.fillna("", inplace=True)
 
-    return dummies.loc[table.index,:]
+    return dummies.loc[table.index, :]
 
 
 def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
@@ -231,22 +230,23 @@ class ICLattice(object):
                 prb.update(1)
             return nodes
 
-        #nodes = self._get_nodes(keep_infimum=False)
+        # nodes = self._get_nodes(keep_infimum=False)
         supremum = self.lattice.supremum
         infimum = self.lattice.infimum
 
         def concept_sorter(concept):
             return (len(concept.extent), -len(list(concept.upset())))
+
         # select concept in AOC
         aoc = {c for c in self.lattice
                if (c == supremum or c.properties or c.objects) and c != infimum}
 
         # Make links (long way)
         concepts = sorted(aoc, key=concept_sorter, reverse=True)
-        downsets = {c:set(c.downset()) for c in self.lattice}
+        downsets = {c: set(c.downset()) for c in self.lattice}
         children = defaultdict(set)
         l = len(concepts)
-        with tqdm(total=l* 3) as prb:
+        with tqdm(total=l * 3) as prb:
             # Compute descendants in aoc poset
             for i in range(l):
                 concept = concepts[i]

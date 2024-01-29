@@ -19,6 +19,7 @@ import pandas as pd
 import re
 from tqdm import tqdm
 import logging
+
 log = logging.getLogger()
 
 len = len
@@ -188,8 +189,8 @@ class Pattern(object):
         classes = r"[\[{{](?:{sounds}|\-|,)+[}}\]]".format(sounds="|".join(simple_segs))
 
         def is_class(s):
-            return s is not None and (len(s)>3 or "-" in s or "," in s) and \
-                  ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}"))
+            return s is not None and (len(s) > 3 or "-" in s or "," in s) and \
+                ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}"))
 
         def get_class(s):
             if "," in s:
@@ -203,10 +204,10 @@ class Pattern(object):
             regex = r"({classes}|{seg})".format(seg=seg, classes=classes)
             left, right = string.split(" ⇌ ")
             c1, c2 = cells
-            alternation = {c1:[], c2:[]}
+            alternation = {c1: [], c2: []}
 
             for segs_l, segs_r in zip_longest(left.split("_"),
-                                      right.split("_")):
+                                              right.split("_")):
                 segs_l = re.findall(regex, segs_l)
                 segs_r = re.findall(regex, segs_r)
 
@@ -214,20 +215,20 @@ class Pattern(object):
                 alt_r = []
 
                 # Re-align classes:
-                i,j = 0,0
+                i, j = 0, 0
                 while i < len(segs_l) and j < len(segs_r):
                     l_class = is_class(segs_l[i]) if i < len(segs_l) else False
                     r_class = is_class(segs_r[j]) if j < len(segs_r) else False
                     if l_class and not r_class:
-                        segs_l = [""]+ segs_l
+                        segs_l = [""] + segs_l
                     elif r_class and not l_class:
-                        segs_r = [""]+ segs_r
+                        segs_r = [""] + segs_r
                     else:
                         i += 1
                         j += 1
 
                 # prepare alternation
-                for sl, sr in zip_longest(segs_l,segs_r):
+                for sl, sr in zip_longest(segs_l, segs_r):
                     if sr is None:
                         alt_l.append(sl)
                     elif sl is None:
@@ -262,8 +263,6 @@ class Pattern(object):
                     yield get_class(s), quantities[q]
                 else:
                     yield s, quantities[q]
-
-
 
         new = cls.__new__(cls, cells)
 
@@ -366,7 +365,7 @@ class Pattern(object):
         for cell in self.cells:
             formatted = []
             for segs in self.alternation[cell]:
-                formatted.append("".join(segs)) #TODO: used restore
+                formatted.append("".join(segs))  # TODO: used restore
             yield formatted
 
     def _init_from_alignment(self, alignment):
@@ -488,10 +487,10 @@ class BinaryPattern(Pattern):
             return lambda x: chars
 
         def identity(x):
-            return x+" "
+            return x + " "
 
         def iter_alternation(alt):
-            for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)): #TODO: used Charclass
+            for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)):  # TODO: used Charclass
                 if is_transform:
                     for x in group:
                         yield is_transform, x
@@ -550,7 +549,7 @@ class BinaryPattern(Pattern):
             gen_left = []
             gen_right = []
             for a, b in zip_longest(left, right, fillvalue=""):
-                if a != "" and b != "" :
+                if a != "" and b != "":
                     A, B = Inventory.transformation(a, b)
                 else:
                     A, B = "", ""
@@ -667,6 +666,7 @@ class BinaryPattern(Pattern):
 
     def _iter_alt(self, features=True):
         """Generator of formatted alternating material for each cell."""
+
         def format_as_chars(left, right):
             return ("{{{}}}".format(",".join(sorted(left))),
                     "{{{}}}".format(",".join(sorted(right))))
@@ -676,7 +676,7 @@ class BinaryPattern(Pattern):
             feats_left = "[{}]".format(" ".join(sorted(feats_left)))
             feats_right = "[{}]".format(" ".join(sorted(feats_right)))
             chars_left, chars_right = format_as_chars(left, right)
-            if len(feats_left) +len(feats_right) <= len(chars_left) + len(chars_right):
+            if len(feats_left) + len(feats_right) <= len(chars_left) + len(chars_right):
                 return feats_left, feats_right
             return chars_left, chars_right
 
@@ -694,7 +694,7 @@ class BinaryPattern(Pattern):
             formatted_left = ""
             formatted_right = ""
             for seg_left, seg_right in zip_longest(left, right, fillvalue=""):
-                if Inventory.is_leaf(seg_left) and Inventory.is_leaf(seg_right) :
+                if Inventory.is_leaf(seg_left) and Inventory.is_leaf(seg_right):
                     formatted_left += seg_left
                     formatted_right += seg_right
                 else:
@@ -885,17 +885,17 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                     collection[alt][t].append(new_rule)
                 else:
                     done = []
-                    log.debug("All alignments of {}, {}".format(a,b))
+                    log.debug("All alignments of {}, {}".format(a, b))
                     for aligned in alignment.align_auto(a.tokens, b.tokens, insert_cost, sub_cost):
                         log.debug((aligned))
                         new_rule = Pattern(cells, aligned, aligned=True)
                         new_rule.lexemes = {(row.name, a, b)}
-                        log.debug("pattern: "+str(new_rule))
+                        log.debug("pattern: " + str(new_rule))
                         if str(new_rule) not in done:
                             done.append(str(new_rule))
                             if new_rule._gen_alt:
                                 alt = new_rule.to_alt(exhaustive_blanks=False, use_gen=True)
-                                log.debug("gen alt: "+str(alt))
+                                log.debug("gen alt: " + str(alt))
                             else:
                                 alt = new_rule.to_alt(exhaustive_blanks=False)
                             t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
@@ -943,13 +943,13 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         sorted_collection = []
 
         for alt in collection:
-            log.debug("\n\n####Considering alt:"+str(alt))
+            log.debug("\n\n####Considering alt:" + str(alt))
             # Attempt to generalize
             types = list(collection[alt])
             pats = []
             log.debug("1.Generalizing in each type")
             for j in collection[alt]:
-                log.debug("\tlooking at :"+str(collection[alt][j]))
+                log.debug("\tlooking at :" + str(collection[alt][j]))
                 if _compatible_context_type(j):
                     collection[alt][j] = [generalize_patterns(collection[alt][j])]
                     # print("\t\tcontexts compatible",collection[alt][j])
@@ -959,12 +959,12 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                 pats.extend(collection[alt][j])
             log.debug("2.Generalizing across types")
             if _compatible_context_type(*types):
-                log.debug("\tlooking at compatible:"+str(pats))
+                log.debug("\tlooking at compatible:" + str(pats))
                 collection[alt] = [generalize_patterns(pats)]
             else:
-                log.debug("\tlooking at incompatible:"+str(pats))
+                log.debug("\tlooking at incompatible:" + str(pats))
                 collection[alt] = incremental_generalize_patterns(*pats)
-            log.debug("Result:"+str(collection[alt]))
+            log.debug("Result:" + str(collection[alt]))
             # Score
             for p in collection[alt]:
                 p.score = _score(p, (c1, c2), forms, index)
@@ -1026,8 +1026,8 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
 
     def _iter_applicable_patterns(form, local_patterns, cell):
         known_regexes = set()
-        if type(form) is tuple: # if overabundant
-            form = form[0] # from tuple to Form
+        if type(form) is tuple:  # if overabundant
+            form = form[0]  # from tuple to Form
         for pattern in local_patterns:
             regex = pattern._regex[cell]
             if regex in known_regexes:
@@ -1212,6 +1212,7 @@ def make_pairs(paradigms):
 
     The output has one column for each pairs on the paradigm's columns.
     """
+
     def pair_columns(column, paradigms):
         cell1, cell2 = column.name
         return paradigms[cell1] + " ⇌ " + paradigms[cell2]
@@ -1258,8 +1259,6 @@ def from_csv(filename, defective=True, overabundant=True):
         names = col.name
         collection[names] = {}
         return col.apply(read_pattern, args=(names, collection))
-
-
 
     collection = {}
     table = pd.read_csv(filename, sep=",", header=0, index_col=0)
