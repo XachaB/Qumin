@@ -12,4 +12,4 @@ Documentation index
    The paradigms file <paradigms>
    The segments file <segments>
    Publications <publications>
-   API <modules>
+   API <qumin>
