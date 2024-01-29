@@ -2,7 +2,12 @@
 Quantitative modelling of inflection
 ********************************************
 
-![tests](https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg) [![Documentation Status](https://readthedocs.org/projects/qumin/badge/?version=dev)](https://qumin.readthedocs.io/dev/?badge=latest)
+|tests| |DocStatus|_
+
+.. |tests| image:: https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg
+
+.. |DocStatus| image:: https://readthedocs.org/projects/qumin/badge/?version=dev
+.. _DocStatus: https://qumin.readthedocs.io/dev/?badge=latest
 
 Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was initially developed for `my PhD dissertation <https://tel.archives-ouvertes.fr/tel-01840448>`_.
 
@@ -39,7 +44,7 @@ Data
 
 The scripts expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
 
-For compatible data, see the [Paralex datasets](http://www.paralex-standard.org). The sounds files may sometimes require edition, as Qumin as more constraints on sound definitions.
+For compatible data, see the `Paralex datasets <http://www.paralex-standard.org>`_. The sounds files may sometimes require edition, as Qumin as more constraints on sound definitions.
 
 
 Scripts
