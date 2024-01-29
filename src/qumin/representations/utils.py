@@ -95,6 +95,7 @@ def create_paradigms(data_file_name,
         paradigms.reset_index(inplace=True, drop=False)
 
     else:
+        log.warning("Wide form table is deprecated ! Please use Paralex-style long-form table (http://www.paralex-standard.org).")
         # If the original file has two identical lexeme rows.
         if "variants" in paradigms.columns:
             log.info("Dropping the columns named 'variants'")
