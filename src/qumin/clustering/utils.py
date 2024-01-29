@@ -21,10 +21,10 @@ except:
 
 import numpy as np
 import re
+from collections import defaultdict
 import logging
 
 log = logging.getLogger()
-from collections import defaultdict
 
 
 class Node(object):

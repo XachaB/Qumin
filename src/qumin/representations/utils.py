@@ -48,7 +48,7 @@ def create_paradigms(data_file_name,
                      cols=None, verbose=False, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
-                     col_names=("lexeme","cell","form"),
+                     col_names=("lexeme", "cell", "form"),
                      cells=[]):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
