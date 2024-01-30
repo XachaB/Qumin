@@ -1,0 +1,33 @@
+table {
+    margin: 5px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    min-width: 20%;
+    border-radius: 3px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    border-radius: 3px;
+    border-collapse: collapse;
+    font-size: 10pt;
+}
+
+table td, table th {
+    border-right: 1px solid #ddd !important;
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 0;
+    background: #fafafa;
+    padding: 5px;
+}
+
+table tr:nth-child(odd) td,
+table tr:nth-child(odd) th {
+    background: #f6f6f6
+}
+
+table thead tr th,
+table thead tr:nth-child(odd) th {
+    border: 0;
+    background-color: #ededed;
+    text-align: center;
+}
