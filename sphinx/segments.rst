@@ -67,12 +67,13 @@ The ALIAS column is not needed anymore.
 Shorthands
 ~~~~~~~~~~~
 
-When writing phonological rules, linguists often use shorthands like “V” for the natural class of all vowels, and “C” for the natural class of all consonants. If you want, you can provide some extra rows in the table to define shorthand names for some natural classes. These names have to start and end by “#”. Here an example for the French segments file, giving shorthands for C (consonants), V (vowels) and G (glides):
+Qumin used to support a second header row to provide distinctive feature shorthands. These are not supported anymore.
+
+One can provide some extra rows in the table to define shorthand names for some natural classes. These names have to start and end by “#”. Here an example for the French segments file, giving shorthands for C (consonants), V (vowels) and G (glides):
 
  ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
   Seg.   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.  
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   son      syl          cons            cont      nas     haut   bas   arr       rond      ant         COR       vois    rel.ret.  
+ ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
   #C#             0            1                                                                                                          
   #V#    1        1            0               1                                                                        1       1         
   #G#    1        0            0               1         0       1      0                         0                     1       1         
@@ -91,7 +92,7 @@ When writing segments file, it is important to be careful of the naturality of n
 Monovalent or bivalent features
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-`Frisch (1996) <https://www.cas.usf.edu/~frisch/publications.html>`__ argues that monovalent features (using only ``-1`` and ``1``) are to be preferred to bivalent features, as the latter implicitly generate natural classes for the complement features ([-coronal]), which is not always desirable. In Qumin, both monovalent and bivalent features are accepted. Internally, the program will expand all ``1`` and ``0``  into + and - values. As an example, take this table which classifies the three vowels /a/, /i/ and /u/:
+`Frisch (1996) <http://www.cas.usf.edu/~frisch/publications.html>`__ argues that monovalent features (using only ``-1`` and ``1``) are to be preferred to bivalent features, as the latter implicitly generate natural classes for the complement features ([-coronal]), which is not always desirable. In Qumin, both monovalent and bivalent features are accepted. Internally, the program will expand all ``1`` and ``0``  into + and - values. As an example, take this table which classifies the three vowels /a/, /i/ and /u/:
 
 .. csv-table::
    :file: segment_examples/V_monovalent.csv

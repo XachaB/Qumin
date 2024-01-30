@@ -18,6 +18,19 @@ log = logging.getLogger()
 
 inventory = None
 
+_to_short_feature = {'anterior': 'ant', 'approximant': 'appr', 'back': 'back', 'click': 'click', 'consonantal': 'C',
+                     'constr gl': 'cgl', 'constricted': 'constr', 'constricted glottis': 'cgl', 'continuant': 'cont',
+                     'coronal': 'coro', 'delayed release': 'del.rel', 'distributed': 'dist', 'dorsal': 'dors',
+                     'front': 'front', 'high': 'high', 'labial': 'lab', 'laryngeal': 'laryng', 'lateral': 'lat',
+                     'long': 'long', 'low': 'low', 'nasal': 'nas', 'pharyngeal': 'phar', 'place': 'place',
+                     'preaspirated': 'preasp', 'preglottalized': 'pregl', 'prenasal': 'prenas', 'round': 'round',
+                     'sibilant': 'sib', 'sonorant': 'son', 'spread': 'spread', 'spread gl': 'spre.gl',
+                     'spread glottis': 'sg', 'strident': 'stri', 'syllabic': 'syll', 'tap': 'tap', 'tense': 'tens',
+                     'voice': 'voic', 'mid': 'mid', 'central': 'centr', 'compact': 'compact', 'diffuse': 'diff',
+                     'abrupt': 'abrupt', 'checked': 'check', 'grave': 'grave', 'acute': 'acute', 'medial': 'med',
+                     'flat': 'flat', 'sharp': 'sharp', 'trill': 'tril', 'labiodental': 'labdent'}
+_short_features = [y for _, y in _to_short_feature.items()]
+
 
 class Form(str):
     """ A form is a string of sounds, separated by spaces.
@@ -276,6 +289,9 @@ class Inventory(object):
         drop = {"value", "UNICODE", "ALIAS",  # Legacy columns
                 "label", "tier"  # Unused Paralex columns
                 }
+        deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS"})
+        if ~deprecated_cols.empty():
+            log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
         for col in drop:
             if col in table.columns:
                 table.drop(col, axis=1, inplace=True)
@@ -598,19 +614,20 @@ def normalize(ipa, features):
 
 def shorten_feature_names(table):
     if "Seg." in list(table.iloc[0]):
-        # Use shortened names if they exist
-        table.columns = table.iloc[0]
-        table.drop(0, axis=0, inplace=True)
-        return table
-
+        raise ValueError("Using a second row of headers is not supported anymore.")
     short_features_names = []
     for name in table.columns:
         if name in ["sound_id", "Seg.", "UNICODE", "ALIAS",
-                    "value", "label", "tier"] or len(name) <= 3:
+                    "value", "label", "tier"] or len(name) <= 3: # Not a feature name
             short_features_names.append(name)
         else:
-            names = [name[:i] for i in range(3, len(name) + 1)]
-            while names and names[0] in short_features_names:
-                names.pop(0)
-            short_features_names.append(names[0])
+            if name in _to_short_feature:  # Check standard names
+                short_features_names.append(_to_short_feature[name])
+            elif name.lower() in _to_short_feature:  # Uppercase
+                short_features_names.append(_to_short_feature[name].upper())
+            else:  # Make an abbreviation on the fly
+                names = [name[:i] for i in range(3, len(name) + 1)]
+                while names and names[0] in (_short_features + short_features_names):
+                    names.pop(0)
+                short_features_names.append(names[0])
     table.columns = short_features_names
