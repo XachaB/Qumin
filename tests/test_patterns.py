@@ -82,7 +82,7 @@ class PatternsTestCase(unittest.TestCase):
                 ]
 
         pretty = ["sˈomuʃ ⇌ ˈɛ / _",
-                  "u{ĩ,ˈĩ,ˈẽ,ẽ}d ⇌ {o,u,ˈo,ˈu} / X*[+cons -lab-dent]_u"]
+                  "u{ĩ,ˈĩ,ˈẽ,ẽ}d ⇌ {o,u,ˈo,ˈu} / X*[+C -labdent]_u"]
         for pat_str, pretty_result in zip(strs, pretty):
             new = patterns.Pattern._from_str(("a", "b"), pat_str)
             self.assertEqual(repr(new), pat_str)

@@ -10,10 +10,17 @@ To create a new segments file, the best is usually to refer to an authoritative 
 Format
 ~~~~~~
 
-The segments file is also written in wide format, with each row describing a phoneme. The first column gives phonemes as they are written in the paradigms file. Each column represents a distinctive feature. Here is an example with just 10 rows of the segments table for French verbs:
+Each row of the segments file describes a single phoneme. The first column gives phonemes as they are written in the paradigms file. Each column represents a distinctive feature. Here is an example with just 10 rows of the segments table for French verbs:
+
+
+.. warning::
+    The index header used to be `Seg.` (for segment). This is deprecated, and Qumin now expects `sound_id`, per the Paralex standard.
+
+.. warning::
+    The columns `ALIAS`, `UNICODE` and `value` are all also deprecated
 
  ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.  
+  sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
  ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
   p      0        0            1               0         0       0            0                   1                     0       0         
   b      0        0            1               0         0       0            0                   1                     1       0         
@@ -29,16 +36,13 @@ The segments file is also written in wide format, with each row describing a pho
 
 Some conventions:
 
--  The first column must be called ``Seg.``.
--  The phonological symbols, in the ``Seg.`` column cannot be one of he reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
--  If the file contains a “value” column, it will be ignored. This is used to provide a human-readable description of segments, which can be useful when preparing the data.
--  In order to provide short names for the features, as in [+nas] rather than [+nasal], you can add a second level of header, also beginning by ``Seg.``, which gives abbreviated names:
+-  The first column must be called ``sound_id``.
+-  The phonological symbols, in the ``sound_id`` column cannot be one of he reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
 
  ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.  
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   son      syl          cons            cont      nas     haut   bas   arr       rond      ant         COR       vois    rel.ret.  
-  p      0        0            1               0         0       0            0                   1                     0       0         
+  sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
+ ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  p      0        0            1               0         0       0            0                   1                     0       0
   b      0        0            1               0         0       0            0                   1                     1       0        
  ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========  
 
@@ -51,8 +55,7 @@ The file is encoded in utf-8 and can be either a csv table (preferred) or a tabu
 
 ::
 
-   Seg.,sonant,syllabique,consonantique,continu,nasal,haut,bas,arrière,arrondi,antérieur,CORONAL,voisé,rel.ret.
-   Seg.,son,syl,cons,cont,nas,haut,bas,arr,rond,ant,COR,vois,rel.ret.
+   sound_id,sonant,syllabique,consonantique,continu,nasal,haut,bas,arrière,arrondi,antérieur,CORONAL,voisé,rel.ret.
    p,0,0,1,0,0,0,,0,,1,,0,0
    b,0,0,1,0,0,0,,0,,1,,1,0
    t,0,0,1,0,0,0,,0,,1,1,0,0
@@ -72,7 +75,7 @@ Qumin used to support a second header row to provide distinctive feature shortha
 One can provide some extra rows in the table to define shorthand names for some natural classes. These names have to start and end by “#”. Here an example for the French segments file, giving shorthands for C (consonants), V (vowels) and G (glides):
 
  ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.  
+  sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
  ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
   #C#             0            1                                                                                                          
   #V#    1        1            0               1                                                                        1       1         
@@ -100,7 +103,7 @@ Monovalent or bivalent features
 Internally, Qumin will construct the following table, which looks almost identical because we used monovalued features:
 
 ===== ======= ===== ====== ======= ======= ===========
-Seg.   +high  +low  +front  +back  +round   +Non-round
+sound_id   +high  +low  +front  +back  +round   +Non-round
 ===== ======= ===== ====== ======= ======= ===========
 a               x            x                x
 i        x             x                      x
@@ -123,7 +126,7 @@ The same thing can be achieved with less columns using binary features:
 Internally, these will be expanded to:
 
 ===== ======= ===== ====== ======= ======= ===========
-Seg.   +high  -high +front  -front  +round   -round
+sound_id   +high  -high +front  -front  +round   -round
 ===== ======= ===== ====== ======= ======= ===========
 a               x            x                x
 i        x             x                      x

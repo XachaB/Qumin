@@ -290,7 +290,7 @@ class Inventory(object):
                 "label", "tier"  # Unused Paralex columns
                 }
         deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS"})
-        if ~deprecated_cols.empty():
+        if ~deprecated_cols.empty:
             log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
         for col in drop:
             if col in table.columns:
@@ -624,7 +624,7 @@ def shorten_feature_names(table):
             if name in _to_short_feature:  # Check standard names
                 short_features_names.append(_to_short_feature[name])
             elif name.lower() in _to_short_feature:  # Uppercase
-                short_features_names.append(_to_short_feature[name].upper())
+                short_features_names.append(_to_short_feature[name.lower()].upper())
             else:  # Make an abbreviation on the fly
                 names = [name[:i] for i in range(3, len(name) + 1)]
                 while names and names[0] in (_short_features + short_features_names):
