@@ -90,19 +90,22 @@ def create_paradigms(data_file_name,
             return None
         return ";".join(s.values)
 
+    def check_cells(cells, par_cols):
+        unknown_cells = set(cells) - set(par_cols)
+        if unknown_cells:
+            raise ValueError(f"You specified some cells which aren't in the paradigm : {' '.join(unknown_cells)}")
+        return sorted(list(set(par_cols)-set(cells)))
+
     # Long form
     if set(col_names) < set(paradigms.columns):
         lexemes, cell_col, form_col = col_names
 
         # Filter cells before pivoting for speed reasons
         if cells is not None:
-            par_cols = paradigms[cell_col].unique()
-            todrop = list(set(par_cols)-set(cells))
-            log.info('Dropping rows with following cell values: '+", ".join(sorted(todrop)))
-            for checkname in cells:
-                if checkname not in par_cols:
-                    raise ValueError(f"It's impossible to keep the rows {checkname}, since there is no such row.")
-            paradigms = paradigms[(paradigms[cell_col].isin(cells))]
+            to_drop = check_cells(cells, paradigms[cell_col].unique())
+            if len(to_drop) > 0:
+                log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
+                paradigms = paradigms[(paradigms[cell_col].isin(cells))]
 
         paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
                                           columns=cell_col,
@@ -118,16 +121,11 @@ def create_paradigms(data_file_name,
             paradigms.drop("variants", axis=1, inplace=True)
 
         if cells is not None:
-            par_cols = paradigms.columns
-            for checkname in cells:
-                if checkname not in par_cols:
-                    raise ValueError(f"It's impossible to keep the \
-                                    column {checkname}, since it doesn't exist.")
             cells.append('lexeme')
-            todrop = list(set(par_cols)-set(cells))
-            if len(todrop) > 0:
-                log.info('Dropping unnecessary columns : '+", ".join(sorted(todrop)))
-                paradigms.drop(todrop, axis=1, inplace=True)
+            to_drop = check_cells(cells, paradigms.columns)
+            if len(to_drop) > 0:
+                log.info(f"Dropping columns with following cell headers: {', '.join(sorted(to_drop))}")
+                paradigms.drop(to_drop, axis=1, inplace=True)
 
         # First column has to be lexemes
         lexemes = paradigms.columns[0]
