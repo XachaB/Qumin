@@ -7,6 +7,7 @@ Author: Sacha Beniamine
 import numpy as np
 from . import find_microclasses
 import logging
+
 log = logging.getLogger()
 
 

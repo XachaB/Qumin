@@ -6,6 +6,7 @@ Compute conditional entropies in inflectional patterns.
 """
 
 import logging
+import argparse
 
 # Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
@@ -37,13 +38,14 @@ def main(args):
 
     preds = sorted(args.nPreds)
     overabundant = args.overabundant
-    cells = args.cells
-    if not cells:
-        cells = []
 
     onePred = preds[0] == 1
     if onePred:
         preds.pop(0)
+
+    cells = args.cells
+    if len(cells) == 1:
+        raise argparse.ArgumentTypeError("You can't provide only one cell.")
 
     # Define logging levels (different depending on verbosity)
     if args.verbose or args.debug:
@@ -66,8 +68,7 @@ def main(args):
                                  overabundant=overabundant,
                                  merge_cols=args.cols_merged,
                                  segcheck=True,
-                                 cells=cells,
-                                 col_names=args.cols_names)
+                                 col_names=args.cols_names, cells=cells)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
                                            overabundant=overabundant)
 
@@ -91,7 +92,7 @@ def main(args):
         paradigms2 = create_paradigms(args.bipartite[1], defective=True,
                                       overabundant=False,
                                       merge_cols=args.cols_merged, segcheck=True,
-                                      col_names=args.cols_names)
+                                      col_names=args.cols_names, cells=cells)
         pat_table2, pat_dic2 = patterns.from_csv(args.bipartite[0], defective=True,
                                                  overabundant=False)
 
@@ -106,7 +107,7 @@ def main(args):
                                          {'computation': computation,
                                           'source': args.name[0],
                                           'content': 'entropies'})
-            ent_file2 = md.register_file('bipartite2.csv', *
+            ent_file2 = md.register_file('bipartite2.csv',
                                          {'computation': computation,
                                           'source': args.name[1],
                                           'content': 'entropies'})
@@ -163,8 +164,6 @@ def main(args):
         if overabundant:
             distrib.entropy_matrix_OA(beta=args.beta)
         else:
-                                           'content': 'effectifs'})
-
             distrib.entropy_matrix()
         accuracies = distrib.accuracies[1]
         entropies = distrib.entropies[1]
@@ -302,6 +301,10 @@ def H_command():
                         help="Whether identical columns are merged in the input.",
                         action="store_true", default=False)
 
+    parser.add_argument("--cells",
+                        help="List of cells to use. Defaults to all.",
+                        nargs='+', default=None)
+
     parser.add_argument("-o", "--overabundant",
                         help="Use overabundant entries for computation.",
                         action="store_true", default=False)
@@ -330,12 +333,6 @@ def H_command():
                          help="Export result as only one column.",
                          action="store_true",
                          default=False)
-
-    parser.add_argument("--cells",
-                        help="List of cells to use. Defaults to all.",
-                        nargs='+', default=False)
-
-
 
     args = parser.parse_args()
 

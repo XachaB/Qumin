@@ -9,24 +9,29 @@ import json
 import os
 from pathlib import Path
 from .. import __version__
+
 log = logging.getLogger()
 
 
 class Metadata():
     """Metadata manager for Qumin scripts. Basic usage :
-    1) Register Metadata manager;
-    2) Before saving a file, register it with a short name;
-    3) Save all metadata in a secure place
 
-        md = Metadata(args, __file__)
-        filename = md.register_file(name, suffix)
-        # Now, you can open an IO stream and write to ``filename``.
-        md.save_metadata(path)
+        1. Register Metadata manager;
+        2. Before writing any important file, register it with a short name;
+        3. Save all metadata in a secure place
+
+    Examples:
+        .. code-block:: python
+
+            md = Metadata(args, __file__)
+            filename = md.register_file(name, suffix)
+            # Now, you can open an IO stream and write to ``filename``.
+            md.save_metadata(path)
 
     Arguments:
         args (:class:`pandas:pandas.DataFrame`):
             arguments passed to the script
-        filename (str): name of the main script
+        filename (str): name of the main script, passing __file__ is fine.
         relative (bool) : whether to use absolute or relative paths. Relative refers to working_dir
 
     Attributes:
@@ -84,14 +89,14 @@ class Metadata():
     def register_file(self, suffix, properties=None):
         """ Register a file to save. Returns a normalized name.
 
-        Arguments :
+        Arguments:
             suffix (str): the suffix to append to the normalized prefix
             properties (dict): optional set of properties to keep along
 
         Returns:
-            (str) : the full registered path"""
+            (str): the full registered path"""
 
-        filename = self.prefix+"_"+suffix
+        filename = self.prefix + "_" + suffix
         self.output.append({'filename': filename,
                             'properties': properties})
         return filename
@@ -112,7 +117,7 @@ def get_version():
 
     If the directory isn't under git or svn, the function returns an empty str.
 
-     Returns:
+    Returns:
         (str): svn/git version or ''.
      """
     return __version__
@@ -161,7 +166,6 @@ class ArgumentDefaultsRawTextHelpFormatter(argparse.RawDescriptionHelpFormatter)
 
 
 def get_default_parser(usage, patterns=False, paradigms=True, multipar=False):
-
     parser = argparse.ArgumentParser(description=usage,
                                      formatter_class=ArgumentDefaultsRawTextHelpFormatter)
 

@@ -13,10 +13,11 @@ import re
 from ..utils import snif_separator
 import functools
 import logging
+
 log = logging.getLogger()
 
-
 inventory = None
+
 
 class Form(str):
     """ A form is a string of sounds, separated by spaces.
@@ -25,6 +26,7 @@ class Form(str):
     Forms are strings, they are segmented at the object creation.
     They have a tokens attribute, which is a tuple of phonemes.
     """
+
     def __new__(cls, string):
         tokens = Inventory._segmenter.findall(string)
         tokens = tuple(Inventory._normalization.get(c, c) for c in tokens)
@@ -37,12 +39,13 @@ class Form(str):
     @classmethod
     def from_segmented_str(cls, segmented):
         stripped = segmented.strip(" ")
-        self = str.__new__(cls, stripped+" ")
+        self = str.__new__(cls, stripped + " ")
         self.tokens = stripped.split()
         return self
 
     def __repr__(self):
-        return "Form("+self+")"
+        return "Form(" + self + ")"
+
 
 class Inventory(object):
     """The static `segments.Inventory` class describes a sound inventory.
@@ -106,14 +109,14 @@ class Inventory(object):
         ordered = sorted(extent)
         joined = "|".join(ordered)
         if len(extent) == 1:
-            cls._regexes[id] = id+" "
+            cls._regexes[id] = id + " "
             cls._regexes_end[id] = id
             cls._pretty_str[id] = id
         else:
             # The non capturing group of each segment
-            cls._regexes[id] = "(?:" + "|".join(x+" " for x in ordered) + ")"
+            cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
             cls._regexes_end[id] = "(?:" + "|".join(x for x in ordered) + ")"
-            cls._pretty_str[id] = "{" + ",".join(ordered)+"}" #TODO: change to "{a,b,c}"
+            cls._pretty_str[id] = "{" + ",".join(ordered) + "}"  # TODO: change to "{a,b,c}"
         cls._classes[id] = set(classes)
         cls._features[id] = set(intent)
         cls._features_str[id] = shorthand or "[{}]".format(" ".join(sorted(intent)))
@@ -205,7 +208,7 @@ class Inventory(object):
             pretty string and features of a sound.
 
         """
-        return cls.pretty_str(sound) +" = "+cls._features_str[sound]
+        return cls.pretty_str(sound) + " = " + cls._features_str[sound]
 
     @classmethod
     def inf(cls, a, b):
@@ -221,7 +224,7 @@ class Inventory(object):
         """Computes phonological similarity  (Frisch, 2004)
 
         Measure from "Similarity avoidance and the OCP" , Frisch, S. A.; Pierrehumbert, J. B. & Broe,
-        M. B. *Natural Language \& Linguistic Theory*, Springer, 2004, 22, 179-228, p. 198.
+        M. B. *Natural Language & Linguistic Theory*, Springer, 2004, 22, 179-228, p. 198.
 
         We compute similarity by comparing the number of shared and unshared natural classes
         of two consonants, using the equation in (7). This equation is a direct extension
@@ -229,7 +232,8 @@ class Inventory(object):
 
         (7) :math:`Similarity = \\frac{\\text{Shared natural classes}}{\\text{Shared natural classes } + \\text{Non-shared natural classes}}`
         """
-        if a == b: return 1
+        if a == b:
+            return 1
         ca = cls._classes[a]
         cb = cls._classes[b]
         return len(ca & cb) / len(ca | cb)
@@ -243,14 +247,14 @@ class Inventory(object):
             sep: separator in the file
         """
         # TODO: this is now much slower !
-        log.info("Reading table %s",filename)
+        log.info("Reading table %s", filename)
 
         table = pd.read_table(filename, header=0, dtype=str,
                               index_col=False, sep=sep or snif_separator(filename),
                               encoding="utf-8")
         shorten_feature_names(table)
         sound_id = "sound_id"  # name in Paralex
-        if sound_id not in table.columns: # backward compatibility
+        if sound_id not in table.columns:  # backward compatibility
             sound_id = "Seg."
 
         table[sound_id] = table[sound_id].astype(str)
@@ -269,9 +273,8 @@ class Inventory(object):
                 raise ValueError("The symbol \"#\" is reserved and can only "
                                  "be used in a shorthand name (#V# for a vowel, etc)")
 
-
-        drop = {"value", "UNICODE", "ALIAS", # Legacy columns
-                "label", "tier"              # Unused Paralex columns
+        drop = {"value", "UNICODE", "ALIAS",  # Legacy columns
+                "label", "tier"  # Unused Paralex columns
                 }
         for col in drop:
             if col in table.columns:
@@ -308,7 +311,7 @@ class Inventory(object):
 
         if shorthands is not None:
             shorthand_context = table_to_context(shorthands, na_value="-1",
-                                                col_formatter=feature_formatter)
+                                                 col_formatter=feature_formatter)
 
             stack = shorthands.index.tolist()
             shorthands = {}
@@ -357,9 +360,9 @@ class Inventory(object):
                 alert += "\n\t" + leaf + " is the same node as " + str(lattice_node)
                 alert += "\n\t\t" + cls.infos(lattice_node)
                 for o in other:
-                    alert += "\n\t\t" +  cls.infos(o)
+                    alert += "\n\t\t" + cls.infos(o)
 
-            raise Exception("Warning, some segments are " # TODO: change doc!!!
+            raise Exception("Warning, some segments are "  # TODO: change doc!!!
                             "ancestors of other segments:" + alert)
 
         cls._max = max(cls._classes, key=len)
@@ -382,7 +385,7 @@ class Inventory(object):
             cls._score_matrix[(a, b)] = cls._score_matrix[(b, a)] = cost
             costs.append(cost)
 
-        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop # TODO: update gap score
+        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop  # TODO: update gap score
         for a in simple_sounds:
             cls._score_matrix[(a, a)] = 0
 
@@ -421,7 +424,7 @@ class Inventory(object):
                 return s[0]
             return frozenset(s)
         except KeyError:
-            raise ValueError("Unknown sound descriptor: "+repr(descriptor))
+            raise ValueError("Unknown sound descriptor: " + repr(descriptor))
 
     @classmethod
     def meet(cls, *args):
@@ -478,7 +481,7 @@ class Inventory(object):
                     x_back = cls.get(frozenset((cls.features(y) - right) | left))
                     if x == x_back:
                         tmp.append(x)
-            return frozenset(tmp) # TODO: warning: this need not be a lattice node
+            return frozenset(tmp)  # TODO: warning: this need not be a lattice node
 
         left, right = cls.get_transform_features(a, b)
         A, B = cls.get(left), cls.get(right)

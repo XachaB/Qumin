@@ -21,10 +21,10 @@ except:
 
 import numpy as np
 import re
+from collections import defaultdict
 import logging
 
 log = logging.getLogger()
-from collections import defaultdict
 
 
 class Node(object):
@@ -102,14 +102,14 @@ class Node(object):
                 xs, ys = zip(
                     *[child._recursive_xy(ticks, node_spacing,
                                           max_x, y_factor) for child in self.children])
-                self.height = max([child.height for child in self.children]) +1
-                y = max(ys) + (y_factor ** (self.height-1))
+                self.height = max([child.height for child in self.children]) + 1
+                y = max(ys) + (y_factor ** (self.height - 1))
                 xs = sorted(xs)
-                x = xs[0] + ((xs[-1] - xs[0])/2)
+                x = xs[0] + ((xs[-1] - xs[0]) / 2)
                 if y in ticks:
 
                     # If the preferred value is far enough, pick it
-                    min_dist = min(abs(x-x2) for x2 in ticks[y])
+                    min_dist = min(abs(x - x2) for x2 in ticks[y])
                     if min_dist < half_step:
                         # We prefer candidates in the node span
                         candidates = np.arange(xs[0] - half_step, xs[-1] + half_step, half_step).tolist()
@@ -121,10 +121,11 @@ class Node(object):
                     if min_dist < half_step:
                         # Fallback on more points
                         candidates = np.arange(0 - half_step, xs[0] - half_step, half_step).tolist() \
-                                    + np.arange(xs[-1] + half_step, max_x + half_step, half_step).tolist()
+                                     + np.arange(xs[-1] + half_step, max_x + half_step, half_step).tolist()
                         # Pick the candidate which is the further from existing points
                         # And closest to the preferred center point
-                        candidates = [(x1, min(abs(x1 - x2) for x2 in ticks[y]), max_x-abs(x1-x)) for x1 in candidates]
+                        candidates = [(x1, min(abs(x1 - x2) for x2 in ticks[y]), max_x - abs(x1 - x)) for x1 in
+                                      candidates]
 
                         x, min_dist, center_dist = max(candidates, key=lambda x: x[1])
                     ticks[y].append(x)
@@ -207,18 +208,19 @@ class Node(object):
                     jaccard = len(a1 & a2) / len(a1 | a2)
                     similarities[i, j] = similarities[j, i] = jaccard
 
-        paths = {i:[i] for i in range(li)}
+        paths = {i: [i] for i in range(li)}
+
         def shortest_path(sim):
             return np.unravel_index(np.argmax(sim, axis=None), sim.shape)
 
-        for x in range(li-1):
+        for x in range(li - 1):
             i, j = shortest_path(similarities)
             i_start = paths[i][0]
             j_end = paths[j][-1]
-            similarities[i,:] = float("-inf")
-            similarities[:,j] = float("-inf")
-            similarities[j_end,i_start] = float("-inf") # don't loop
-            res = paths[i]+paths[j]
+            similarities[i, :] = float("-inf")
+            similarities[:, j] = float("-inf")
+            similarities[j_end, i_start] = float("-inf")  # don't loop
+            res = paths[i] + paths[j]
             for k in res:
                 paths[k] = res
 
@@ -242,7 +244,8 @@ class Node(object):
 
     def __repr__(self):
         rules = [
-            str(node.labels) + " -> " + " ".join(str(c.labels) for c in sorted(node.children, key=lambda x:x.labels)) for
+            str(node.labels) + " -> " + " ".join(str(c.labels) for c in sorted(node.children, key=lambda x: x.labels))
+            for
             node in self]
         return "\n".join(sorted(rules))
 
@@ -309,7 +312,7 @@ class Node(object):
                 for feature in node.attributes["common"]:
                     a, b = feature.split("=")
                     table.append("\\textsc{" + a + "} & " + b + " \\\\")
-                table.append("\end{tabular}")
+                table.append("\\end{tabular}")
             return "".join(table)
 
         def scale(m, max_obs, max_target):
@@ -342,10 +345,10 @@ class Node(object):
                 style = ",fill=gray!20"
 
             node_filled = node_template.format(name=str(i),
-                                              x=scale(node.attributes["_x"],
-                                                      max_x, width),
-                                              y=scale(node.attributes["_y"],
-                                                      max_y, height))
+                                               x=scale(node.attributes["_x"],
+                                                       max_x, width),
+                                               y=scale(node.attributes["_y"],
+                                                       max_y, height))
             node_text = node_label.format(parent=str(i),
                                           label=label_f(node),
                                           style=style,

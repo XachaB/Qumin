@@ -9,8 +9,8 @@ from copy import deepcopy
 from collections import Counter
 from .contexts import Context
 import logging
-log = logging.getLogger()
 
+log = logging.getLogger()
 
 
 def generalize_patterns(pats):
@@ -65,9 +65,9 @@ def incremental_generalize_patterns(*args):
     def correct(p, a, b):
         """Return whether the pattern p is correct for the forms a and b and the specified cells."""
         return p.applicable(a, p.cells[0]) and \
-               p.applicable(b, p.cells[1]) and \
-               p.apply(a, p.cells) == b and \
-               p.apply(b, p.cells[::-1]) == a
+            p.applicable(b, p.cells[1]) and \
+            p.apply(a, p.cells) == b and \
+            p.apply(b, p.cells[::-1]) == a
 
     exact_alternations = [x.to_alt(exhaustive_blanks=True) for x in args]
     counts = Counter(exact_alternations)

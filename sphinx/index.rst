@@ -6,9 +6,11 @@ Documentation index
 --------------------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    Quick start <self>
    The paradigms file <paradigms>
    The segments file <segments>
-   API <modules>
+   Publications <publications>
+   Paralex datasets <http://www.paralex-standard.org>
+   API <qumin>

@@ -10,6 +10,7 @@ from itertools import combinations
 from . import Node
 from tqdm import tqdm
 import logging
+
 log = logging.getLogger()
 
 
@@ -178,7 +179,7 @@ class BUDLClustersBuilder(object):
         current_partition = " - ".join(", ".join(c) for c in self.clusters)
         log.debug("\t".join(["Partition", "M", "C", "P", "R", "DL"]))
         log.debug(" ".join([current_partition, ":\t", "\t".join(
-                (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL)))]))
+            (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL)))]))
 
     def initialize_clusters(self, paradigms):
         self.clusters = {}
@@ -284,7 +285,7 @@ class BUDLClustersBuilder(object):
         color = "c"
         if self.DL >= prev_DL:
             log.info("DL stopped improving: prev = {}, current best = {}".format(prev_DL,
-                                                                              self.DL))
+                                                                                 self.DL))
             color = "r"
 
         self.nodes[labels] = Node(leaves, size=size, children=[left, right],
@@ -307,7 +308,7 @@ class BUDLClustersBuilder(object):
         best_merges = []
         best = np.inf
         pairs = combinations(sorted(self.nodes), 2)
-        tot = (len(self.nodes)* (len(self.nodes)-1))//2
+        tot = (len(self.nodes) * (len(self.nodes) - 1)) // 2
 
         for g1, g2 in tqdm(pairs, leave=False, total=tot):
             R, C, P, *_ = self._simulate_merge(g1, g2)
@@ -330,6 +331,7 @@ class BUDLClustersBuilder(object):
         """Return the root of the Inflection Class tree, if it exists."""
         assert len(self.nodes) == 1
         return next(iter(self.nodes.values()))
+
 
 def weighted_log(symbol_count, message_length):
     r"""Compute :math:`-log_{2}(symbol_count/message_length) * message_length`.

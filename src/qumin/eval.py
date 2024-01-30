@@ -8,22 +8,20 @@ from .entropy import cond_P, P
 import numpy as np
 from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
-import argparse
 from .utils import get_default_parser, Metadata
 from itertools import combinations, chain
 from multiprocessing import Pool
 from pathlib import Path
 from tqdm import tqdm
-import seaborn as sns;
-
-sns.set()
+import seaborn as sns
 from matplotlib import pyplot as plt
 import logging
+
+sns.set()
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 log = logging.getLogger()
 sns.set()
-
 
 
 def prepare_arguments(paradigms, iterations, methods, features):
@@ -265,7 +263,7 @@ def main(args):
     """
     log.info(args)
     md = Metadata(args, __file__)
-    now = md.day+"_"+md.now
+    now = md.day + "_" + md.now
     np.random.seed(0)  # make random generator determinist
 
     segments.Inventory.initialize(args.segments)
@@ -311,7 +309,6 @@ def main(args):
 
 
 def eval_command():
-
     parser = get_default_parser(main.__doc__, paradigms=True,
                                 patterns=False, multipar=True)
 
