@@ -18,7 +18,6 @@ except:
     log.warning("Warning: mpld3 could not be imported. No html export possible.")
 from concepts import Context
 import pandas as pd
-from ..utils import merge_duplicate_columns
 from tqdm import tqdm
 
 axes = {'facecolor': 'None', 'edgecolor': 'None', 'linewidth': 0}
@@ -415,7 +414,7 @@ class ICLattice(object):
             filter(lambda obj: type(obj) is matplotlib.collections.PathCollection,
                    fig.axes[0].get_children(), ))
         lines = list(filter(lambda obj: type(obj) is matplotlib.lines.Line2D and
-                                        len(obj.get_xdata(orig=True)) > 1,
+                            len(obj.get_xdata(orig=True)) > 1,
                             fig.axes[0].get_children()))
         points_ids = []
         corrd_to_points = {}

@@ -6,6 +6,7 @@ Compute conditional entropies in inflectional patterns.
 """
 
 import logging
+import argparse
 
 # Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
@@ -40,6 +41,10 @@ def main(args):
     if onePred:
         preds.pop(0)
 
+    cells = args.cells
+    if len(cells) == 1:
+        raise argparse.ArgumentTypeError("You can't provide only one cell.")
+
     # Define logging levels (different depending on verbosity)
     if args.verbose or args.debug:
         logfile_name = md.register_file('debug.log', {'content': 'log'})
@@ -60,7 +65,7 @@ def main(args):
     paradigms = create_paradigms(paradigms_file_path, defective=True, overabundant=False,
                                  merge_cols=args.cols_merged,
                                  segcheck=True,
-                                 col_names=args.cols_names)
+                                 col_names=args.cols_names, cells=cells)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
                                            overabundant=False)
 
@@ -84,7 +89,7 @@ def main(args):
         paradigms2 = create_paradigms(args.bipartite[1], defective=True,
                                       overabundant=False,
                                       merge_cols=args.cols_merged, segcheck=True,
-                                      col_names=args.cols_names)
+                                      col_names=args.cols_names, cells=cells)
         pat_table2, pat_dic2 = patterns.from_csv(args.bipartite[0], defective=True,
                                                  overabundant=False)
 
@@ -99,10 +104,10 @@ def main(args):
                                          {'computation': computation,
                                           'source': args.name[0],
                                           'content': 'entropies'})
-            ent_file2 = md.register_file('bipartite2.csv', *
-            {'computation': computation,
-             'source': args.name[1],
-             'content': 'entropies'})
+            ent_file2 = md.register_file('bipartite2.csv',
+                                         {'computation': computation,
+                                          'source': args.name[1],
+                                          'content': 'entropies'})
             I = md.register_file('I.csv', {'computation': computation,
                                            'source': args.names,
                                            'content': 'I'})
@@ -266,6 +271,10 @@ def H_command():
     parser.add_argument("-m", "--cols_merged",
                         help="Whether identical columns are merged in the input.",
                         action="store_true", default=False)
+
+    parser.add_argument("--cells",
+                        help="List of cells to use. Defaults to all.",
+                        nargs='+', default=None)
 
     actions = parser.add_argument_group('actions')
 

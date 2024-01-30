@@ -8,17 +8,16 @@ from .entropy import cond_P, P
 import numpy as np
 from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
-import argparse
 from .utils import get_default_parser, Metadata
 from itertools import combinations, chain
 from multiprocessing import Pool
 from pathlib import Path
 from tqdm import tqdm
-import seaborn as sns;
-
-sns.set()
+import seaborn as sns
 from matplotlib import pyplot as plt
 import logging
+
+sns.set()
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 log = logging.getLogger()

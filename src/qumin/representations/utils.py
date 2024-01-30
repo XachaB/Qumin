@@ -48,7 +48,8 @@ def create_paradigms(data_file_name,
                      cols=None, verbose=False, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
-                     col_names=("lexeme", "cell", "form")):
+                     col_names=("lexeme", "cell", "form"),
+                     cells=[]):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
     Arguments:
@@ -64,6 +65,8 @@ def create_paradigms(data_file_name,
         overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
         merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
         cols (tuple): names of the lexeme, cells and form columns (in this order).
+        cells (List[str]): List of cell names to consider. Defaults to all.
+
     Returns:
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
     """
@@ -87,11 +90,27 @@ def create_paradigms(data_file_name,
             return None
         return ";".join(s.values)
 
+    def check_cells(cells, par_cols):
+        unknown_cells = set(cells) - set(par_cols)
+        if unknown_cells:
+            raise ValueError(f"You specified some cells which aren't in the paradigm : {' '.join(unknown_cells)}")
+        return sorted(list(set(par_cols)-set(cells)))
+
     # Long form
     if set(col_names) < set(paradigms.columns):
         lexemes, cell_col, form_col = col_names
-        paradigms = paradigms.pivot_table(values=form_col, index=lexemes, columns=cell_col,
+
+        # Filter cells before pivoting for speed reasons
+        if cells is not None:
+            to_drop = check_cells(cells, paradigms[cell_col].unique())
+            if len(to_drop) > 0:
+                log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
+                paradigms = paradigms[(paradigms[cell_col].isin(cells))]
+
+        paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
+                                          columns=cell_col,
                                           aggfunc=aggregator)
+
         paradigms.reset_index(inplace=True, drop=False)
 
     else:
@@ -100,6 +119,13 @@ def create_paradigms(data_file_name,
         if "variants" in paradigms.columns:
             log.info("Dropping the columns named 'variants'")
             paradigms.drop("variants", axis=1, inplace=True)
+
+        if cells is not None:
+            cells.append('lexeme')
+            to_drop = check_cells(cells, paradigms.columns)
+            if len(to_drop) > 0:
+                log.info(f"Dropping columns with following cell headers: {', '.join(sorted(to_drop))}")
+                paradigms.drop(to_drop, axis=1, inplace=True)
 
         # First column has to be lexemes
         lexemes = paradigms.columns[0]
