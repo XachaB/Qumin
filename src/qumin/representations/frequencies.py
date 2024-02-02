@@ -11,44 +11,40 @@ import logging
 log = logging.getLogger()
 
 
-class Weights():
+class Weights(object):
     """Frequency information for a language. Based on frequency tables in
-    Paralex format
+    Paralex format.
 
     Examples:
 
         >>> w = Weights('tests/data/frequencies.csv')
-        >>> wn = Weights('../Lexiques/Estonien-copie/estonian_frequencies.csv')
 
     Attributes:
 
         frequencies (:class:`pandas:pandas.DataFrame`):
-            containing forms.
+            Table of frequency values read from a Paralex file.
 
-        headers (:class:`pandas:pandas.DataFrame`):
-            containing pairwise patterns of alternation.
+        col_names (List[str]):
+            List of column names on which operation are performed. Usually lexeme, cell, form.
         """
 
     def __init__(self, filename,
-                 col_names={"lexeme": "lexeme",
-                            "cell": "cell",
-                            "form": "form"}, default_source=None):
+                 col_names=["lexeme", "cell", "form"], default_source=None):
         """Constructor for Weights.
 
         Arguments:
             filename (str): Path to a frequency file in Paralex Format. Required is the form_id columns. At least one of the following columns should be there : lexeme, cell, form.
             col_names (dict): mapping of names for the following columns : lexeme, cell, form.
+            default_source (str): name of the source to use if nothing specified. Defaults to a random source.
         """
 
-        self.col_names = {"lexeme": "lexeme",
-                          "cell": "cell",
-                          "form": "form"}.update(col_names)
+        self.col_names = col_names
         self.origin = filename
         log.info('Reading frequency table')
-        self.weight = pd.read_csv(filename, index_col='freq_id')
+        self.weight = pd.read_csv(filename, index_col='freq_id', usecols=col_names+['value', 'freq_id'])
         freq_col = self.weight.columns
-        if set(col_names.values()) < set(freq_col) & set(col_names.values()) != set():
-            raise ValueError(f"These column names don't appear in the frequency table: {set(col_names.values())-set(freq_col)}")
+        if set(col_names) < set(freq_col) & set(col_names) != set():
+            raise ValueError(f"These column names don't appear in the frequency table: {set(col_names)-set(freq_col)}")
 
         if "source" not in freq_col:
             self.weight['source'] = 'default'
@@ -57,7 +53,7 @@ class Weights():
             self.default_source = list(self.weight['source'].unique())[0]
             log.info(f"No default source provided for frequencies. Using {self.default_source}")
 
-    def get_freq(self, pairs, source=None, mean=False):
+    def get_freq(self, filters={}, group_on=None, source=None, mean=False):
         """
         Return the frequency of an item for a given source
 
@@ -69,32 +65,35 @@ class Weights():
             >>> w = Weights('tests/data/frequencies.csv')
             >>> w.get_freq({'lexeme':'aa'})
             29.0
-            >>> w.get_freq({'lexeme':None, 'cell':'par'}, mean=True)
+            >>> w.get_freq({'cell':'par'}, mean=True)
             4.0
-            >>> w.get_freq({'lexeme':'bb', 'form':'bbb'})
-            nan
+            >>> w.get_freq(group_on=['lexeme'])
+            lexeme
+            aa    29.0
+            bb     NaN
+            Name: value, dtype: float64
 
         Arguments:
-            pairs (dict): a mapping of the following form `{"lexeme": value, "cell": value, "form": value}`. At least one key is required.
+            filters (dict): a mapping of the following form `{"lexeme": value, "cell": value, "form": value}`. At least one key is required.
             source (str): the name of the source to use. If nothing is provided, the default source is selected.
             mean (bool): Defaults to False. If True, returns a mean instead of a sum.
         """
 
-        # Filter out None values
-        mapping = {k: v for k, v in pairs.items() if v is not None}
-        if source is None:
-            source = self.default_source
-        mapping.update({"source": source})
-
         # Filter using keys from mapping dict
-        sublist = self.weight.loc[(self.weight[list(mapping)] == pd.Series(mapping)).all(axis=1)]
+        sublist = self._filter_weights(filters, source)
 
-        if mean:
-            return sublist['value'].mean(skipna=False)
+        if group_on is None:
+            if mean:
+                return sublist['value'].mean(skipna=False)
+            else:
+                return sublist['value'].sum(skipna=False)
         else:
-            return sublist['value'].sum(skipna=False)
+            if mean:
+                return sublist.groupby(by=group_on, group_keys=False)['value'].apply(lambda x: x.mean(skipna=False))
+            else:
+                return sublist.groupby(by=group_on, group_keys=False)['value'].apply(lambda x: x.sum(skipna=False))
 
-    def get_relative_freq(self, filters=None, group_on=None, source=None):
+    def get_relative_freq(self, filters={}, group_on=None, source=None):
         """
         Return the relative frequency of an item for a given source
 
@@ -133,16 +132,8 @@ class Weights():
             source (str): the name of the source to use. If nothing is provided, the default source is selected.
         """
 
-        mapping = dict()
-        # Filter out None values
-        if filters is not None:
-            mapping = {k: v for k, v in filters.items() if v is not None}
-        if source is None:
-            source = self.default_source
-        mapping.update({"source": source})
-
         # Filter using keys from mapping dict
-        sublist = self.weight.loc[(self.weight[list(mapping)] == pd.Series(mapping)).all(axis=1)].copy()
+        sublist = self._filter_weights(filters, source)
 
         def _compute_rel_freq(x):
             if x.isna().values.any() or x['value'].sum() == 0:
@@ -154,6 +145,17 @@ class Weights():
         sublist['result'] = sublist.groupby(by=group_on, group_keys=False).apply(_compute_rel_freq).T
 
         return sublist
+
+    def _filter_weights(self, filters, source):
+        missing = set(filters.keys())-set(self.col_names)
+        if missing:
+            log.warning("You passed some column names that don't exist. They will be ignored: %s",
+                        ", ".join(missing))
+        mapping = {k: v for k, v in filters.items() if v is not None and k not in missing}
+        if source is None:
+            source = self.default_source
+        mapping["source"] = source
+        return self.weight.loc[(self.weight[list(mapping)] == pd.Series(mapping)).all(axis=1)].copy()
 
 
 if __name__ == "__main__":
