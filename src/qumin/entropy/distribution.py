@@ -63,7 +63,7 @@ class PatternDistribution(object):
     """
 
     def __init__(self, paradigms, patterns, pat_dic, overabundant=False,
-                 features=None):
+                 features=None, weights=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -75,20 +75,16 @@ class PatternDistribution(object):
                 dictionnary of pairs of cells to patterns
             features:
                 optional table of features
+            weights:
+                optional frequency information
         """
         if not overabundant:
             # Keep the first form for each cell
             self.paradigms = paradigms.map(lambda x: x[0] if x else x)
         else:
-            # Expand the paradigms
             self.paradigms = paradigms
-            # self.paradigms = dict()
-            # for cell in paradigms.columns:
-                # self.paradigms[cell] = paradigms[cell].explode()
-            # Is this necessary ?
-            # for c in paradigms.columns:
-                # self.paradigms = self.paradigms.explode(c)
 
+        self.weights = weights
         self.pat_dict = pat_dic
         self.patterns = patterns.map(lambda x: (str(x),))
         if features is not None:
@@ -326,6 +322,7 @@ class PatternDistribution(object):
 
         # For faster access
         patterns = self.patterns
+        weights = self.weights
         patterns_dic = {}
         col_names = set(self.paradigms.columns)
 
@@ -338,9 +335,13 @@ class PatternDistribution(object):
             patterns_dic[cell] = pd.DataFrame(columns=list(col_names-{cell}),
                                               index=[_.index, _])
 
+        def get_frequency(lexeme, form, cell):
+            return None
+
         def dispatch_patterns(row, a, b, reverse=False):
             """ This function reassigns the patterns to their forms.
-            This step is necessary to compute source-cell overabundance
+            This information was lost during previous steps.
+            This step is mandatory to compute source-cell overabundance
 
             Arguments:
                 row (:class:`pandas:pandas.Series`) : a row of the patterns table
@@ -357,14 +358,21 @@ class PatternDistribution(object):
             lex = row.lexeme.iloc[0]
             if reverse:
                 forms = self.paradigms.at[lex, b], self.paradigms.at[lex, a]
+                outname = a
             else:
                 forms = self.paradigms.at[lex, a], self.paradigms.at[lex, b]
+                outname = b
 
             nullset = {''}
             if forms != (nullset, nullset):
                 if forms[0] == forms[1]:  # If the lists are identical, do not compute product
                     pairs = [(x, x) for x in forms[0]]
                     lpatterns = row[(a, b)][0].split(";")
+                    local_weights = [weights.get_relative_freq(filters={"lexeme": lex,
+                                                                        "form": out,
+                                                                        "cell": outname},
+                                                               group_on=['form'])
+                                     for pred, out in pairs]
                 elif forms[0] == '':
                     pairs = [('', x) for x in forms[1]]
                     lpatterns = ['' for i in forms[1]]
@@ -375,7 +383,7 @@ class PatternDistribution(object):
                     pairs = product(*forms)
                     lpatterns = row[(a, b)][0].split(";")
 
-            return pd.Series([[p for p, _ in pairs], lpatterns])
+            return pd.Series([[p for p, _ in pairs], lpatterns, local_weights])
 
         for a, b in tqdm(patterns.columns):
             z = patterns[(a, b)].reset_index().apply(
@@ -402,7 +410,7 @@ class PatternDistribution(object):
             if selector[selector].size != 0:
                 known_ab = self.add_features(classes[a][b])
                 known_ba = self.add_features(classes[b][a])
-
+                breakpoint()
                 _ = cond_entropy_OA(patterns_dic[a][b],
                                     known_ab, subset=selector,
                                     **kwargs)

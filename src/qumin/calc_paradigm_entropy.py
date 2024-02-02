@@ -68,6 +68,7 @@ def main(args):
                                  overabundant=overabundant,
                                  merge_cols=args.cols_merged,
                                  segcheck=True,
+                                 frequencies=True,
                                  col_names=args.cols_names, cells=cells)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
                                            overabundant=overabundant)
@@ -151,7 +152,7 @@ def main(args):
 
     if onePred:
         computation = 'onePredEntropies'
-        
+
         ent_file = md.register_file('entropies.csv',
                                     {'computation': computation,
                                      'content': 'entropies'})
@@ -165,6 +166,7 @@ def main(args):
             distrib.entropy_matrix_OA(beta=args.beta)
         else:
             distrib.entropy_matrix()
+
         accuracies = distrib.accuracies[1]
         entropies = distrib.entropies[1]
         effectifs = distrib.effectifs[1]

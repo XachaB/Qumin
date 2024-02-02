@@ -1,0 +1,9 @@
+freq_id,lexeme,cell,form,value
+1,aa,nom,aaa,3
+2,aa,gen,aab,5
+3,aa,par,aac,8
+4,aa,dat,aad,13
+5,bb,nom,bba,21
+6,bb,nom,bbd,1
+7,bb,gen,bbb,
+8,bb,par,bbc,0
