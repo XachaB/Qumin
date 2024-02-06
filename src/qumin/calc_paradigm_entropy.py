@@ -38,6 +38,7 @@ def main(args):
 
     preds = sorted(args.nPreds)
     overabundant = args.overabundant
+    frequencies = args.freq
 
     onePred = preds[0] == 1
     if onePred:
@@ -68,7 +69,6 @@ def main(args):
                                  overabundant=overabundant,
                                  merge_cols=args.cols_merged,
                                  segcheck=True,
-                                 frequencies=True,
                                  col_names=args.cols_names, cells=cells)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
                                            overabundant=overabundant)
@@ -148,7 +148,8 @@ def main(args):
                                       pat_table,
                                       pat_dic,
                                       overabundant=overabundant,
-                                      features=features)
+                                      features=features,
+                                      frequencies=frequencies)
 
     if onePred:
         computation = 'onePredEntropies'
@@ -275,8 +276,8 @@ def H_command():
                         type=str,
                         default=None)
 
-    parser.add_argument('--weights',
-                        help="Weights for overabundant forms",
+    parser.add_argument('--freq',
+                        help="Frequencies to use for weighting at all steps",
                         type=str,
                         default=None)
 

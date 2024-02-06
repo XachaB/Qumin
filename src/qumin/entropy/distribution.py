@@ -63,7 +63,7 @@ class PatternDistribution(object):
     """
 
     def __init__(self, paradigms, patterns, pat_dic, overabundant=False,
-                 features=None, weights=None):
+                 features=None, frequencies=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -84,7 +84,10 @@ class PatternDistribution(object):
         else:
             self.paradigms = paradigms
 
-        self.weights = weights
+        if frequencies is not None:
+            self.weights = representations.frequencies.Weights(frequencies)
+        else:
+            self.weights = False
         self.pat_dict = pat_dic
         self.patterns = patterns.map(lambda x: (str(x),))
         if features is not None:
@@ -322,8 +325,8 @@ class PatternDistribution(object):
 
         # For faster access
         patterns = self.patterns
-        weights = self.weights
         patterns_dic = {}
+        weights_dic = {}
         col_names = set(self.paradigms.columns)
 
         # For each cell, we have a DF, where the index is composed
@@ -334,9 +337,10 @@ class PatternDistribution(object):
             _ = self.paradigms[cell].explode()
             patterns_dic[cell] = pd.DataFrame(columns=list(col_names-{cell}),
                                               index=[_.index, _])
+            weights_dic[cell] = patterns_dic[cell].copy()
 
-        def get_frequency(lexeme, form, cell):
-            return None
+        if self.weights:
+            weights = self.weights.get_relative_freq(group_on=['lexeme', 'cell'])
 
         def dispatch_patterns(row, a, b, reverse=False):
             """ This function reassigns the patterns to their forms.
@@ -368,11 +372,6 @@ class PatternDistribution(object):
                 if forms[0] == forms[1]:  # If the lists are identical, do not compute product
                     pairs = [(x, x) for x in forms[0]]
                     lpatterns = row[(a, b)][0].split(";")
-                    local_weights = [weights.get_relative_freq(filters={"lexeme": lex,
-                                                                        "form": out,
-                                                                        "cell": outname},
-                                                               group_on=['form'])
-                                     for pred, out in pairs]
                 elif forms[0] == '':
                     pairs = [('', x) for x in forms[1]]
                     lpatterns = ['' for i in forms[1]]
@@ -380,23 +379,35 @@ class PatternDistribution(object):
                     pairs = [(x, '') for x in forms[0]]
                     lpatterns = ['' for i in forms[0]]
                 else:
-                    pairs = product(*forms)
+                    pairs = [(pred, out) for pred, out in product(*forms)]
                     lpatterns = row[(a, b)][0].split(";")
+                if self.weights:
+                    local_weights = [weights.loc[lex, outname, str(out).strip()]['result']
+                                     if out != '' else 0 for pred, out in pairs]
 
             return pd.Series([[p for p, _ in pairs], lpatterns, local_weights])
 
-        for a, b in tqdm(patterns.columns):
-            z = patterns[(a, b)].reset_index().apply(
-                lambda x: dispatch_patterns(x, a, b), axis=1).explode([0,1])
-            z = z.reset_index().groupby(['index', 0], dropna=False).agg({1: lambda x: (';'.join(x),)})
-            z.index = patterns_dic[a][b].index
-            patterns_dic[a][b] = z
+        def format_patterns(a, b, reverse=False):
+            """This is used for reformating DFs"""
 
             z = patterns[(a, b)].reset_index().apply(
-                lambda x: dispatch_patterns(x, a, b, reverse=True), axis=1).explode([0,1])
-            z = z.reset_index().groupby(['index', 0], dropna=False).agg({1: lambda x: (';'.join(x),)})
-            z.index = patterns_dic[b][a].index
-            patterns_dic[b][a] = z
+                lambda x: dispatch_patterns(x, a, b, reverse=reverse),
+                axis=1).explode([0, 1, 2])
+            z = z.reset_index().groupby(['index', 0], dropna=False).agg(
+                {1: lambda x: (';'.join(x),),
+                 2: lambda x: tuple(x)})
+
+            if reverse:
+                pred, out = b, a
+            else:
+                pred, out = a, b
+            z.index = patterns_dic[pred][out].index
+            patterns_dic[pred][out] = z[1]
+            weights_dic[pred][out+"_w"] = z[2]
+
+        for a, b in tqdm(patterns.columns):
+            format_patterns(a, b)
+            format_patterns(a, b, reverse=True)
 
         classes = self.classes
         rows = list(self.paradigms.columns)
@@ -410,15 +421,15 @@ class PatternDistribution(object):
             if selector[selector].size != 0:
                 known_ab = self.add_features(classes[a][b])
                 known_ba = self.add_features(classes[b][a])
-                breakpoint()
-                _ = cond_entropy_OA(patterns_dic[a][b],
+
+                _ = cond_entropy_OA(pd.concat([patterns_dic[a][b], weights_dic[a][b+"_w"]], axis=1),
                                     known_ab, subset=selector,
                                     **kwargs)
 
                 entropies.at[a, b] = _[0, 1]
                 accuracies.at[a, b] = _[0, 0]
 
-                _ = cond_entropy_OA(patterns_dic[b][a],
+                _ = cond_entropy_OA(pd.concat([patterns_dic[b][a], weights_dic[b][a+"_w"]], axis=1),
                                     known_ba, subset=selector,
                                     **kwargs)
 

@@ -144,6 +144,8 @@ class Weights(object):
 
         sublist['result'] = sublist.groupby(by=group_on, group_keys=False).apply(_compute_rel_freq).T
 
+        sublist.reset_index(inplace=True)
+        sublist.set_index(self.col_names, inplace=True)
         return sublist
 
     def _filter_weights(self, filters, source):
