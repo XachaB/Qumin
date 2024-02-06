@@ -14,23 +14,20 @@ import logging
 log = logging.getLogger()
 
 
-def unique_lexemes(series):
-    """Rename duplicates in a serie of strings.
+def unique_lexemes(series, file_type):
+    """Check if there are duplicates in the lexemes list.
+    If yes, raise an error.
 
-    Take a pandas series of strings and output another serie
-    where all originally duplicate strings are given numbers,
-    so each cell contains a unique string.
+    Arguments:
+        series (:class:`pandas:pandas.Series`): list of lexemes as a Series object.
+        file_type (str): used for error messages. Should describe the dataset which is being tested.
     """
-    ids = {}
+    duplicated = list(series[series.duplicated()])
 
-    def unique_id(string, ids):
-        if string in ids:
-            ids[string] += 1
-            return string + "_" + str(ids[string])
-        ids[string] = 1
-        return string
-
-    return series.apply(unique_id, args=(ids,))
+    if duplicated:
+        raise ValueError(f"""There are {len(duplicated)} duplicates among lexemes.
+            Please check the {file_type} dataset.
+            Duplicates are: {", ".join(duplicated)}""")
 
 
 def create_features(data_file_name):
@@ -38,7 +35,7 @@ def create_features(data_file_name):
     features = pd.read_csv(data_file_name)
     # First column has to be lexemes
     lexemes = features.columns[0]
-    features[lexemes] = unique_lexemes(features[lexemes])
+    unique_lexemes(features[lexemes], "features")
     features.set_index(lexemes, inplace=True)
     features.fillna(value="", inplace=True)
     return features
@@ -143,7 +140,7 @@ def create_paradigms(data_file_name,
             raise ValueError("The paradigm's columns are: {}".format(paradigms.columns)) from e
 
     # Lexemes must be unique identifiers
-    paradigms[lexemes] = unique_lexemes(paradigms[lexemes])
+    unique_lexemes(paradigms[lexemes], 'paradigms')
     paradigms.set_index(lexemes, inplace=True)
 
     paradigms.fillna(value="", inplace=True)
