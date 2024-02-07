@@ -92,6 +92,7 @@ class Weights(object):
             else:
                 return sublist['value'].sum(skipna=False)
         else:
+            # TODO Replicate the same speed improvements as for relative frequencies ?
             if mean:
                 return sublist.groupby(by=group_on, group_keys=False)['value'].apply(lambda x: x.mean(skipna=False))
             else:
@@ -104,31 +105,20 @@ class Weights(object):
         The frequency of an item is defined as the sum of the frequencies of this item,
         across all rows.
 
+        Note:
+            For very large dataframes, computations can be long, be careful.
+
         Examples:
 
             >>> w = Weights('tests/data/frequencies.csv')
-            >>> w.get_relative_freq(filters={'lexeme':'bb', 'cell':'nom'}, group_on=["lexeme"])['result']
-            freq_id
-            5    0.954545
-            6    0.045455
-            Name: result, dtype: float64
-            >>> w.get_relative_freq(filters={'cell':"gen"}, group_on=["cell"])['result']
-            freq_id
-            2    0.5
-            7    0.5
-            Name: result, dtype: float64
-            >>> w.get_relative_freq(filters={'cell':"par"}, group_on=["cell"])['result']
-            freq_id
-            3    1.0
-            8    0.0
-            Name: result, dtype: float64
-            >>> w.get_relative_freq(filters={'lexeme':'bb'}, group_on=["lexeme", "cell"])['result']
-            freq_id
-            5    0.954545
-            6    0.045455
-            7    1.000000
-            8    1.000000
-            Name: result, dtype: float64
+            >>> w.get_relative_freq(filters={'cell':"gen"}, group_on=["cell"])['result'].values
+            array([0.5, 0.5])
+            >>> w.get_relative_freq(filters={'lexeme':'bb', 'cell':'nom'}, group_on=["lexeme"])['result'].values
+            array([0.95454545, 0.04545455])
+            >>> w.get_relative_freq(filters={'cell':"par"}, group_on=["cell"])['result'].values
+            array([1., 0.])
+            >>> w.get_relative_freq(filters={'lexeme':'bb'}, group_on=["lexeme", "cell"])['result'].values
+            array([0.95454545, 0.04545455, 1.        , 1.        ])
 
         Arguments:
             filters (dict): a mapping of the following form `{"lexeme": value, "cell": value, "form": value}`. At least one key is required.
@@ -146,7 +136,35 @@ class Weights(object):
             else:
                 return x['value']/x['value'].sum(skipna=False)
 
-        sublist['result'] = sublist.groupby(by=group_on, group_keys=False).progress_apply(_compute_rel_freq).T
+        # We first get the size of each group
+        sublist['result'] = sublist\
+            .groupby(group_on, sort=False)['value']\
+            .transform("size")
+
+        sublist['result'] = sublist['result'].astype('float64')
+
+        # And if there were some nan values, we give a uniform weight
+        # (we could also count nan as a zero)
+        # This is the slowest part (not using a C implementation)
+        sublist.loc[sublist['result'] != 1, 'result'] = sublist.loc[sublist['result'] != 1]\
+            .groupby(group_on, sort=False)['value']\
+            .transform(lambda x: 1/x.size if x.isna().any() else 2)
+
+        # For bigger groups we sum
+        selector = sublist['result'] == 2
+        sublist.loc[selector, 'result'] = sublist.loc[selector]['value']/sublist.loc[selector]\
+            .groupby(group_on, sort=False)['value']\
+            .transform('sum')
+
+        # TODO this should be replaced by a simpler .transform(sum, skipna=False),
+        # However, skipna is not yet implemented for GroupBy.sum
+        # Another solution is :
+        # sublist.loc[sublist['result'] != 1, 'result'] = sublist.loc[sublist['result'] != 1].groupby(
+        #     group_on, sort=False)['value'].transform(lambda x: x/x.sum(skipna=False))
+        # sublist.loc[sublist['result'].isna(), 'result'] = \
+        #     sublist.loc[sublist['result'].isna()]\
+        #     .groupby(group_on, sort=False)['value']\
+        #     .transform(lambda x: 1/x.size)
 
         sublist.reset_index(inplace=True)
         sublist.set_index(self.col_names, inplace=True)
@@ -183,7 +201,10 @@ class Weights(object):
 
         def _selector(mapping):
             """Avoid repetition of this complex line"""
-            return self.weight.loc[self.weight[list(mapping)].isin(mapping).all(axis=1)].copy()
+            if mapping:
+                return self.weight.loc[self.weight[list(mapping)].isin(mapping).all(axis=1)].copy()
+            else:
+                return self.weight
 
         if inplace:
             self.weight = _selector(mapping)
