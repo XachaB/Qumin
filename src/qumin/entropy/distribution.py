@@ -387,7 +387,7 @@ class PatternDistribution(object):
 
             return pd.Series([[p for p, _ in pairs], lpatterns, local_weights])
 
-        def format_patterns(a, b, reverse=False):
+        def _format_patterns(a, b, reverse=False):
             """This is used for reformating DFs"""
 
             z = patterns[(a, b)].reset_index().apply(
@@ -406,8 +406,8 @@ class PatternDistribution(object):
             weights_dic[pred][out+"_w"] = z[2]
 
         for a, b in tqdm(patterns.columns):
-            format_patterns(a, b)
-            format_patterns(a, b, reverse=True)
+            _format_patterns(a, b)
+            _format_patterns(a, b, reverse=True)
 
         classes = self.classes
         rows = list(self.paradigms.columns)

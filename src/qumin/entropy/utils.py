@@ -3,8 +3,6 @@
 
 import numpy as np
 from scipy import special as sp
-# TODO replace sklearn with some lighter solution
-from sklearn.feature_extraction.text import CountVectorizer
 
 
 def P(x, subset=None):
