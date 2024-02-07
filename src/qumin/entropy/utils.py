@@ -173,7 +173,10 @@ def matrix_analysis(matrix, weight=None, phi="soft", beta=1, with_proba=False,
     }
 
     # Compute the frequency of each pattern (using frequency data if available)
-    pat_freq = np.mean(matrix, axis=0)  # Frequency of success of each pattern
+    pat_freq = np.mean(matrix, axis=0)
+
+    # Compute entropy based on patterns
+    entropy = -np.sum(np.where(pat_freq == 0, 0, np.log2(pat_freq))*pat_freq) + 0
 
     # Apply transformation to pattern probabilities
     phi_pat = phi_dic[phi](pat_freq)
@@ -189,17 +192,8 @@ def matrix_analysis(matrix, weight=None, phi="soft", beta=1, with_proba=False,
     # (+0 to avoid displaying results as "-0")
     if weight is None:
         accuracy = np.mean(row_proba)
-        entropy = -np.sum(np.log2(row_proba)/row_proba.shape[0]) + 0
     else:
-        # If weights are provided, use them
         accuracy = np.average(row_proba, weights=weight)
-        entropy = -np.sum(np.average(np.log2(row_proba), weights=weight)) + 0
-
-    if verbose:
-        print("Phi_pat:", phi_pat)
-        print("Pattern frequency :", pat_freq)
-        print("Overall probability of success :", accuracy)
-        print("Custom entropy :", entropy)
 
     return accuracy, entropy, row_proba, phi_pat
 
