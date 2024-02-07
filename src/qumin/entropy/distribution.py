@@ -336,7 +336,7 @@ class PatternDistribution(object):
         for cell in tqdm(self.paradigms.columns):
             _ = self.paradigms[cell].explode()
             patterns_dic[cell] = pd.DataFrame(columns=list(col_names-{cell}),
-                                              index=[_.index, _])
+                                              index=[_.index,_])
             weights_dic[cell] = patterns_dic[cell].copy()
 
         if self.weights:
@@ -382,10 +382,10 @@ class PatternDistribution(object):
                     pairs = [(pred, out) for pred, out in product(*forms)]
                     lpatterns = row[(a, b)][0].split(";")
                 if self.weights:
-                    local_weights = [weights.loc[lex, outname, str(out).strip()]['result']
-                                     if out != '' else 0 for pred, out in pairs]
+                    pat_weights = [weights.loc[lex, outname, str(out).strip()]['result']
+                                   if out != '' else 0 for pred, out in pairs]
 
-            return pd.Series([[p for p, _ in pairs], lpatterns, local_weights])
+            return pd.Series([[p for p, _ in pairs], lpatterns, pat_weights])
 
         def _format_patterns(a, b, reverse=False):
             """This is used for reformating DFs"""
@@ -421,16 +421,18 @@ class PatternDistribution(object):
             if selector[selector].size != 0:
                 known_ab = self.add_features(classes[a][b])
                 known_ba = self.add_features(classes[b][a])
+                weights_a = weights.loc[pd.IndexSlice[:, a, :]]
+                weights_b = weights.loc[pd.IndexSlice[:, b, :]]
 
                 _ = cond_entropy_OA(pd.concat([patterns_dic[a][b], weights_dic[a][b+"_w"]], axis=1),
-                                    known_ab, subset=selector,
+                                    known_ab, subset=selector, weights=weights_a,
                                     **kwargs)
 
                 entropies.at[a, b] = _[0, 1]
                 accuracies.at[a, b] = _[0, 0]
 
                 _ = cond_entropy_OA(pd.concat([patterns_dic[b][a], weights_dic[b][a+"_w"]], axis=1),
-                                    known_ba, subset=selector,
+                                    known_ba, subset=selector, weights=weights_b,
                                     **kwargs)
 
                 entropies.at[b, a] = _[0, 1]

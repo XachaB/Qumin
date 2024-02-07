@@ -164,7 +164,10 @@ def main(args):
                                           {'computation': computation,
                                            'content': 'effectifs'})
         if overabundant:
-            distrib.entropy_matrix_OA(beta=args.beta)
+            distrib.entropy_matrix_OA(beta=args.beta,
+                                      weighting=args.freq_method,
+                                      grad_success=args.grad_success,
+                                      cat_pattern=args.cat_pattern)
         else:
             distrib.entropy_matrix()
 
@@ -315,6 +318,20 @@ def H_command():
     parser.add_argument("--beta",
                         help="Value of beta to use for softmax.",
                         type=int, default=10)
+
+    parser.add_argument("--freq_method",
+                        help="Kind of strategy to use for frequencies and weighting.",
+                        choices=['normal', 'frequency', 'frequency_extended'],
+                        default='normal')
+
+    parser.add_argument("--grad_success",
+                        help="Whether to consider success as a categorical feature or not",
+                        action="store_true", default=False)
+
+    parser.add_argument("--cat_pattern",
+                        help="Whether to consider pattern applicability."
+                        "as a categorical feature or not.",
+                        action="store_true", default=False)
 
     actions = parser.add_argument_group('actions')
 
