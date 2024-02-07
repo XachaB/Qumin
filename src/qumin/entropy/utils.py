@@ -198,27 +198,32 @@ def matrix_analysis(matrix, weights=None,
     if np.sum(weights) == 0:
         return 0, 0, None, None
 
+    if cat_pattern or not grad_success:
+        bool_matrix = np.array(matrix, dtype=bool)
+
     # Compute the frequency of each pattern (using frequency data if available)
     if cat_pattern:
-        raise NotImplementedError  # TODO
+        pat_freq = np.average(bool_matrix, axis=0, weights=weights)
+        pat_freq = pat_freq/np.sum(pat_freq)
     else:
         pat_freq = np.average(matrix, axis=0, weights=weights)
 
     # Compute entropy based on patterns
-    entropy = -np.sum(np.where(pat_freq == 0, 0, np.log2(pat_freq))*pat_freq) + 0
+    with np.errstate(divide='ignore'):
+        entropy = -np.sum(np.log2(pat_freq, where=pat_freq != 0)*pat_freq) + 0
 
     # Apply transformation to pattern probabilities
     phi_pat = phi_dic[phi](pat_freq)
 
     # Compute probability of success on each row
     if grad_success:
-        row_proba = matrix@phi_pat.T
+        row_accuracy = matrix@phi_pat.T
     else:
-        raise NotImplementedError  # TODO
+        row_accuracy = bool_matrix@phi_pat.T
 
     # Compute average probability of success on this subclass
     # There can be some weighting, if available.
-    accuracy = np.average(row_proba, weights=weights)
+    accuracy = np.average(row_accuracy, weights=weights)
 
-    return accuracy, entropy, row_proba, phi_pat
+    return accuracy, entropy, row_accuracy, phi_pat
 
