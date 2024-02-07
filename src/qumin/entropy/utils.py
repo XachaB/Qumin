@@ -86,6 +86,9 @@ def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwarg
         A (:class:`pandas.core.series.Series`): A series of data.
         B (:class:`pandas.core.series.Series`): A series of data.
         subset (Optional[iterable]): Only give the distribution for a subset of values.
+        weights (): TODO
+        weighting (str): which kind of approach should be used for weighting : normal, \
+        frequency, frequency_extended.
         **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
     Return:
@@ -107,6 +110,8 @@ def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwarg
 
     if weights is None and weighting in ['frequency', 'frequency_extended']:
         raise ValueError('Frequency computation required but no weights were provided.')
+    elif weights is not None and weighting == 'normal':
+        raise ValueError("Normal computation doesn't require any weights.")
 
     def get_weights(A):
         """Provides weights for the source cell.
@@ -116,11 +121,9 @@ def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwarg
             Remove this function and use the frequency API
         """
         if weighting == 'frequency_extended':
-            def lambfunc(x):
-                return weights.loc[(x.name[0], str(x.name[1]).strip(' ')),
-                                   'result']
-
-            return A.apply(lambfunc, axis=1)
+            return A.apply(lambda x: weights.loc[
+                (x.name[0], str(x.name[1]).strip(' ')),
+                'result'], axis=1)
         else:
             w = A.index.to_frame()
             w.rename_axis(['lex', 'a'], inplace=True)
@@ -154,7 +157,7 @@ def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwarg
 
         return [i*(np.sum(weight)/population)
                 for i in matrix_analysis(matrix, weights=weight,
-                                         **kwargs, weighting=weighting)[0:2]]
+                                         **kwargs)[0:2]]
 
     results = list(grouped_A.apply(group_analysis))
     sums = np.sum(np.matrix(results), axis=0)
@@ -164,7 +167,7 @@ def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwarg
 
 def matrix_analysis(matrix, weights=None,
                     phi="soft", beta=1,
-                    grad_success=True, cat_pattern=False, weighting=0):
+                    grad_success=False, cat_pattern=False):
     """Given an overabundance matrix and a function, computes the probability of
     each individual pattern and the accuracy for each lexeme.
 
@@ -173,7 +176,8 @@ def matrix_analysis(matrix, weights=None,
         phi (str): One of the following distributions: `norm` (normalized),\
         `soft` (softmax), `uni` (bare uniform).
         beta (float): The value of beta when using `softmax`.
-        categorical_success (bool) : whether to consider success as a boolean or as a scalar (between 0-1)
+        cat_pattern (bool): whether to build pattern frequencies on categorical information or not. Defaults to False.
+        grad_success (bool): whether to consider success as a scalar (between 0-1) or not. Defaults to False.
 
     Return:
         A list of objects: The global accuracy (`float`), the global entropy, H(A|B) (`float`),\
@@ -191,6 +195,7 @@ def matrix_analysis(matrix, weights=None,
     }
 
     # If weights sum to zero, all forms are defective and can be skipped.
+    # If weights is None, then it won't be used by np.average, so nothing to do.
     if np.sum(weights) == 0:
         return 0, 0, None, None
 
