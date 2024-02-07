@@ -146,8 +146,8 @@ def cond_entropy_OA(A, B, subset=None, **kwargs):
     return sums
 
 
-def matrix_analysis(matrix, weight=None, phi="soft", beta=1, with_proba=False,
-                    verbose=False, categorical_success=False):
+def matrix_analysis(matrix, weight=None, phi="soft", beta=1,
+                    categorical_success=False):
     """Given an overabundance matrix and a function, computes the probability of
     each individual pattern and the accuracy for each lexeme.
 
@@ -155,8 +155,6 @@ def matrix_analysis(matrix, weight=None, phi="soft", beta=1, with_proba=False,
         matrix (:class:`numpy.array`): A matrix of 0 and 1.
         phi (str): One of the following distributions: `norm` (normalized), `soft` (softmax), `uni` (bare uniform).
         beta (float): The value of beta when using `softmax`.
-        with_proba (bool): whether to return an array of results.
-        verbose (bool): whether to display the results or not.
         categorical_success (bool) : whether to consider success as a boolean or as a scalar (between 0-1)
 
     Return:
