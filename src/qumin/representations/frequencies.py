@@ -6,7 +6,9 @@ Functions for frequency management.
 """
 
 import pandas as pd
+from tqdm import tqdm
 import logging
+tqdm.pandas()
 
 log = logging.getLogger()
 
@@ -28,7 +30,7 @@ class Weights(object):
             List of column names on which operation are performed. Usually lexeme, cell, form.
         """
 
-    def __init__(self, filename,
+    def __init__(self, filename, filters={},
                  col_names=["lexeme", "cell", "form"], default_source=None):
         """Constructor for Weights.
 
@@ -52,6 +54,8 @@ class Weights(object):
         elif default_source is None:
             self.default_source = list(self.weight['source'].unique())[0]
             log.info(f"No default source provided for frequencies. Using {self.default_source}")
+
+        self._filter_weights(filters, source=False, inplace=True)
 
     def get_freq(self, filters={}, group_on=None, source=None, mean=False):
         """
@@ -142,22 +146,49 @@ class Weights(object):
             else:
                 return x['value']/x['value'].sum(skipna=False)
 
-        sublist['result'] = sublist.groupby(by=group_on, group_keys=False).apply(_compute_rel_freq).T
+        sublist['result'] = sublist.groupby(by=group_on, group_keys=False).progress_apply(_compute_rel_freq).T
 
         sublist.reset_index(inplace=True)
         sublist.set_index(self.col_names, inplace=True)
         return sublist
 
-    def _filter_weights(self, filters, source):
+    def _filter_weights(self, filters, source, inplace=False):
+        """Filters the dictionary based on a set of filters
+        provided as a dictionary by the user."""
+
         missing = set(filters.keys())-set(self.col_names)
         if missing:
             log.warning("You passed some column names that don't exist. They will be ignored: %s",
                         ", ".join(missing))
-        mapping = {k: v for k, v in filters.items() if v is not None and k not in missing}
+
+        def _listify(x):
+            """Ensure that passed values of mapping are list-like objects"""
+            if isinstance(x, str):
+                x = [x]
+            else:
+                try:
+                    iter(x)
+                except TypeError:
+                    x = [x]
+                else:
+                    x = list(x)
+            return x
+
+        mapping = {k: _listify(v) for k, v in filters.items() if v is not None and k not in missing}
+
         if source is None:
             source = self.default_source
-        mapping["source"] = source
-        return self.weight.loc[(self.weight[list(mapping)] == pd.Series(mapping)).all(axis=1)].copy()
+        if source is not False:
+            mapping["source"] = [source]
+
+        def _selector(mapping):
+            """Avoid repetition of this complex line"""
+            return self.weight.loc[self.weight[list(mapping)].isin(mapping).all(axis=1)].copy()
+
+        if inplace:
+            self.weight = _selector(mapping)
+        else:
+            return _selector(mapping)
 
 
 if __name__ == "__main__":
