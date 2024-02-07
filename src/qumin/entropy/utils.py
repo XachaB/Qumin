@@ -130,14 +130,13 @@ def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwarg
             c = w.value_counts('lex')
             return w['lexeme'].apply(lambda x: 1/c[x])
 
-    iname = A.index.names[-1]
-    A = A.reset_index(level=iname)[subset].set_index(iname, append=True)
-    B = B.reset_index(level=iname)[subset].set_index(iname, append=True)
+    iname = A.index.names[0]
+
+    A = A[subset[A.index.get_level_values(iname)].values].copy()
+    B = B[subset[B.index.get_level_values(iname)].values]
     A['w'] = get_weights(A)
 
-    # We need to align first to add the wordform index to A (patterns)
-    colname = B.columns[0]
-    grouped_A = A.groupby(B[colname], sort=False)
+    grouped_A = A.groupby(B, sort=False)
     population = subset.shape[0]
     results = []
 
@@ -213,9 +212,9 @@ def matrix_analysis(matrix, weights=None,
 
     # Compute probability of success on each row
     if grad_success:
-        raise NotImplementedError  # TODO
-    else:
         row_proba = matrix@phi_pat.T
+    else:
+        raise NotImplementedError  # TODO
 
     # Compute average probability of success on this subclass
     # There can be some weighting, if available.
