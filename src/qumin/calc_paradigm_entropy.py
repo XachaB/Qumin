@@ -194,17 +194,20 @@ def main(args):
         mean_acc = accuracies.mean().mean()
         log.info("Mean H(c1 -> c2) = %s ", mean_ent)
         log.info("Mean E(c1 -> c2) = %s ", mean_acc)
-        log.debug("Mean H(c1 -> c2) = %s ", mean_ent)
 
         if args.debug:
             if overabundant:
-                check = distrib.one_pred_distrib_log_OA(
-                    sanity_check=sanity_check)
+                check = distrib.entropy_matrix_OA(debug=True,
+                                                  beta=args.beta,
+                                                  weighting=args.freq_method,
+                                                  grad_success=args.grad_success,
+                                                  cat_pattern=args.cat_pattern,
+                                                  sanity_check=sanity_check)
             else:
                 check = distrib.one_pred_distrib_log(
                     sanity_check=sanity_check)
 
-            if sanity_check:
+            if sanity_check and not overabundant:
                 check_file = md.register_file('entropies_slow_method.csv',
                                               {'computation': computation,
                                                'content': 'entropies_slow_method'})

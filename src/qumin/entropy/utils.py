@@ -78,73 +78,19 @@ def cross_entropy(A, B):
     return -(P(B) * np.log2(P(A))).sum()
 
 
-def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwargs):
-    r"""Calculate the conditional entropy between two series of overabundant data points.
-    Presupposes that values in the series are of the same type, typically tuples.
-
-    Arguments:
-        A (:class:`pandas.core.series.Series`): A series of data.
-        B (:class:`pandas.core.series.Series`): A series of data.
-        subset (Optional[iterable]): Only give the distribution for a subset of values.
-        weights (): TODO
-        weighting (str): which kind of approach should be used for weighting : normal, \
-        frequency, frequency_extended.
-        **kwargs: optional keyword arguments for :func:`matrix_analysis`.
-
-    Return:
-        list[float]: A list of metrics. First the global accuracy, then H(A|B).
-
-    Note:
-        There are three options for weighting. The following settings are available :
-            1. normal: Normalized weighting for overabundant patterns and source cells
-            2. frequency: Frequency based weighting for overabundant and source cells
-            3. frequency_extended: Consider the frequency of lexemes, both for predicting patterns \
-            and averaging entropy/accuracy.
-
-        Note that in cases 2 and 3, forms with a frequency of 0\
-        will simply be skipped.
-    """
-
-    # A : patterns that can in fact be applied to each form
-    # B : patterns that are potentially applicable to each form
-
-    grouped_A = A.groupby(B, sort=False)
-    population = subset.shape[0]
-    results = []
-
-    # Each subclass (forms with similar properties) is analyzed.
-    def group_analysis(group):
-        group_name = list(group.columns)
-        pattern = group_name[0]
-        group[pattern] = group[pattern].apply(lambda x: x[0].split(';'))
-        weight = np.array(list(group['w']))
-        group = group.explode(group_name[0:2])
-        matrix = np.nan_to_num(
-            group.pivot(
-                values=group_name[1],
-                columns=pattern)
-            .to_numpy()
-            .astype(float))
-
-        return [i*(np.sum(weight)/population)
-                for i in matrix_analysis(matrix, weights=weight,
-                                         **kwargs)[0:2]]
-
-    results = list(grouped_A.apply(group_analysis))
-    return np.nansum(results, axis=0)
-
-
 def matrix_analysis(matrix, weights=None,
-                    phi="soft", beta=1,
+                    phi="soft", beta=1, full=False,
                     grad_success=False, cat_pattern=False):
     """Given an overabundance matrix and a function, computes the probability of
     each individual pattern and the accuracy for each lexeme.
 
     Arguments:
         matrix (:class:`numpy.array`): A matrix of 0 and 1.
+        weights: TODO
         phi (str): One of the following distributions: `norm` (normalized),\
         `soft` (softmax), `uni` (bare uniform).
         beta (float): The value of beta when using `softmax`.
+        full (bool): whether to return all mesures or only accuracy and entropy. Defaults to False.
         cat_pattern (bool): whether to build pattern frequencies on categorical information or not. Defaults to False.
         grad_success (bool): whether to consider success as a scalar (between 0-1) or not. Defaults to False.
 
@@ -166,8 +112,10 @@ def matrix_analysis(matrix, weights=None,
     # If weights sum to zero, all forms are defective and can be skipped.
     # If weights is None, then it won't be used by np.average, so nothing to do.
     if np.sum(weights) == 0:
-        return 0, 0, None, None
-
+        if full:
+            return 0, 0, None, None, 0
+        else:
+            return 0, 0
     if cat_pattern or not grad_success:
         bool_matrix = np.array(matrix, dtype=bool)
 
@@ -194,5 +142,7 @@ def matrix_analysis(matrix, weights=None,
     # Compute average probability of success on this subclass
     # There can be some weighting, if available.
     accuracy = np.average(row_accuracy, weights=weights)
-
-    return accuracy, entropy, row_accuracy, phi_pat
+    if full:
+        return accuracy, entropy, row_accuracy, phi_pat, pat_freq
+    else:
+        return accuracy, entropy
