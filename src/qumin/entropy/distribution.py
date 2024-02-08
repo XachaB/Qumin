@@ -292,7 +292,7 @@ class PatternDistribution(object):
 
         self._register_entropy(n, entropies, effectifs)
 
-    def entropy_matrix_OA(self, silent=False, **kwargs):
+    def entropy_matrix_OA(self, silent=False, weighting='normal', **kwargs):
         r"""Creates a :class:`pandas:pandas.DataFrame`
         with unary entropies, and one with counts of lexemes.
 
@@ -319,17 +319,61 @@ class PatternDistribution(object):
             As opposed to :func:`entropy_matrix`, this function allows overabundant forms.
 
         Todo:
-            Merge with :func:`entropy_matrix`.
+            Merge with :func:`entropy_matrix` ?
         """
 
         if not silent:
             log.info("Computing c1 → c2 entropies")
 
-        # For faster access
+        if self.weights:
+            log.info('Reading frequency data')
+            weights = self.weights.get_relative_freq(group_on=['lexeme', 'cell'])
+
+        patterns_dic, weights_dic = self._patterns_to_long(weights)
+
+        classes = self.classes
+        rows = list(self.paradigms.columns)
+
+        entropies = pd.DataFrame(index=rows, columns=rows)
+        accuracies = pd.DataFrame(index=rows, columns=rows)
+        effectifs = pd.DataFrame(index=rows, columns=rows)
+
+        def _pair_entropy(a, b, selector, **kwargs):
+            """Produce an entropy analysis for a pair of columns
+            """
+            known_ab = self.add_features(classes[a][b])
+            col_weights = weights.loc[pd.IndexSlice[:, a, :]]
+            A, B = self._prepare_OA_data(pd.concat([patterns_dic[a][b], weights_dic[a][b+"_w"]], axis=1),
+                                         known_ab, subset=selector, weights=col_weights,
+                                         weighting=weighting)
+            _ = cond_entropy_OA(A, B, subset=selector, weights=col_weights, **kwargs)
+            entropies.at[a, b] = _[1]
+            accuracies.at[a, b] = _[0]
+            effectifs.at[a, b] = sum(selector)
+
+        for a, b in self.patterns.columns:
+            selector = self.hasforms[a] & self.hasforms[b]
+            if selector[selector].size != 0:
+                _pair_entropy(a, b, selector, **kwargs)
+                _pair_entropy(b, a, selector, **kwargs)
+
+        self._register_entropy(1, entropies, effectifs, accuracies=accuracies)
+
+    def _patterns_to_long(self, weights=None):
+        """This function is used to handle overabundant computations.
+        It's main aim is to identify to which form (and thus frequency)
+        each pattern corresponds. Indeed, this information is lost in
+        the patterns file.
+
+        Here, we rebuild the missing information by unpacking
+        forms with the same method as in find_patterns.
+        Final data is in long format. Since alignment is lost, we use a dict.
+        """
+
         patterns = self.patterns
+        col_names = set(self.paradigms.columns)
         patterns_dic = {}
         weights_dic = {}
-        col_names = set(self.paradigms.columns)
 
         # For each cell, we have a DF, where the index is composed
         # of (lexeme, wordform) pairs, the columns correspond to
@@ -338,14 +382,10 @@ class PatternDistribution(object):
         for cell in self.paradigms.columns:
             _ = self.paradigms[cell].explode()
             patterns_dic[cell] = pd.DataFrame(columns=list(col_names-{cell}),
-                                              index=[_.index,_])
+                                              index=[_.index, _])
             weights_dic[cell] = patterns_dic[cell].copy()
 
-        if self.weights:
-            log.info('Reading frequency data')
-            weights = self.weights.get_relative_freq(group_on=['lexeme', 'cell'])
-
-        def dispatch_patterns(row, a, b, reverse=False):
+        def _dispatch_patterns(row, a, b, reverse=False):
             """ This function reassigns the patterns to their forms.
             This information was lost during previous steps.
             This step is mandatory to compute source-cell overabundance
@@ -355,13 +395,7 @@ class PatternDistribution(object):
                 a (str) : first column name.
                 b (str) : second column name.
                 reverse (bool) : whether to compute for A->B of B->A. The function is not symmetric.
-
-            Note:
-                As opposed to :func:`entropy_matrix`, this function allows overabundant forms.
-
-            Todo:
-                Merge with :func:`entropy_matrix`."""
-
+            """
             lex = row.lexeme.iloc[0]
             if reverse:
                 forms = self.paradigms.at[lex, b], self.paradigms.at[lex, a]
@@ -394,7 +428,7 @@ class PatternDistribution(object):
             """This is used for reformating DFs"""
 
             z = patterns[(a, b)].reset_index().apply(
-                lambda x: dispatch_patterns(x, a, b, reverse=reverse),
+                lambda x: _dispatch_patterns(x, a, b, reverse=reverse),
                 axis=1).explode([0, 1, 2])
             z = z.reset_index().groupby(['index', 0], dropna=False).agg(
                 {1: lambda x: (';'.join(x),),
@@ -408,42 +442,47 @@ class PatternDistribution(object):
             patterns_dic[pred][out] = z[1]
             weights_dic[pred][out+"_w"] = z[2]
 
+        log.info('Formatting patterns')
         for a, b in tqdm(patterns.columns):
             _format_patterns(a, b)
             _format_patterns(a, b, reverse=True)
 
-        classes = self.classes
-        rows = list(self.paradigms.columns)
+        return patterns_dic, weights_dic
 
-        entropies = pd.DataFrame(index=rows, columns=rows)
-        accuracies = pd.DataFrame(index=rows, columns=rows)
-        effectifs = pd.DataFrame(index=rows, columns=rows)
+    def _prepare_OA_data(self, A, B, subset=None, weights=None, weighting='normal'):
+        """This function is used to prepare the data for overabundance analysis.
+        More specifically, it checks if the arguments are right and it
+        reorganizes the input DataFrames accordingly.
+        """
+        if weights is None and weighting in ['frequency', 'frequency_extended']:
+            raise ValueError('Frequency computation required but no weights were provided.')
+        elif weights is not None and weighting == 'normal':
+            raise ValueError("Normal computation doesn't require any weights.")
 
-        for a, b in patterns.columns:
-            selector = self.hasforms[a] & self.hasforms[b]
-            if selector[selector].size != 0:
-                known_ab = self.add_features(classes[a][b])
-                known_ba = self.add_features(classes[b][a])
-                weights_a = weights.loc[pd.IndexSlice[:, a, :]]
-                weights_b = weights.loc[pd.IndexSlice[:, b, :]]
+        def get_weights(A):
+            """Provides weights for the source cell.
+            Only if frequency_extended was selected.
 
-                _ = cond_entropy_OA(pd.concat([patterns_dic[a][b], weights_dic[a][b+"_w"]], axis=1),
-                                    known_ab, subset=selector, weights=weights_a,
-                                    **kwargs)
+            Todo:
+                Remove this function and use the frequency API
+            """
+            if weighting == 'frequency_extended':
+                return A.apply(lambda x: weights.loc[
+                    (x.name[0], str(x.name[1]).strip(' ')),
+                    'result'], axis=1)
+            else:
+                w = A.index.to_frame()
+                w.rename_axis(['lex', 'a'], inplace=True)
+                c = w.value_counts('lex')
+                return w['lexeme'].apply(lambda x: 1/c[x])
 
-                entropies.at[a, b] = _[1]
-                accuracies.at[a, b] = _[0]
+        iname = A.index.names[0]
 
-                _ = cond_entropy_OA(pd.concat([patterns_dic[b][a], weights_dic[b][a+"_w"]], axis=1),
-                                    known_ba, subset=selector, weights=weights_b,
-                                    **kwargs)
+        A = A[subset[A.index.get_level_values(iname)].values].copy()
+        B = B[subset[B.index.get_level_values(iname)].values]
+        A['w'] = get_weights(A)
 
-                entropies.at[b, a] = _[1]
-                accuracies.at[b, a] = _[0]
-
-                effectifs.at[a, b] = sum(selector)
-                effectifs.at[b, a] = sum(selector)
-        self._register_entropy(1, entropies, effectifs, accuracies=accuracies)
+        return A, B
 
     def one_pred_distrib_log_OA(self, sanity_check=False, detailed=False):
         r"""Print a log of the probability distribution for

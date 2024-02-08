@@ -108,34 +108,6 @@ def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwarg
     # A : patterns that can in fact be applied to each form
     # B : patterns that are potentially applicable to each form
 
-    if weights is None and weighting in ['frequency', 'frequency_extended']:
-        raise ValueError('Frequency computation required but no weights were provided.')
-    elif weights is not None and weighting == 'normal':
-        raise ValueError("Normal computation doesn't require any weights.")
-
-    def get_weights(A):
-        """Provides weights for the source cell.
-        Only if frequency_extended was selected.
-
-        Todo:
-            Remove this function and use the frequency API
-        """
-        if weighting == 'frequency_extended':
-            return A.apply(lambda x: weights.loc[
-                (x.name[0], str(x.name[1]).strip(' ')),
-                'result'], axis=1)
-        else:
-            w = A.index.to_frame()
-            w.rename_axis(['lex', 'a'], inplace=True)
-            c = w.value_counts('lex')
-            return w['lexeme'].apply(lambda x: 1/c[x])
-
-    iname = A.index.names[0]
-
-    A = A[subset[A.index.get_level_values(iname)].values].copy()
-    B = B[subset[B.index.get_level_values(iname)].values]
-    A['w'] = get_weights(A)
-
     grouped_A = A.groupby(B, sort=False)
     population = subset.shape[0]
     results = []
