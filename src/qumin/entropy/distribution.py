@@ -63,7 +63,7 @@ class PatternDistribution(object):
     """
 
     def __init__(self, paradigms, patterns, pat_dic, overabundant=False,
-                 features=None, frequencies=None):
+                 features=None, frequencies=None, paradigms_file_path=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -77,6 +77,8 @@ class PatternDistribution(object):
                 optional table of features
             weights:
                 optional frequency information
+        Todo:
+            Remove paradigms_file_path from arguments.
         """
         if not overabundant:
             # Keep the first form for each cell
@@ -85,7 +87,7 @@ class PatternDistribution(object):
             self.paradigms = paradigms
 
         if frequencies is not None:
-            self.weights = representations.frequencies.Weights(frequencies)
+            self.weights = representations.frequencies.Weights(frequencies, paradigms_file_path)
         else:
             self.weights = False
         self.pat_dict = pat_dic
@@ -333,13 +335,14 @@ class PatternDistribution(object):
         # of (lexeme, wordform) pairs, the columns correspond to
         # the remaining cells, and the values are the applicable rules
 
-        for cell in tqdm(self.paradigms.columns):
+        for cell in self.paradigms.columns:
             _ = self.paradigms[cell].explode()
             patterns_dic[cell] = pd.DataFrame(columns=list(col_names-{cell}),
                                               index=[_.index,_])
             weights_dic[cell] = patterns_dic[cell].copy()
 
         if self.weights:
+            log.info('Reading frequency data')
             weights = self.weights.get_relative_freq(group_on=['lexeme', 'cell'])
 
         def dispatch_patterns(row, a, b, reverse=False):

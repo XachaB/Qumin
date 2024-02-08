@@ -149,7 +149,8 @@ def main(args):
                                       pat_dic,
                                       overabundant=overabundant,
                                       features=features,
-                                      frequencies=frequencies)
+                                      frequencies=frequencies,
+                                      paradigms_file_path=paradigms_file_path)
 
     if onePred:
         computation = 'onePredEntropies'

@@ -30,7 +30,7 @@ class Weights(object):
             List of column names on which operation are performed. Usually lexeme, cell, form.
         """
 
-    def __init__(self, filename, filters={},
+    def __init__(self, filename, paradigms_file_path, filters={},
                  col_names=["lexeme", "cell", "form"], default_source=None):
         """Constructor for Weights.
 
@@ -54,6 +54,16 @@ class Weights(object):
         elif default_source is None:
             self.default_source = list(self.weight['source'].unique())[0]
             log.info(f"No default source provided for frequencies. Using {self.default_source}")
+
+        # The form_id should be replaced with phon_form values from the Paralex paradigms
+        paradigms = pd.read_csv(paradigms_file_path)
+        paradigms.set_index('form_id', inplace=True)
+
+        # TODO
+        # In a further version, this should be useless and only form_id should be used.
+        self.weight.set_index('form', inplace=True)
+        self.weight['form'] = paradigms.loc[self.weight.index]['phon_form']
+        self.weight.reset_index(inplace=True, names='form_id')
 
         self._filter_weights(filters, source=False, inplace=True)
 
