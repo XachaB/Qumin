@@ -431,15 +431,15 @@ class PatternDistribution(object):
                                     known_ab, subset=selector, weights=weights_a,
                                     **kwargs)
 
-                entropies.at[a, b] = _[0, 1]
-                accuracies.at[a, b] = _[0, 0]
+                entropies.at[a, b] = _[1]
+                accuracies.at[a, b] = _[0]
 
                 _ = cond_entropy_OA(pd.concat([patterns_dic[b][a], weights_dic[b][a+"_w"]], axis=1),
                                     known_ba, subset=selector, weights=weights_b,
                                     **kwargs)
 
-                entropies.at[b, a] = _[0, 1]
-                accuracies.at[b, a] = _[0, 0]
+                entropies.at[b, a] = _[1]
+                accuracies.at[b, a] = _[0]
 
                 effectifs.at[a, b] = sum(selector)
                 effectifs.at[b, a] = sum(selector)

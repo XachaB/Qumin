@@ -159,9 +159,7 @@ def cond_entropy_OA(A, B, subset=None, weights=None, weighting='normal', **kwarg
                                          **kwargs)[0:2]]
 
     results = list(grouped_A.apply(group_analysis))
-    sums = np.sum(np.matrix(results), axis=0)
-
-    return sums
+    return np.nansum(results, axis=0)
 
 
 def matrix_analysis(matrix, weights=None,
@@ -226,4 +224,3 @@ def matrix_analysis(matrix, weights=None,
     accuracy = np.average(row_accuracy, weights=weights)
 
     return accuracy, entropy, row_accuracy, phi_pat
-
