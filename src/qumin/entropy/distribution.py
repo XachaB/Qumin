@@ -10,11 +10,9 @@ import numpy as np
 from collections import Counter, defaultdict
 from prettytable import PrettyTable, ALL
 from itertools import combinations, product
-# TODO replace sklearn with some lighter solution
-from sklearn.feature_extraction.text import CountVectorizer
 
 from functools import reduce
-from . import cond_entropy, entropy, P, cond_entropy_OA, matrix_analysis
+from . import cond_entropy, entropy, P, matrix_analysis
 from .. import representations
 from tqdm import tqdm
 import logging
@@ -63,7 +61,7 @@ class PatternDistribution(object):
     """
 
     def __init__(self, paradigms, patterns, pat_dic, overabundant=False,
-                 features=None):
+                 features=None, frequencies=None, paradigms_file_path=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -75,20 +73,21 @@ class PatternDistribution(object):
                 dictionnary of pairs of cells to patterns
             features:
                 optional table of features
+            weights:
+                optional frequency information
+        Todo:
+            Remove paradigms_file_path from arguments.
         """
         if not overabundant:
             # Keep the first form for each cell
             self.paradigms = paradigms.map(lambda x: x[0] if x else x)
         else:
-            # Expand the paradigms
             self.paradigms = paradigms
-            # self.paradigms = dict()
-            # for cell in paradigms.columns:
-                # self.paradigms[cell] = paradigms[cell].explode()
-            # Is this necessary ?
-            # for c in paradigms.columns:
-                # self.paradigms = self.paradigms.explode(c)
 
+        if frequencies is not None:
+            self.weights = representations.frequencies.Weights(frequencies, paradigms_file_path)
+        else:
+            self.weights = False
         self.pat_dict = pat_dic
         self.patterns = patterns.map(lambda x: (str(x),))
         if features is not None:
@@ -182,7 +181,8 @@ class PatternDistribution(object):
                 self.accuracies[n] = accuracies
 
     def n_preds_entropy_matrix(self, n):
-        r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies, and one with counts of lexemes.
+        r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies,
+        and one with counts of lexemes.
 
         The result contains entropy :math:`H(c_{1}, ..., c_{n} \to c_{n+1} )`.
 
@@ -291,7 +291,7 @@ class PatternDistribution(object):
 
         self._register_entropy(n, entropies, effectifs)
 
-    def entropy_matrix_OA(self, silent=False, **kwargs):
+    def entropy_matrix_OA(self, debug=False, weighting='normal', **kwargs):
         r"""Creates a :class:`pandas:pandas.DataFrame`
         with unary entropies, and one with counts of lexemes.
 
@@ -318,47 +318,99 @@ class PatternDistribution(object):
             As opposed to :func:`entropy_matrix`, this function allows overabundant forms.
 
         Todo:
-            Merge with :func:`entropy_matrix`.
+            Merge with :func:`entropy_matrix` ?
         """
 
-        if not silent:
-            log.info("Computing c1 → c2 entropies")
+        log.info("Computing c1 → c2 entropies")
 
-        # For faster access
+        if self.weights:
+            log.info('Reading frequency data')
+            weights = self.weights.get_relative_freq(group_on=['lexeme', 'cell'])
+
+        patterns_dic, weights_dic = self._patterns_to_long(weights)
+
+        classes = self.classes
+        rows = list(self.paradigms.columns)
+
+        entropies = pd.DataFrame(index=rows, columns=rows)
+        accuracies = pd.DataFrame(index=rows, columns=rows)
+        effectifs = pd.DataFrame(index=rows, columns=rows)
+
+        def _pair_entropy(a, b, selector, **kwargs):
+            """Produce an entropy analysis for a pair of columns
+            """
+            known_ab = self.add_features(classes[a][b])
+            col_weights = weights.loc[pd.IndexSlice[:, a, :]]
+            A, B = self._prepare_OA_data(pd.concat([patterns_dic[a][b], weights_dic[a][b+"_w"]],
+                                                   axis=1),
+                                         known_ab, subset=selector, weights=col_weights,
+                                         weighting=weighting)
+            if debug:
+                self.cond_entropy_OA_log(A, B, subset=selector, **kwargs)
+            else:
+                _ = self.cond_entropy_OA(A, B, subset=selector, **kwargs)
+                entropies.at[a, b] = _[1]
+                accuracies.at[a, b] = _[0]
+                effectifs.at[a, b] = sum(selector)
+        if debug:
+            log.debug("Logging one predictor probabilities")
+            log.debug(" P(x → y) = P(x~y | Class(x))")
+        log.info('Going through each pair of columns')
+        for a, b in tqdm(self.patterns.columns):
+            if debug:
+                log.debug("# Distribution of {} → {}".format(a, b))
+            selector = self.hasforms[a] & self.hasforms[b]
+            if selector[selector].size != 0:
+                _pair_entropy(a, b, selector, **kwargs)
+                _pair_entropy(b, a, selector, **kwargs)
+
+        if not debug:
+            self._register_entropy(1, entropies, effectifs, accuracies=accuracies)
+
+    def _patterns_to_long(self, weights=None):
+        """This function is used to handle overabundant computations.
+        It's main aim is to identify to which form (and thus frequency)
+        each pattern corresponds. Indeed, this information is lost in
+        the patterns file.
+
+        Here, we rebuild the missing information by unpacking
+        forms with the same method as in find_patterns.
+        Final data is in long format. Since alignment is lost, we use a dict.
+        """
+
         patterns = self.patterns
-        patterns_dic = {}
         col_names = set(self.paradigms.columns)
+        patterns_dic = {}
+        weights_dic = {}
 
         # For each cell, we have a DF, where the index is composed
         # of (lexeme, wordform) pairs, the columns correspond to
         # the remaining cells, and the values are the applicable rules
 
-        for cell in tqdm(self.paradigms.columns):
+        for cell in self.paradigms.columns:
             _ = self.paradigms[cell].explode()
             patterns_dic[cell] = pd.DataFrame(columns=list(col_names-{cell}),
                                               index=[_.index, _])
+            weights_dic[cell] = patterns_dic[cell].copy()
 
-        def dispatch_patterns(row, a, b, reverse=False):
+        def _dispatch_patterns(row, a, b, reverse=False):
             """ This function reassigns the patterns to their forms.
-            This step is necessary to compute source-cell overabundance
+            This information was lost during previous steps.
+            This step is mandatory to compute source-cell overabundance
 
             Arguments:
                 row (:class:`pandas:pandas.Series`) : a row of the patterns table
                 a (str) : first column name.
                 b (str) : second column name.
-                reverse (bool) : whether to compute for A->B of B->A. The function is not symmetric.
-
-            Note:
-                As opposed to :func:`entropy_matrix`, this function allows overabundant forms.
-
-            Todo:
-                Merge with :func:`entropy_matrix`."""
-
+                reverse (bool) : whether to compute for A->B of B->A. The function is not symmetric
+            """
             lex = row.lexeme.iloc[0]
             if reverse:
                 forms = self.paradigms.at[lex, b], self.paradigms.at[lex, a]
+                outname = a
             else:
                 forms = self.paradigms.at[lex, a], self.paradigms.at[lex, b]
+                outname = b
 
             nullset = {''}
             if forms != (nullset, nullset):
@@ -372,57 +424,92 @@ class PatternDistribution(object):
                     pairs = [(x, '') for x in forms[0]]
                     lpatterns = ['' for i in forms[0]]
                 else:
-                    pairs = product(*forms)
+                    pairs = [(pred, out) for pred, out in product(*forms)]
                     lpatterns = row[(a, b)][0].split(";")
+                if self.weights:
+                    pat_weights = [weights.loc[lex, outname, str(out).strip()]['result']
+                                   if out != '' else 0 for pred, out in pairs]
 
-            return pd.Series([[p for p, _ in pairs], lpatterns])
+            return pd.Series([[p for p, _ in pairs], lpatterns, pat_weights])
 
+        def _format_patterns(a, b, reverse=False):
+            """This is used for reformating DFs"""
+
+            z = patterns[(a, b)].reset_index().apply(
+                lambda x: _dispatch_patterns(x, a, b, reverse=reverse),
+                axis=1).explode([0, 1, 2])
+            z = z.reset_index().groupby(['index', 0], dropna=False).agg(
+                {1: lambda x: (';'.join(x),),
+                 2: lambda x: tuple(x)})
+
+            if reverse:
+                pred, out = b, a
+            else:
+                pred, out = a, b
+            z.index = patterns_dic[pred][out].index
+            patterns_dic[pred][out] = z[1]
+            weights_dic[pred][out+"_w"] = z[2]
+
+        log.info('Formatting patterns')
         for a, b in tqdm(patterns.columns):
-            z = patterns[(a, b)].reset_index().apply(
-                lambda x: dispatch_patterns(x, a, b), axis=1).explode([0,1])
-            z = z.reset_index().groupby(['index', 0], dropna=False).agg({1: lambda x: (';'.join(x),)})
-            z.index = patterns_dic[a][b].index
-            patterns_dic[a][b] = z
+            _format_patterns(a, b)
+            _format_patterns(a, b, reverse=True)
 
-            z = patterns[(a, b)].reset_index().apply(
-                lambda x: dispatch_patterns(x, a, b, reverse=True), axis=1).explode([0,1])
-            z = z.reset_index().groupby(['index', 0], dropna=False).agg({1: lambda x: (';'.join(x),)})
-            z.index = patterns_dic[b][a].index
-            patterns_dic[b][a] = z
+        return patterns_dic, weights_dic
 
-        classes = self.classes
-        rows = list(self.paradigms.columns)
+    def _prepare_OA_data(self, A, B, subset=None, weights=None, weighting='normal'):
+        """This function is used to prepare the data for overabundance analysis.
+        More specifically, it checks if the arguments are right and it
+        reorganizes the input DataFrames accordingly.
 
-        entropies = pd.DataFrame(index=rows, columns=rows)
-        accuracies = pd.DataFrame(index=rows, columns=rows)
-        effectifs = pd.DataFrame(index=rows, columns=rows)
+        Note:
+            There are three options for weighting. The following settings are available :
+                1. normal: Normalized weighting for overabundant patterns and source cells
+                2. frequency: Frequency based weighting for overabundant and source cells
+                3. frequency_extended: Consider the frequency of lexemes, both pattern prediction\
+                and averaging of entropy/accuracy.
 
-        for a, b in patterns.columns:
-            selector = self.hasforms[a] & self.hasforms[b]
-            if selector[selector].size != 0:
-                known_ab = self.add_features(classes[a][b])
-                known_ba = self.add_features(classes[b][a])
+            Note that in cases 2 and 3, forms with a frequency of 0\
+            will simply be skipped.
+        """
+        if weights is None and weighting in ['frequency', 'frequency_extended']:
+            raise ValueError('Frequency computation required but no frequencies were provided.')
+        elif weights is not None and weighting == 'normal':
+            raise ValueError("Normal computation doesn't require any frequencies.")
 
-                _ = cond_entropy_OA(patterns_dic[a][b],
-                                    known_ab, subset=selector,
-                                    **kwargs)
+        def get_weights(A):
+            """Provides weights for the source cell.
+            Only if frequency_extended was selected.
 
-                entropies.at[a, b] = _[0, 1]
-                accuracies.at[a, b] = _[0, 0]
+            Todo:
+                Remove this function and use the frequency API
+            """
+            if weighting == 'frequency':
+                return A.apply(lambda x: weights.loc[
+                    (x.name[0], str(x.name[1]).strip(' ')),
+                    'result'], axis=1)
+            elif weighting == 'frequency_extended':
+                return A.apply(lambda x: weights.loc[
+                    (x.name[0], str(x.name[1]).strip(' ')),
+                    'value'], axis=1)
+            else:
+                w = A.index.to_frame()
+                w.rename_axis(['lex', 'a'], inplace=True)
+                c = w.value_counts('lex')
+                return w['lexeme'].apply(lambda x: 1/c[x])
 
-                _ = cond_entropy_OA(patterns_dic[b][a],
-                                    known_ba, subset=selector,
-                                    **kwargs)
+        iname = A.index.names[0]
 
-                entropies.at[b, a] = _[0, 1]
-                accuracies.at[b, a] = _[0, 0]
+        A = A[subset[A.index.get_level_values(iname)].values].copy()
+        B = B[subset[B.index.get_level_values(iname)].values]
+        A['w'] = get_weights(A)
 
-                effectifs.at[a, b] = sum(selector)
-                effectifs.at[b, a] = sum(selector)
-        self._register_entropy(1, entropies, effectifs, accuracies=accuracies)
+        return A, B
 
-    def one_pred_distrib_log_OA(self, sanity_check=False, detailed=False):
-        r"""Print a log of the probability distribution for
+    def cond_entropy_OA_log(self, A, B, subset=None, weighting='normal',
+                            **kwargs):
+        """
+        Print a log of the probability distribution for
         one predictor with overabundance.
 
         Writes down the distributions
@@ -431,205 +518,134 @@ class PatternDistribution(object):
         names in :attr:`PatternDistribution.paradigms`.
         Also writes the entropy of the distributions.
 
+        Print a log of this probability distribution for one predictor with overabundance.
+
         Arguments:
-            sanity_check (bool): Default to False. Use a slower calculation to check that the results are exact.
-            detailed (bool): Default to False. Whether to display or not each individual lexeme in the log.
+            A (:class:`pandas.core.series.Series`): A series of data.
+            B (:class:`pandas.core.series.Series`): A series of data.
+            subset (Optional[iterable]): Only give the distribution for a subset of values.
+            weighting (str): which kind of approach should be used for weighting : normal, \
+            frequency, frequency_extended.
+            **kwargs: optional keyword arguments for :func:`matrix_analysis`.
+
+        Return:
+            list[float]: A list of metrics. First the global accuracy, then H(A|B).
 
         Note:
-            As opposed to :func:`one_pred_distrib_log`, this function allows
-            overabundant forms.
+            This uses exactly the same process as
+            :func:`cond_entropy_OA`. It only displays an additional log.)
 
         Todo:
             Enable sanity_check here also.
-            Handling of overabundant source forms (not correct yet)
         """
 
-        def count_with_examples(row, counter, examples, paradigms, cells):
-            c1, c2 = cells
-            lemma, pattern = row
-            example = "{}: {} → {}".format(lemma,
-                                           paradigms.at[lemma, c1],
-                                           paradigms.at[lemma, c2])
-            counter[pattern] += 1
-            examples[pattern] = example
+        # A : patterns that can in fact be applied to each form
+        # B : patterns that are potentially applicable to each form
 
-        log.debug("Printing log for P(c1 → c2).")
+        grouped_A = A.groupby(B, sort=False)
+        results = []
+        final_weights = []
 
-        if sanity_check:
-            rows = list(self.paradigms.columns)
-            entropies_check = pd.DataFrame(index=rows,
-                                            columns=rows)
-
-        log.debug("Logging one predictor probabilities")
-        log.debug(" P(x → y) = P(x~y | Class(x))")
-
-        patterns = self.patterns  # .map(lambda x: x[0])
-
-        for column in patterns:
-            for pred, out in [column, column[::-1]]:
-                selector = self.hasforms[pred] & self.hasforms[out]
-                log.debug("\n# Distribution of {}→{} \n".format(pred, out))
-                A = patterns[column][selector]
-                B = self.add_features(self.classes[(pred, out)][selector])
-                cond_events = A.groupby(B, sort=False)
-
-                # I disable the sanity_check, but I may add it later.
-                # if sanity_check:
-                #     classes_p = P(B)
-                #     cond_p = P(cond_events)
-
-                #     surprisal = cond_p.groupby(levlevelel=0).apply(entropy)
-                #     slow_ent = (classes_p * surprisal).sum()
-                #     entropies_check.at[pred, out] = slow_ent
-                #     print("Entropy from this distribution: ",
-                #           slow_ent)
-
-                #     if self.entropies[1] is not None:
-                #         ent = self.entropies[1].at[pred, out]
-                #         print("Entropy from the score_matrix: ", ent)
-
-                #         if not isclose(ent, slow_ent):
-                #             print("\n# Distribution of {}→{}".format(pred, out))
-                #             print("WARNING: Something is wrong"
-                #                   " in the entropy's calculation. "
-                #                   "Slow and fast methods produce "
-                #                   "different results: slow {}, fast {}"
-                #                   "".format(slow_ent, ent))
-
-                log.debug("Showing distributions for %s classes",
-                          len(cond_events))
-                population = selector.shape[0]
-                results = []
-                myform = "{:5.2f}"
-                myform2 = ".2f"
-                for i, (classe, members) in enumerate(
-                        sorted(cond_events,
+        # Each subclass (forms with similar properties) is analyzed.
+        for i, (classe, members) in enumerate(
+                        sorted(grouped_A,
                                key=lambda x: len(x[1]),
                                reverse=True)):
-                    phi = "soft"
-                    beta = 10
 
-                    # Tableau des patterns (init).
-                    ptable = pd.DataFrame(
-                        columns=["ID", "pattern",
-                                 "P(p) ["+phi+"," + "beta = "+str(beta)+"]"])
+            group_name = list(members.columns)
+            patterns = group_name[0]
+            members[patterns] = members[patterns].apply(lambda x: x[0].split(';'))
+            weight = np.array(list(members['w']))
+            group = members.explode(group_name[0:2])
+            pivoted = group.pivot(values=group_name[1],
+                                  columns=patterns)
+            pat2id = {p: n for n, p in enumerate(pivoted.columns)}
+            id2pat = list(pivoted.columns)
+            pivoted.rename(pat2id, inplace=True, axis=1)
 
-                    # On analyse chaque groupe
-                    cv = CountVectorizer(tokenizer=lambda x: x,
-                                         lowercase=False,
-                                         token_pattern=None)
+            matrix = np.nan_to_num(pivoted.to_numpy().astype(float))
 
-                    m = cv.fit_transform([_[0].split(";")
-                                          for _ in members]).todense()
+            res = matrix_analysis(matrix, weights=weight, full=True, **kwargs)
 
-                    # Compute P(success) for each row.
-                    (accuracy, entropy,
-                     row_proba, pat_proba) = matrix_analysis(m,
-                                                             phi=phi,
-                                                             beta=beta)
+            # Debuging
+            myform = "{:5.2f}"
+            log.debug("\n\n## Class n°%s (%s members).\n", str(i), str(len(members)))
+            log.debug("Accuracy : "+myform.format(res[0]))
+            log.debug("Entropy  : "+myform.format(res[1]))
+            ptable = pd.DataFrame(pd.Series(id2pat, name="pattern"))
 
-                    pat_proba_dic = defaultdict(
-                        int, {str(e): pat_proba[0, n] for n, e in enumerate(
-                                    cv.get_feature_names_out())})
-                    # This must return 0 if pattern not available
+            ptable.index.name = "ID"
+            ptable['frequency'] = res[4]
+            ptable['P(p)'] = res[3]
+            pivoted['weight'] = weight
+            pivoted['P(success)'] = res[2]
 
-                    m = np.concatenate((m, row_proba), axis=1)
-                    results.append([accuracy, entropy, members.shape[0]])
+            log.debug("Patterns:\n\n"+ptable.to_markdown(index=True)+"\n")
+            pivoted.reset_index(inplace=True)
+            log.debug("Members:\n\n"+pivoted.to_markdown(index=False)+"\n")
+            results.append(list(res[0:2])+[len(members)])
+            final_weights += [np.sum(weight)]
 
-                    # Log
-                    # Table of patterns
+        global_res = (np.array(final_weights)/sum(final_weights))@np.array(results)[:, 0:2]
 
-                    log.debug("\n## Class n°" + str(i) + " ("+str(len(members))
-                              + " members).\n")
-                    log.debug("Accuracy : "+myform.format(accuracy))
-                    log.debug("Entropy  : "+myform.format(entropy))
+        df_res = pd.DataFrame(results, columns=["Accuracy",
+                                                "Entropy",
+                                                "Size"])
+        df_res['Weights'] = final_weights
+        df_res.index.name = "Class"
+        log.debug("\n\n# Global results\n")
+        log.debug("Global accuracy is: %s", global_res[0])
+        log.debug("Global entropy  is: %s", global_res[1])
+        log.debug("\n"+df_res.to_markdown(
+                    floatfmt=[".3f", ".3f", ".3f", ".0f"])+"\n")
+        return None
 
-                    pat_dic = {}
-                    pat_list = []
-                    n = 0
-                    for n, my_pattern in enumerate(classe):
-                        id = "p"+str(n)
-                        s = str(my_pattern)
-                        pat_dic[s] = id
-                        pat_list.append(my_pattern)
-                        ptable.loc[len(ptable)] = [id, s, myform.format(pat_proba_dic[s])]
-                    ptable = ptable.set_index(["ID"])
+    def cond_entropy_OA(self, A, B, subset=None, weighting='normal', **kwargs):
+        """Writes down the distributions
+        :math:`P( patterns_{c1, c2} | classes_{c1, c2} )`
+        for all unordered combinations of two column
+        names in :attr:`PatternDistribution.paradigms`.
+        Also writes the entropy of the distributions,
+        and the accuracy of the computation.
 
-                    source_oa = False
-                    try:
-                        # Table of results
-                        titles = [pat_dic[str(e)]
-                                  for e in cv.get_feature_names_out()]
-                        titles_fmt = [".0f"]+[".0f" for e in
-                                              cv.get_feature_names_out()]
-                        titles_fmt.extend([myform2, myform2])
-                        titles.append("P(success)")
-                    except:
-                        # TODO brute-force handling of exceptions
-                        source_oa = True
+        Arguments:
+            A (:class:`pandas.core.series.Series`): A series of data.
+            B (:class:`pandas.core.series.Series`): A series of data.
+            subset (Optional[iterable]): Only give the distribution for a subset of values.
+            weighting (str): which kind of approach should be used for weighting : normal, \
+            frequency, frequency_extended.
+            **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
-                    log.debug("List of patterns for this class is:\n")
-                    log.debug("\n" + ptable.to_markdown())
+        Return:
+            list[float]: A list of metrics. First the global accuracy, then H(A|B).
+        """
+        population = A['w'].sum()
+        grouped_A = A.groupby(B, sort=False)
+        results = []
 
-                    # Only if source cell is not overabundant.
-                    if not source_oa:
-                        display = pd.DataFrame(m, columns=titles,
-                                               index=members.index)
+        # Each subclass (forms with similar properties) is analyzed.
+        def group_analysis(group):
+            group_name = list(group.columns)
+            pattern = group_name[0]
+            group[pattern] = group[pattern].apply(lambda x: x[0].split(';'))
+            weight = np.array(list(group['w']))
+            group = group.explode(group_name[0:2])
+            matrix = np.nan_to_num(
+                group.pivot(
+                    values=group_name[1],
+                    columns=pattern)
+                .to_numpy()
+                .astype(float))
 
-                        # Regrouper les sous-catégories similaires
-                        # et compter leur fréquence
-                        if not detailed:
-                            display_words = display.copy().drop_duplicates().reset_index()
-                            display = display.value_counts(normalize=True).reset_index()
-                            display = display.merge(display_words).set_index("lexeme")
-                        counter = Counter()
-                        examples = defaultdict()
-                        members.reset_index().apply(count_with_examples,
-                                                    args=(counter,
-                                                          examples,
-                                                          self.paradigms,
-                                                          (pred, out)),
-                                                    axis=1)
-                        # total = sum(list(counter.values()))
-                        if self.features is not None:
-                            log.debug("Features: %s", *classe[-self.features_len:])
-                            classe = classe[:-self.features_len]
+            return [i*(np.sum(weight)/population)
+                    for i in matrix_analysis(matrix, weights=weight, **kwargs)[0:2]]
 
-                        # for my_pattern in classe:
-                        #     if my_pattern in counter:
-                        #         row = (str(my_pattern),
-                        #                examples[my_pattern],
-                        #                counter[my_pattern],
-                        #                counter[my_pattern] / total)
-                            # else:
-                                # row = (str(my_pattern), "-", 0, 0)
-                            # table.add_row(row)
-
-                        log.debug("\nMatrix of available patterns:\n")
-                        log.debug("\n"+display.to_markdown(floatfmt=titles_fmt))
-                        log.debug("\n")
-                    else:
-                        # TODO Handle this differently
-                        log.debug("""\n!!! Source cell is overabundant !!!
-                            Skip.""")
-
-                results = np.matrix(results)
-                global_res = results[:, 2].T@(results[:, 0:2]/population)
-                df_res = pd.DataFrame(results, columns=["Accuracy",
-                                                        "Entropy",
-                                                        "Size"])
-                log.debug("\n# Global results")
-                log.debug("\nGlobal accuracy is: %s", global_res[0, 0])
-                log.debug("Global entropy  is: %s", global_res[0, 1])
-                log.debug("\n## Detailed overview of results\n")
-                log.debug(df_res.to_markdown(
-                    floatfmt=[".3f", ".3f", ".3f", ".0f"]))
-
-        if sanity_check:
-            return value_norm(entropies_check)
+        results = list(grouped_A.apply(group_analysis))
+        return np.nansum(results, axis=0)
 
     def entropy_matrix(self):
-        r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies, and one with counts of lexemes.
+        r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies,
+        and one with counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
 
@@ -1071,7 +1087,8 @@ class SplitPatternDistribution(PatternDistribution):
             return I
 
     def cond_bipartite_entropy(self, target=0, known=1):
-        """ Entropie conditionnelle entre les deux systèmes, H(c1->c2\|c1'->c2') ou H(c1'->c2'\|c1->c2)
+        """ Entropie conditionnelle entre les deux systèmes,
+        H(c1->c2\|c1'->c2') ou H(c1'->c2'\|c1->c2)
         """
         # For faster access
         log.info("Computing implicative H({}|{})".format(self.names[target],
