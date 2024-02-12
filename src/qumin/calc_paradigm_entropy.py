@@ -325,8 +325,8 @@ def H_command():
 
     parser.add_argument("--freq_method",
                         help="Kind of strategy to use for frequencies and weighting.",
-                        choices=['normal', 'frequency', 'frequency_extended'],
-                        default='normal')
+                        choices=['type', 'mixed', 'token'],
+                        default='type')
 
     parser.add_argument("--grad_success",
                         help="Whether to consider success as a categorical feature or not",

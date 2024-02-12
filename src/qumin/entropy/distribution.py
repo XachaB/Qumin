@@ -291,7 +291,7 @@ class PatternDistribution(object):
 
         self._register_entropy(n, entropies, effectifs)
 
-    def entropy_matrix_OA(self, debug=False, weighting='normal', **kwargs):
+    def entropy_matrix_OA(self, debug=False, weighting='type', **kwargs):
         r"""Creates a :class:`pandas:pandas.DataFrame`
         with unary entropies, and one with counts of lexemes.
 
@@ -457,16 +457,16 @@ class PatternDistribution(object):
 
         return patterns_dic, weights_dic
 
-    def _prepare_OA_data(self, A, B, subset=None, weights=None, weighting='normal'):
+    def _prepare_OA_data(self, A, B, subset=None, weights=None, weighting='type'):
         """This function is used to prepare the data for overabundance analysis.
         More specifically, it checks if the arguments are right and it
         reorganizes the input DataFrames accordingly.
 
         Note:
             There are three options for weighting. The following settings are available :
-                1. normal: Normalized weighting for overabundant patterns and source cells
-                2. frequency: Frequency based weighting for overabundant and source cells
-                3. frequency_extended: Consider the frequency of lexemes, both pattern prediction\
+                1. type: Normalized weighting for overabundant patterns and source cells
+                2. mixed: Frequency based weighting for overabundant and source cells
+                3. token: Consider the frequency of lexemes, both pattern prediction\
                 and averaging of entropy/accuracy.
 
             Note that in cases 2 and 3, forms with a frequency of 0\
@@ -474,7 +474,7 @@ class PatternDistribution(object):
         """
         if weights is None and weighting in ['frequency', 'frequency_extended']:
             raise ValueError('Frequency computation required but no frequencies were provided.')
-        elif weights is not None and weighting == 'normal':
+        elif weights is not None and weighting == 'type':
             raise ValueError("Normal computation doesn't require any frequencies.")
 
         def get_weights(A):
@@ -506,7 +506,7 @@ class PatternDistribution(object):
 
         return A, B
 
-    def cond_entropy_OA_log(self, A, B, subset=None, weighting='normal',
+    def cond_entropy_OA_log(self, A, B, subset=None, weighting='type',
                             **kwargs):
         """
         Print a log of the probability distribution for
@@ -524,8 +524,8 @@ class PatternDistribution(object):
             A (:class:`pandas.core.series.Series`): A series of data.
             B (:class:`pandas.core.series.Series`): A series of data.
             subset (Optional[iterable]): Only give the distribution for a subset of values.
-            weighting (str): which kind of approach should be used for weighting : normal, \
-            frequency, frequency_extended.
+            weighting (str): which kind of approach should be used for weighting : type, \
+            mixed, token.
             **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
         Return:
@@ -600,7 +600,7 @@ class PatternDistribution(object):
                     floatfmt=[".3f", ".3f", ".3f", ".0f"])+"\n")
         return None
 
-    def cond_entropy_OA(self, A, B, subset=None, weighting='normal', **kwargs):
+    def cond_entropy_OA(self, A, B, subset=None, weighting='type', **kwargs):
         """Writes down the distributions
         :math:`P( patterns_{c1, c2} | classes_{c1, c2} )`
         for all unordered combinations of two column
@@ -612,8 +612,8 @@ class PatternDistribution(object):
             A (:class:`pandas.core.series.Series`): A series of data.
             B (:class:`pandas.core.series.Series`): A series of data.
             subset (Optional[iterable]): Only give the distribution for a subset of values.
-            weighting (str): which kind of approach should be used for weighting : normal, \
-            frequency, frequency_extended.
+            weighting (str): which kind of approach should be used for weighting : type, \
+            mixed, token.
             **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
         Return:
