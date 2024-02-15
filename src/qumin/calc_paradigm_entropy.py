@@ -45,7 +45,7 @@ def main(args):
         preds.pop(0)
 
     cells = args.cells
-    if len(cells) == 1:
+    if cells and len(cells) == 1:
         raise argparse.ArgumentTypeError("You can't provide only one cell.")
 
     # Define logging levels (different depending on verbosity)
