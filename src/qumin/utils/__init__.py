@@ -102,6 +102,16 @@ class Metadata():
         return filename
 
 
+def check_pattern_cells(pat_dic, pat_table, cells):
+    temp_pat_dic = {k: v for k, v in pat_dic.items() if k[0] in cells and k[1] in cells}
+
+    todrop = [pat_col for pat_col in list(pat_table.columns)
+              if pat_col[0] not in cells or pat_col[1] not in cells]
+    if todrop:
+        pat_table.drop(columns=todrop, inplace=True)
+    return temp_pat_dic, pat_table
+
+
 def snif_separator(filename):
     with open(filename, "r", encoding="utf-8") as f:
         first_line = f.readline()

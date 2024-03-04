@@ -61,7 +61,7 @@ class PatternDistribution(object):
     """
 
     def __init__(self, paradigms, patterns, pat_dic, overabundant=False,
-                 features=None, frequencies=None, paradigms_file_path=None):
+                 features=None, frequencies_file_path=None, paradigms_file_path=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -84,10 +84,8 @@ class PatternDistribution(object):
         else:
             self.paradigms = paradigms
 
-        if frequencies is not None:
-            self.weights = representations.frequencies.Weights(frequencies, paradigms_file_path)
-        else:
-            self.weights = False
+        self.weights = representations.frequencies.Weights(frequencies_file_path, paradigms_file_path)
+
         self.pat_dict = pat_dic
         self.patterns = patterns.map(lambda x: (str(x),))
         if features is not None:
@@ -291,7 +289,7 @@ class PatternDistribution(object):
 
         self._register_entropy(n, entropies, effectifs)
 
-    def entropy_matrix_OA(self, debug=False, weighting='type', **kwargs):
+    def entropy_matrix_OA(self, debug=False, weighting='type', sanity_check=False, **kwargs):
         r"""Creates a :class:`pandas:pandas.DataFrame`
         with unary entropies, and one with counts of lexemes.
 
@@ -323,10 +321,8 @@ class PatternDistribution(object):
 
         log.info("Computing c1 → c2 entropies")
 
-        if self.weights:
-            log.info('Reading frequency data')
-            weights = self.weights.get_relative_freq(group_on=['lexeme', 'cell'])
-
+        log.info('Building frequency data')
+        weights = self.weights.get_relative_freq(group_on=['lexeme', 'cell'])
         patterns_dic, weights_dic = self._patterns_to_long(weights)
 
         classes = self.classes
@@ -345,6 +341,7 @@ class PatternDistribution(object):
                                                    axis=1),
                                          known_ab, subset=selector, weights=col_weights,
                                          weighting=weighting)
+
             if debug:
                 self.cond_entropy_OA_log(A, B, subset=selector, **kwargs)
             else:
@@ -405,12 +402,11 @@ class PatternDistribution(object):
                 reverse (bool) : whether to compute for A->B of B->A. The function is not symmetric
             """
             lex = row.lexeme.iloc[0]
-            if reverse:
-                forms = self.paradigms.at[lex, b], self.paradigms.at[lex, a]
-                outname = a
-            else:
-                forms = self.paradigms.at[lex, a], self.paradigms.at[lex, b]
-                outname = b
+            forms = self.paradigms.at[lex, a], self.paradigms.at[lex, b]
+
+            # This strategy avoids checking if reverse is True.
+            rev = 1-int(reverse)
+            outname = [a, b]
 
             nullset = {''}
             if forms != (nullset, nullset):
@@ -426,15 +422,14 @@ class PatternDistribution(object):
                 else:
                     pairs = [(pred, out) for pred, out in product(*forms)]
                     lpatterns = row[(a, b)][0].split(";")
-                if self.weights:
-                    pat_weights = [weights.loc[lex, outname, str(out).strip()]['result']
-                                   if out != '' else 0 for pred, out in pairs]
-
-            return pd.Series([[p for p, _ in pairs], lpatterns, pat_weights])
+                pat_weights = [weights.loc[lex, outname[rev], str(p[rev]).strip()]['result']
+                            if p[rev] != '' else 0 for p in pairs]
+            return pd.Series([[p[1-rev] for p in pairs], lpatterns, pat_weights])
 
         def _format_patterns(a, b, reverse=False):
             """This is used for reformating DFs"""
-
+            # breakpoint()
+            # haspattern = patterns[patterns[(a, b)] != ('None',)][(a, b)]
             z = patterns[(a, b)].reset_index().apply(
                 lambda x: _dispatch_patterns(x, a, b, reverse=reverse),
                 axis=1).explode([0, 1, 2])
@@ -446,6 +441,7 @@ class PatternDistribution(object):
                 pred, out = b, a
             else:
                 pred, out = a, b
+            # breakpoint()
             z.index = patterns_dic[pred][out].index
             patterns_dic[pred][out] = z[1]
             weights_dic[pred][out+"_w"] = z[2]
@@ -472,10 +468,13 @@ class PatternDistribution(object):
             Note that in cases 2 and 3, forms with a frequency of 0\
             will simply be skipped.
         """
-        if weights is None and weighting in ['frequency', 'frequency_extended']:
-            raise ValueError('Frequency computation required but no frequencies were provided.')
-        elif weights is not None and weighting == 'type':
-            raise ValueError("Normal computation doesn't require any frequencies.")
+        # TODO Move these to top of file / opening of weights
+        if weights is None and weighting in ['mixed', 'token']:
+            log.warning('Frequency computation required but no frequencies were provided.')
+            log.warning('Falling back to type weighting.')
+            weighting = 'type'
+        # elif weights is not None and weighting == 'type':
+        #     raise ValueError("Type weighting doesn't require any frequencies.")
 
         def get_weights(A):
             """Provides weights for the source cell.
@@ -484,24 +483,22 @@ class PatternDistribution(object):
             Todo:
                 Remove this function and use the frequency API
             """
-            if weighting == 'frequency':
-                return A.apply(lambda x: weights.loc[
-                    (x.name[0], str(x.name[1]).strip(' ')),
-                    'result'], axis=1)
-            elif weighting == 'frequency_extended':
+            if weighting == 'token':
                 return A.apply(lambda x: weights.loc[
                     (x.name[0], str(x.name[1]).strip(' ')),
                     'value'], axis=1)
-            else:
-                w = A.index.to_frame()
-                w.rename_axis(['lex', 'a'], inplace=True)
-                c = w.value_counts('lex')
-                return w['lexeme'].apply(lambda x: 1/c[x])
+            else:  # Last case is common to mixed and type options. In type option, weights should already be uniform.
+                return A.apply(lambda x: weights.loc[
+                    (x.name[0], str(x.name[1]).strip(' ')),
+                    'result'], axis=1)
 
+        # Subsetting dataframes
         iname = A.index.names[0]
-
         A = A[subset[A.index.get_level_values(iname)].values].copy()
         B = B[subset[B.index.get_level_values(iname)].values]
+
+        # Getting weights
+        # breakpoint()
         A['w'] = get_weights(A)
 
         return A, B
@@ -630,16 +627,19 @@ class PatternDistribution(object):
             group[pattern] = group[pattern].apply(lambda x: x[0].split(';'))
             weight = np.array(list(group['w']))
             group = group.explode(group_name[0:2])
-            matrix = np.nan_to_num(
-                group.pivot(
-                    values=group_name[1],
-                    columns=pattern)
-                .to_numpy()
-                .astype(float))
-
+            try:
+                matrix = np.nan_to_num(
+                    group.pivot(
+                        values=group_name[1],
+                        columns=pattern)
+                    .to_numpy()
+                    .astype(float))
+            except:
+                breakpoint()
             return [i*(np.sum(weight)/population)
                     for i in matrix_analysis(matrix, weights=weight, **kwargs)[0:2]]
 
+        breakpoint()
         results = list(grouped_A.apply(group_analysis))
         return np.nansum(results, axis=0)
 

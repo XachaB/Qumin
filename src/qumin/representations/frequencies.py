@@ -42,29 +42,41 @@ class Weights(object):
 
         self.col_names = col_names
         self.origin = filename
-        log.info('Reading frequency table')
-        self.weight = pd.read_csv(filename, index_col='freq_id', usecols=col_names+['value', 'freq_id'])
-        freq_col = self.weight.columns
-        if set(col_names) < set(freq_col) & set(col_names) != set():
-            raise ValueError(f"These column names don't appear in the frequency table: {set(col_names)-set(freq_col)}")
-
-        if "source" not in freq_col:
+        paradigms = pd.read_csv(paradigms_file_path, dtype={'freq_id': 'int64'})
+        if filename is None:
+            log.info('No frequencies provided. Building normalized weights for the provided columns...')
+            self.weight = paradigms
             self.weight['source'] = 'default'
+            self.weight.rename({'phon_form': 'form'}, axis=1, inplace=True)
+            self.weight['value'] = pd.NA
             self.default_source = 'default'
-        elif default_source is None:
-            self.default_source = list(self.weight['source'].unique())[0]
-            log.info(f"No default source provided for frequencies. Using {self.default_source}")
+            paradigms.set_index('form_id', inplace=True)
+        else:
+            log.info('Reading frequency table...')
+            self.weight = pd.read_csv(filename, index_col='freq_id', usecols=col_names+['value', 'freq_id'])
+            freq_col = self.weight.columns
+            if set(col_names) < set(freq_col) & set(col_names) != set():
+                raise ValueError(f"These column names don't appear in the frequency table: {set(col_names)-set(freq_col)}")
 
-        # The form_id should be replaced with phon_form values from the Paralex paradigms
-        paradigms = pd.read_csv(paradigms_file_path)
-        paradigms.set_index('form_id', inplace=True)
+            if "source" not in freq_col:
+                self.weight['source'] = 'default'
+                self.default_source = 'default'
+            elif default_source is None:
+                self.default_source = list(self.weight['source'].unique())[0]
+                log.info(f"No default source provided for frequencies. Using {self.default_source}")
 
-        # TODO
-        # In a further version, this should be useless and only form_id should be used.
-        self.weight.set_index('form', inplace=True)
-        self.weight['form'] = paradigms.loc[self.weight.index]['phon_form']
-        self.weight.reset_index(inplace=True, names='form_id')
+            # The form_id should be replaced with phon_form values from the Paralex paradigms
+            paradigms.set_index('form_id', inplace=True)
+            # TODO
+            # In a further version, this should be useless and only form_id should be used.
+            self.weight.set_index('form', inplace=True)
 
+            # Take the intersection of both indexes
+            ixs = self.weight.index.intersection(paradigms.index)
+            self.weight['form'] = paradigms.loc[ixs]['phon_form']
+            self.weight = self.weight[~self.weight['form'].isna()]
+            self.weight.reset_index(inplace=True, names='form_id')
+        self.weight.sort_index(inplace=True)
         self._filter_weights(filters, source=False, inplace=True)
 
     def get_freq(self, filters={}, group_on=None, source=None, mean=False):

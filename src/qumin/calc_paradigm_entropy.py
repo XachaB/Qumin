@@ -11,7 +11,7 @@ import argparse
 # Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
-from .utils import get_default_parser, Metadata
+from .utils import get_default_parser, Metadata, check_pattern_cells
 
 
 def main(args):
@@ -35,10 +35,10 @@ def main(args):
     patterns_file_path = args.patterns
     paradigms_file_path = args.paradigms
     features_file_name = args.segments
+    frequencies_file_path = args.freq
 
     preds = sorted(args.nPreds)
     overabundant = args.overabundant
-    frequencies = args.freq
 
     onePred = preds[0] == 1
     if onePred:
@@ -72,6 +72,10 @@ def main(args):
                                  col_names=args.cols_names, cells=cells)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
                                            overabundant=overabundant)
+
+    # Keep only useful columns
+    if cells:
+        pat_dic, pat_table = check_pattern_cells(pat_dic, pat_table, cells)
 
     if pat_table.shape[0] < paradigms.shape[0]:
         log.warning(
@@ -149,7 +153,7 @@ def main(args):
                                       pat_dic,
                                       overabundant=overabundant,
                                       features=features,
-                                      frequencies=frequencies,
+                                      frequencies_file_path=frequencies_file_path,
                                       paradigms_file_path=paradigms_file_path)
 
     if onePred:
