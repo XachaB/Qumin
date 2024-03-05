@@ -111,7 +111,7 @@ def matrix_analysis(matrix, weights=None,
 
     # If weights sum to zero, all forms are defective and can be skipped.
     # If weights is None, then it won't be used by np.average, so nothing to do.
-    if np.sum(weights) == 0:
+    if np.nansum(weights) == 0:
         if full:
             return 0, 0, None, None, 0
         else:
@@ -124,7 +124,7 @@ def matrix_analysis(matrix, weights=None,
         pat_freq = np.average(bool_matrix, axis=0, weights=weights)
         pat_freq = pat_freq/np.sum(pat_freq)
     else:
-        pat_freq = np.average(matrix, axis=0, weights=weights)
+        pat_freq = np.nansum(matrix*weights.reshape(-1, 1), axis=0)/np.nansum(weights)
 
     # Compute entropy based on patterns
     with np.errstate(divide='ignore'):
@@ -135,13 +135,13 @@ def matrix_analysis(matrix, weights=None,
 
     # Compute probability of success on each row
     if grad_success:
-        row_accuracy = matrix@phi_pat.T
+        row_accuracy = matrix@phi_pat
     else:
-        row_accuracy = bool_matrix@phi_pat.T
+        row_accuracy = bool_matrix@phi_pat
 
     # Compute average probability of success on this subclass
     # There can be some weighting, if available.
-    accuracy = np.average(row_accuracy, weights=weights)
+    accuracy = np.nansum(row_accuracy*weights)/np.nansum(weights)
     if full:
         return accuracy, entropy, row_accuracy, phi_pat, pat_freq
     else:

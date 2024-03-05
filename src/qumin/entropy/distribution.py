@@ -310,13 +310,13 @@ class PatternDistribution(object):
                 H( patterns_{c1, c2} | classes_{c1, c2} )
 
         Arguments:
+            debug (bool): Whether to enable debug logging. Default False.
+            weighting (str): Kind of wheighting to use  # TODO
+            sanity_check (bool): Whether to perform a slow computation check. Default False.
             **kwargs: optional keyword arguments.
 
         Note:
             As opposed to :func:`entropy_matrix`, this function allows overabundant forms.
-
-        Todo:
-            Merge with :func:`entropy_matrix` ?
         """
 
         log.info("Computing c1 → c2 entropies")
@@ -423,7 +423,7 @@ class PatternDistribution(object):
                     pairs = [(pred, out) for pred, out in product(*forms)]
                     lpatterns = row[(a, b)][0].split(";")
                 pat_weights = [weights.loc[lex, outname[rev], str(p[rev]).strip()]['result']
-                            if p[rev] != '' else 0 for p in pairs]
+                               if p[rev] != '' else 0 for p in pairs]
             return pd.Series([[p[1-rev] for p in pairs], lpatterns, pat_weights])
 
         def _format_patterns(a, b, reverse=False):
@@ -455,7 +455,7 @@ class PatternDistribution(object):
 
     def _prepare_OA_data(self, A, B, subset=None, weights=None, weighting='type'):
         """This function is used to prepare the data for overabundance analysis.
-        More specifically, it checks if the arguments are right and it
+        It checks if the arguments are right and it
         reorganizes the input DataFrames accordingly.
 
         Note:
@@ -478,7 +478,7 @@ class PatternDistribution(object):
 
         def get_weights(A):
             """Provides weights for the source cell.
-            Only if frequency_extended was selected.
+            Only if token was selected.
 
             Todo:
                 Remove this function and use the frequency API
@@ -581,7 +581,7 @@ class PatternDistribution(object):
             pivoted.reset_index(inplace=True)
             log.debug("Members:\n\n"+pivoted.to_markdown(index=False)+"\n")
             results.append(list(res[0:2])+[len(members)])
-            final_weights += [np.sum(weight)]
+            final_weights += [np.nansum(weight)]
 
         global_res = (np.array(final_weights)/sum(final_weights))@np.array(results)[:, 0:2]
 
@@ -616,7 +616,7 @@ class PatternDistribution(object):
         Return:
             list[float]: A list of metrics. First the global accuracy, then H(A|B).
         """
-        population = A['w'].sum()
+        population = A['w'].sum(skipna=True)
         grouped_A = A.groupby(B, sort=False)
         results = []
 
@@ -627,19 +627,16 @@ class PatternDistribution(object):
             group[pattern] = group[pattern].apply(lambda x: x[0].split(';'))
             weight = np.array(list(group['w']))
             group = group.explode(group_name[0:2])
-            try:
-                matrix = np.nan_to_num(
-                    group.pivot(
-                        values=group_name[1],
-                        columns=pattern)
-                    .to_numpy()
-                    .astype(float))
-            except:
-                breakpoint()
-            return [i*(np.sum(weight)/population)
+            matrix = np.nan_to_num(
+                group.pivot(
+                    values=group_name[1],
+                    columns=pattern)
+                .to_numpy()
+                .astype(float))
+
+            return [i*(np.nansum(weight)/population)
                     for i in matrix_analysis(matrix, weights=weight, **kwargs)[0:2]]
 
-        breakpoint()
         results = list(grouped_A.apply(group_analysis))
         return np.nansum(results, axis=0)
 

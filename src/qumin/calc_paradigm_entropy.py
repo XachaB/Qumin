@@ -206,7 +206,7 @@ def main(args):
                                                   weighting=args.freq_method,
                                                   grad_success=args.grad_success,
                                                   cat_pattern=args.cat_pattern,
-                                                  sanity_check=sanity_check)
+                                                  sanity_check=True)
             else:
                 check = distrib.one_pred_distrib_log(
                     sanity_check=sanity_check)
