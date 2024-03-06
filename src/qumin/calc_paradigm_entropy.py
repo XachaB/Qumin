@@ -160,7 +160,7 @@ def main(args):
 
         if args.stacked:
             entropies = entropies.stack()
-            entropies.index = [' -> '.join(index[::-1])
+            entropies.index = [' -> '.join(index)
                                for index in entropies.index.values]
         log.info("Writing to: {}\n\tand {}".format(ent_file, effectifs_file))
         entropies.to_csv(ent_file, sep="\t")
@@ -204,7 +204,7 @@ def main(args):
             print("\nWriting to: {}\n\tand {}".format(n_ent_file, effectifs_file))
             if args.stacked:
                 n_entropies = n_entropies.stack()
-                n_entropies.index = [' -> '.join(index[::-1])
+                n_entropies.index = [' -> '.join(index)
                                      for index in n_entropies.index.values]
             n_entropies.to_csv(n_ent_file, sep="\t")
             effectifs.to_csv(effectifs_file, sep="\t")
