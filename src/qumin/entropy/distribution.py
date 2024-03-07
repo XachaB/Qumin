@@ -355,6 +355,7 @@ class PatternDistribution(object):
                                          weighting=weighting)
 
             if debug:
+                log.debug("# Distribution of {} → {}".format(a, b))
                 self.cond_entropy_OA_log(A, B, subset=selector, **kwargs)
             else:
                 results_dict = self.cond_entropy_OA(A, B, subset=selector, **kwargs).unstack().to_dict()
@@ -367,8 +368,6 @@ class PatternDistribution(object):
             log.debug(" P(x → y) = P(x~y | Class(x))")
         log.info('Going through each pair of columns')
         for a, b in tqdm(self.patterns.columns):
-            if debug:
-                log.debug("# Distribution of {} → {}".format(a, b))
             selector = self.hasforms[a] & self.hasforms[b]
             if selector[selector].size != 0:
                 _pair_entropy(a, b, selector, **kwargs)
