@@ -126,12 +126,12 @@ def matrix_analysis(matrix, weights=None,
     else:
         pat_freq = np.nansum(matrix*weights.reshape(-1, 1), axis=0)/np.nansum(weights)
 
-    # Compute entropy based on patterns
-    with np.errstate(divide='ignore'):
-        entropy = -np.sum(np.log2(pat_freq, where=pat_freq != 0)*pat_freq) + 0
-
     # Apply transformation to pattern probabilities
     phi_pat = phi_dic[phi](pat_freq)
+
+    # Compute entropy based on patterns
+    with np.errstate(divide='ignore'):
+        entropy = -np.sum(np.log2(phi_pat, where=phi_pat != 0)*phi_pat) + 0
 
     # Compute probability of success on each row
     if grad_success:
