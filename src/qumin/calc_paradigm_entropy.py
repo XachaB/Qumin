@@ -182,11 +182,10 @@ def main(args):
 
         if args.stacked:
             entropies = entropies.stack()
+            entropies.index.names = ['predictor', 'predicted']
             accuracies = accuracies.stack()
-            entropies.index = [' -> '.join(index)
-                               for index in entropies.index.values]
-            accuracies.index = [' -> '.join(index)
-                                for index in accuracies.index.values]
+            accuracies.index.names = ['predictor', 'predicted']
+
         log.info("Writing to: \n\t{}\n\t{}\n\t{}".format(ent_file,
                                                          effectifs_file,
                                                          acc_file))
@@ -242,8 +241,9 @@ def main(args):
             log.info("\nWriting to: {}\n\tand {}".format(n_ent_file, effectifs_file))
             if args.stacked:
                 n_entropies = n_entropies.stack()
-                n_entropies.index = [' -> '.join(index)
-                                     for index in n_entropies.index.values]
+                n_entropies.index.names = ['predictor', 'predicted']
+                # n_entropies.index = [' -> '.join(index)
+                                     # for index in n_entropies.index.values]
             n_entropies.to_csv(n_ent_file, sep="\t")
             effectifs.to_csv(effectifs_file, sep="\t")
             mean = n_entropies.mean().mean()
