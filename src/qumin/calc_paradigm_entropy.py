@@ -82,6 +82,10 @@ def main(args):
             "It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
         paradigms = paradigms[(paradigms != "").all(axis=1)]
 
+    if len(args.beta) > 1 and args.debug:
+        raise NotImplementedError("Using debug mode is not possible "
+                                  "with multiple values of beta.")
+
     if args.debug and len(pat_table.columns) > 10:
         log.warning("Using debug mode is strongly "
                     "discouraged on large (>10 cells) datasets."
@@ -159,15 +163,9 @@ def main(args):
     if onePred:
         computation = 'onePredEntropies'
 
-        ent_file = md.register_file('entropies.csv',
-                                    {'computation': computation,
-                                     'content': 'entropies'})
-        acc_file = md.register_file('accuracies.csv',
-                                    {'computation': computation,
-                                     'content': 'accuracies'})
-        effectifs_file = md.register_file('effectifs.csv',
-                                          {'computation': computation,
-                                           'content': 'effectifs'})
+        results_file = md.register_file('results.csv',
+                                        {'computation': computation,
+                                         'content': 'metrics'})
         if overabundant:
             distrib.entropy_matrix_OA(beta=args.beta,
                                       weighting=args.freq_method,
@@ -176,27 +174,14 @@ def main(args):
         else:
             distrib.entropy_matrix()
 
-        accuracies = distrib.accuracies[1]
-        entropies = distrib.entropies[1]
-        effectifs = distrib.effectifs[1]
+        results = distrib.results
+        log.info("Writing to: {}".format(results_file))
+        results.to_csv(results_file, sep="\t")
 
-        if args.stacked:
-            entropies = entropies.stack()
-            entropies.index.names = ['predictor', 'predicted']
-            accuracies = accuracies.stack()
-            accuracies.index.names = ['predictor', 'predicted']
+        # mean
+        means = results.groupby(level='params').mean()[['accuracies', 'entropies']]
 
-        log.info("Writing to: \n\t{}\n\t{}\n\t{}".format(ent_file,
-                                                         effectifs_file,
-                                                         acc_file))
-        entropies.to_csv(ent_file, sep="\t")
-        effectifs.to_csv(effectifs_file, sep="\t")
-        accuracies.to_csv(acc_file, sep="\t")
-        # mean on df's index, then on Series' values.
-        mean_ent = entropies.mean().mean()
-        mean_acc = accuracies.mean().mean()
-        log.info("Mean H(c1 -> c2) = %s ", mean_ent)
-        log.info("Mean E(c1 -> c2) = %s ", mean_acc)
+        log.info("Means of H(c1 -> c2) and E(c1 -> c2) are :\n\n %s\n", means.to_markdown())
 
         if args.debug:
             if overabundant:
@@ -325,7 +310,9 @@ def H_command():
 
     parser.add_argument("--beta",
                         help="Value of beta to use for softmax.",
-                        type=int, default=10)
+                        nargs='+',
+                        type=int,
+                        default=10)
 
     parser.add_argument("--freq_method",
                         help="Kind of strategy to use for frequencies and weighting.",
@@ -354,13 +341,6 @@ def H_command():
                          help="Compute entropy for prediction "
                               "from with n predictors. Enter n",
                          nargs='+', type=int, default=[1])
-
-    options = parser.add_argument_group('Optional outputs for actions')
-
-    options.add_argument("-s", "--stacked",
-                         help="Export result as only one column.",
-                         action="store_true",
-                         default=False)
 
     args = parser.parse_args()
 

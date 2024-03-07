@@ -110,9 +110,10 @@ class PatternDistribution(object):
         log.debug("Classes:")
         log.debug(self.classes)
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
-        self.entropies = [None] * 10
-        self.accuracies = [None] * 10
-        self.effectifs = [None] * 10
+        self.results = pd.DataFrame(columns=['effectifs'],
+                                    index=pd.MultiIndex(levels=[[], [], []],
+                                                        codes=[[], [], []],
+                                                        names=['pred', 'out', 'params']))
 
     def add_features(self, series):
         return series + self.features[series.index]
@@ -177,6 +178,22 @@ class PatternDistribution(object):
             if accuracies is not None:
                 self.accuracies.append([None] * n)
                 self.accuracies[n] = accuracies
+
+    def _add_metric(self, pred, out, column, value, both=False):
+        if type(column) is not str and len(column) > 1:
+            index = (pred, out, column[1])
+            index_r = (out, pred, column[1])
+            metric = column[0]
+        else:
+            index = (pred, out)
+            index_r = (out, pred)
+            metric = column[1]
+
+        self.results.at[index, metric] = round(value, 10) + 0
+        if both:
+            self.results.at[index_r, metric] = round(value, 10) + 0
+
+        self.results.sort_index(inplace=True)
 
     def n_preds_entropy_matrix(self, n):
         r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies,
@@ -326,11 +343,6 @@ class PatternDistribution(object):
         patterns_dic, weights_dic = self._patterns_to_long(weights)
 
         classes = self.classes
-        rows = list(self.paradigms.columns)
-
-        entropies = pd.DataFrame(index=rows, columns=rows)
-        accuracies = pd.DataFrame(index=rows, columns=rows)
-        effectifs = pd.DataFrame(index=rows, columns=rows)
 
         def _pair_entropy(a, b, selector, **kwargs):
             """Produce an entropy analysis for a pair of columns
@@ -345,10 +357,11 @@ class PatternDistribution(object):
             if debug:
                 self.cond_entropy_OA_log(A, B, subset=selector, **kwargs)
             else:
-                _ = self.cond_entropy_OA(A, B, subset=selector, **kwargs)
-                entropies.at[a, b] = _[1]
-                accuracies.at[a, b] = _[0]
-                effectifs.at[a, b] = sum(selector)
+                results_dict = self.cond_entropy_OA(A, B, subset=selector, **kwargs).unstack().to_dict()
+                for param, result in results_dict.items():
+                    self._add_metric(a, b, param, result)
+                self._add_metric(a, b, 'effectifs', sum(selector))
+
         if debug:
             log.debug("Logging one predictor probabilities")
             log.debug(" P(x → y) = P(x~y | Class(x))")
@@ -360,9 +373,6 @@ class PatternDistribution(object):
             if selector[selector].size != 0:
                 _pair_entropy(a, b, selector, **kwargs)
                 _pair_entropy(b, a, selector, **kwargs)
-
-        if not debug:
-            self._register_entropy(1, entropies, effectifs, accuracies=accuracies)
 
     def _patterns_to_long(self, weights=None):
         """This function is used to handle overabundant computations.
@@ -597,7 +607,7 @@ class PatternDistribution(object):
                     floatfmt=[".3f", ".3f", ".3f", ".0f"])+"\n")
         return None
 
-    def cond_entropy_OA(self, A, B, subset=None, weighting='type', **kwargs):
+    def cond_entropy_OA(self, A, B, subset=None, weighting='type', beta=[1], **kwargs):
         """Writes down the distributions
         :math:`P( patterns_{c1, c2} | classes_{c1, c2} )`
         for all unordered combinations of two column
@@ -611,6 +621,7 @@ class PatternDistribution(object):
             subset (Optional[iterable]): Only give the distribution for a subset of values.
             weighting (str): which kind of approach should be used for weighting : type, \
             mixed, token.
+            beta (List(float): values of beta to test if using a softmax computation.
             **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
         Return:
@@ -618,27 +629,29 @@ class PatternDistribution(object):
         """
         population = A['w'].sum(skipna=True)
         grouped_A = A.groupby(B, sort=False)
-        results = []
+        results = pd.DataFrame(columns=['accuracies', 'entropies'])
 
-        # Each subclass (forms with similar properties) is analyzed.
-        def group_analysis(group):
-            group_name = list(group.columns)
-            pattern = group_name[0]
-            group[pattern] = group[pattern].apply(lambda x: x[0].split(';'))
-            weight = np.array(list(group['w']))
-            group = group.explode(group_name[0:2])
-            matrix = np.nan_to_num(
-                group.pivot(
-                    values=group_name[1],
-                    columns=pattern)
-                .to_numpy()
-                .astype(float))
+        for b in beta:
 
-            return [i*(np.nansum(weight)/population)
-                    for i in matrix_analysis(matrix, weights=weight, **kwargs)[0:2]]
+            # Each subclass (forms with similar properties) is analyzed.
+            def group_analysis(group):
+                group_name = list(group.columns)
+                pattern = group_name[0]
+                group[pattern] = group[pattern].apply(lambda x: x[0].split(';'))
+                weight = np.array(list(group['w']))
+                group = group.explode(group_name[0:2])
+                matrix = np.nan_to_num(
+                    group.pivot(
+                        values=group_name[1],
+                        columns=pattern)
+                    .to_numpy()
+                    .astype(float))
 
-        results = list(grouped_A.apply(group_analysis))
-        return np.nansum(results, axis=0)
+                return [i*(np.nansum(weight)/population)
+                        for i in matrix_analysis(matrix, weights=weight, beta=b, **kwargs)[0:2]]
+
+            results.loc[b] = np.nansum(list(grouped_A.apply(group_analysis)), axis=0)
+        return results
 
     def entropy_matrix(self):
         r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies,
@@ -669,25 +682,20 @@ class PatternDistribution(object):
         # For faster access
         patterns = self.patterns
         classes = self.classes
-        rows = list(self.paradigms.columns)
-
-        entropies = pd.DataFrame(index=rows, columns=rows)
-        effectifs = pd.DataFrame(index=rows, columns=rows)
 
         for a, b in patterns.columns:
             selector = self.hasforms[a] & self.hasforms[b]
             known_ab = self.add_features(classes[(a, b)])
             known_ba = self.add_features(classes[(b, a)])
 
-            entropies.at[a, b] = cond_entropy(patterns[(a, b)],
-                                              known_ab, subset=selector)
-            entropies.at[b, a] = cond_entropy(patterns[(a, b)],
-                                              known_ba, subset=selector)
+            self._add_metric(a, b, 'entropies',
+                             cond_entropy(patterns[(a, b)],
+                                          known_ab, subset=selector))
+            self._add_metric(b, a, 'entropies',
+                             cond_entropy(patterns[(a, b)],
+                                          known_ba, subset=selector))
 
-            effectifs.at[a, b] = sum(selector)
-            effectifs.at[b, a] = sum(selector)
-
-        self._register_entropy(1, entropies, effectifs)
+            self._add_metric(a, b, 'effectifs', sum(selector), both=True)
 
     def one_pred_distrib_log(self, sanity_check=False):
         """Print a log of the probability distribution for one predictor.
