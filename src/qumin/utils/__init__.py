@@ -96,6 +96,8 @@ class Metadata():
         Returns:
             (str): the full registered path"""
 
+        # Always check if the folder still exists.
+        Path(self.result_dir_absolute).mkdir(exist_ok=True, parents=True)
         filename = self.prefix + "_" + suffix
         self.output.append({'filename': filename,
                             'properties': properties})
