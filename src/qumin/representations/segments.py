@@ -6,14 +6,15 @@ This module addresses the modelisation of phonological segments.
 """
 
 import pandas as pd
-from ..lattice.lattice import table_to_context
 import numpy as np
 from itertools import combinations
-import re
-from ..utils import snif_separator
 import functools
-import logging
+import re
+from tqdm import tqdm
 
+from ..utils import snif_separator
+from ..lattice.lattice import table_to_context
+import logging
 log = logging.getLogger()
 
 inventory = None
@@ -346,7 +347,8 @@ class Inventory(object):
         else:
             shorthands = {}
 
-        for extent, intent in cls._lattice:
+        log.info('Building classes of segments...')
+        for extent, intent in tqdm(cls._lattice):
 
             if extent:
                 # Define the shortest expression of this segment if possible

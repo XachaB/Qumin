@@ -42,7 +42,7 @@ def main(args):
     features_file_name = args.segments
     data_file_path = args.paradigms
     cells = args.cells
-    if len(cells) == 1:
+    if cells and len(cells) == 1:
         raise argparse.ArgumentTypeError("You can't provide only one cell.")
 
     is_of_pattern_type = kind.startswith("patterns")
