@@ -111,9 +111,9 @@ def create_paradigms(data_file_name,
 
         duplicates = paradigms.duplicated(subset=['lexeme', 'cell', 'analysed_phon_form'], keep=False)
         if duplicates.any():
-            log.warning('Your paradigm file contains duplicates. They will be removed.\n %s',
-                        paradigms[duplicates])
-            paradigms.drop_duplicates(subset=['lexeme', 'cell', 'analysed_phon_form'], inplace=True)
+            raise ValueError('Your paradigm file contains duplicates.\n' +
+                             str(paradigms[duplicates]))
+
         paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
                                           columns=cell_col,
                                           aggfunc=aggregator)
@@ -139,8 +139,6 @@ def create_paradigms(data_file_name,
 
     if not defective:
         paradigms.dropna(axis=0, inplace=True)
-
-    log.debug(paradigms)
 
     if cols:
         cols.append(lexemes)
