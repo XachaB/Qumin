@@ -109,6 +109,11 @@ def create_paradigms(data_file_name,
                 log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
                 paradigms = paradigms[(paradigms[cell_col].isin(cells))]
 
+        duplicates = paradigms.duplicated(subset=['lexeme', 'cell', 'analysed_phon_form'], keep=False)
+        if duplicates.any():
+            log.warning('Your paradigm file contains duplicates. They will be removed.\n %s',
+                        paradigms[duplicates])
+            paradigms.drop_duplicates(subset=['lexeme', 'cell', 'analysed_phon_form'], inplace=True)
         paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
                                           columns=cell_col,
                                           aggfunc=aggregator)
