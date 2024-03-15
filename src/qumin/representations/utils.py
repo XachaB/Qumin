@@ -109,7 +109,7 @@ def create_paradigms(data_file_name,
                 log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
                 paradigms = paradigms[(paradigms[cell_col].isin(cells))]
 
-        duplicates = paradigms.duplicated(subset=['lexeme', 'cell', 'analysed_phon_form'], keep=False)
+        duplicates = paradigms.duplicated(subset=['lexeme', 'cell', 'phon_form'], keep=False)
         if duplicates.any():
             raise ValueError('Your paradigm file contains duplicates.\n' +
                              str(paradigms[duplicates]))
