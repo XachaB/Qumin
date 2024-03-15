@@ -312,7 +312,7 @@ def H_command():
                         help="Value of beta to use for softmax.",
                         nargs='+',
                         type=int,
-                        default=10)
+                        default=[5])
 
     parser.add_argument("--freq_method",
                         help="Kind of strategy to use for frequencies and weighting.",
