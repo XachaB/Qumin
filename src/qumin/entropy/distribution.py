@@ -187,7 +187,7 @@ class PatternDistribution(object):
         else:
             index = (pred, out)
             index_r = (out, pred)
-            metric = column[1]
+            metric = column
 
         self.results.at[index, metric] = round(value, 10) + 0
         if both:
@@ -437,7 +437,7 @@ class PatternDistribution(object):
 
         def _format_patterns(a, b, reverse=False):
             """This is used for reformating DFs"""
-            # breakpoint()
+
             # haspattern = patterns[patterns[(a, b)] != ('None',)][(a, b)]
             z = patterns[(a, b)].reset_index().apply(
                 lambda x: _dispatch_patterns(x, a, b, reverse=reverse),
@@ -450,7 +450,7 @@ class PatternDistribution(object):
                 pred, out = b, a
             else:
                 pred, out = a, b
-            # breakpoint()
+
             z.index = patterns_dic[pred][out].index
             patterns_dic[pred][out] = z[1]
             weights_dic[pred][out+"_w"] = z[2]
