@@ -178,7 +178,6 @@ def main(args):
         log.info("Writing to: {}".format(results_file))
         results.to_csv(results_file, sep="\t")
 
-        # mean
         means = results.groupby(level='params').mean()[['accuracies', 'entropies']]
 
         log.info("Means of H(c1 -> c2) and E(c1 -> c2) are :\n\n %s\n", means.to_markdown())
@@ -227,8 +226,6 @@ def main(args):
             if args.stacked:
                 n_entropies = n_entropies.stack()
                 n_entropies.index.names = ['predictor', 'predicted']
-                # n_entropies.index = [' -> '.join(index)
-                                     # for index in n_entropies.index.values]
             n_entropies.to_csv(n_ent_file, sep="\t")
             effectifs.to_csv(effectifs_file, sep="\t")
             mean = n_entropies.mean().mean()
