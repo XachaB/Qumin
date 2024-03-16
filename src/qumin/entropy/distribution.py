@@ -110,7 +110,9 @@ class PatternDistribution(object):
         log.debug("Classes:")
         log.debug(self.classes)
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
-        self.results = pd.DataFrame(columns=['effectifs'],
+        self.results = pd.DataFrame(columns=pd.MultiIndex(levels=[[], []],
+                                                          codes=[[], []],
+                                                          names=['type', 'name']),
                                     index=pd.MultiIndex(levels=[[], [], []],
                                                         codes=[[], [], []],
                                                         names=['pred', 'out', 'params']))
@@ -189,9 +191,9 @@ class PatternDistribution(object):
             index_r = (out, pred)
             metric = column
 
-        self.results.at[index, metric] = round(value, 10) + 0
+        self.results.at[index, ('metrics', metric)] = round(value, 10) + 0
         if both:
-            self.results.at[index_r, metric] = round(value, 10) + 0
+            self.results.at[index_r, ('metrics', metric)] = round(value, 10) + 0
 
         self.results.sort_index(inplace=True)
 

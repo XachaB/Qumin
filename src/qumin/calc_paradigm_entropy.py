@@ -178,7 +178,7 @@ def main(args):
         log.info("Writing to: {}".format(results_file))
         results.to_csv(results_file, sep="\t")
 
-        means = results.groupby(level='params').mean()[['accuracies', 'entropies']]
+        means = results.groupby(level='params').mean()['metrics'][['accuracies', 'entropies']]
 
         log.info("Means of H(c1 -> c2) and E(c1 -> c2) are :\n\n %s\n", means.to_markdown())
 
