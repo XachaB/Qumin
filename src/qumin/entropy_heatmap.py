@@ -121,7 +121,9 @@ def entropy_heatmap(results, md, cmap_name="vlag",
     # Setting labels
     cg.tick_params(axis='x', labelbottom=False, labeltop=True,
                    bottom=False, top=True,
-                   labelrotation=90)
+                   labelrotation=0)
+    cg.tick_params(axis='y',
+                   labelrotation=0)
     cg.set_ylabels('Predictor')
     cg.set_xlabels('Target')
     cg.set_titles(row_template='{row_var} is {row_name}', col_template='{col_name}')
@@ -131,7 +133,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
     # The last value is the width
     cbar_ax = cg.fig.add_axes([0.09, -0.06, 0.84, 0.04])
     cbar = cg.fig.colorbar(cm.ScalarMappable(norm=None, cmap=plt.get_cmap(cmap_name)),
-                           cax=cbar_ax,#cg.fig.axes,
+                           cax=cbar_ax,
                            drawedges=False,
                            orientation='horizontal'
                            )
