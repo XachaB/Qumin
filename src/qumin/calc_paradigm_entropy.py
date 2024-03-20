@@ -61,6 +61,11 @@ def main(args):
     log = logging.getLogger()
     log.info(args)
 
+    if args.freq is None and args.token:
+        log.warning('Frequency computation required but no frequencies were provided.')
+        log.warning('Falling back to type frequencies.')
+        args.token = False
+
     # Initialize the class of segments.
     segments.Inventory.initialize(features_file_name)
 
@@ -168,7 +173,7 @@ def main(args):
                                          'content': 'metrics'})
         if overabundant:
             distrib.entropy_matrix_OA(beta=args.beta,
-                                      weighting=args.freq_method,
+                                      token=args.token,
                                       grad_success=args.grad_success,
                                       cat_pattern=args.cat_pattern)
         else:
@@ -186,7 +191,7 @@ def main(args):
             if overabundant:
                 check = distrib.entropy_matrix_OA(debug=True,
                                                   beta=args.beta,
-                                                  weighting=args.freq_method,
+                                                  token=args.token,
                                                   grad_success=args.grad_success,
                                                   cat_pattern=args.cat_pattern,
                                                   sanity_check=True)
@@ -270,7 +275,7 @@ def H_command():
                         default=None)
 
     parser.add_argument('--freq',
-                        help="Frequencies to use for weighting at all steps",
+                        help="Frequencies to use for weighting.",
                         type=str,
                         default=None)
 
@@ -311,10 +316,9 @@ def H_command():
                         type=int,
                         default=[5])
 
-    parser.add_argument("--freq_method",
-                        help="Kind of strategy to use for frequencies and weighting.",
-                        choices=['type', 'mixed', 'token'],
-                        default='type')
+    parser.add_argument("--token",
+                        help="Whether to use token frequencies instead of type frequencies.",
+                        action="store_true", default=False)
 
     parser.add_argument("--grad_success",
                         help="Whether to consider success as a categorical feature or not",

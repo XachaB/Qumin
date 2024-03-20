@@ -308,7 +308,7 @@ class PatternDistribution(object):
 
         self._register_entropy(n, entropies, effectifs)
 
-    def entropy_matrix_OA(self, debug=False, weighting='type', sanity_check=False, **kwargs):
+    def entropy_matrix_OA(self, debug=False, token=False, sanity_check=False, **kwargs):
         r"""Creates a :class:`pandas:pandas.DataFrame`
         with unary entropies, and one with counts of lexemes.
 
@@ -330,7 +330,7 @@ class PatternDistribution(object):
 
         Arguments:
             debug (bool): Whether to enable debug logging. Default False.
-            weighting (str): Kind of wheighting to use  # TODO
+            token (bool): Whether to use token frequencies instead of type frequencies. Default False.
             sanity_check (bool): Whether to perform a slow computation check. Default False.
             **kwargs: optional keyword arguments.
 
@@ -354,7 +354,7 @@ class PatternDistribution(object):
             A, B = self._prepare_OA_data(pd.concat([patterns_dic[a][b], weights_dic[a][b+"_w"]],
                                                    axis=1),
                                          known_ab, subset=selector, weights=col_weights,
-                                         weighting=weighting)
+                                         token=token)
 
             if debug:
                 log.debug("# Distribution of {} → {}".format(a, b))
@@ -464,28 +464,21 @@ class PatternDistribution(object):
 
         return patterns_dic, weights_dic
 
-    def _prepare_OA_data(self, A, B, subset=None, weights=None, weighting='type'):
+    def _prepare_OA_data(self, A, B, subset=None, weights=None, token=False):
         """This function is used to prepare the data for overabundance analysis.
         It checks if the arguments are right and it
         reorganizes the input DataFrames accordingly.
 
         Note:
             There are three options for weighting. The following settings are available :
-                1. type: Normalized weighting for overabundant patterns and source cells
-                2. mixed: Frequency based weighting for overabundant and source cells
-                3. token: Consider the frequency of lexemes, both pattern prediction\
+                1. type without frequencies: Normalized weighting for overabundant patterns and source cells
+                2. type with frequencies: Frequencies are used for overabundant and source cells ratios.
+                3. token: Consider the frequency of lexemes, both for pattern prediction\
                 and averaging of entropy/accuracy.
 
             Note that in cases 2 and 3, forms with a frequency of 0\
             will simply be skipped.
         """
-        # TODO Move these to top of file / opening of weights
-        if weights is None and weighting in ['mixed', 'token']:
-            log.warning('Frequency computation required but no frequencies were provided.')
-            log.warning('Falling back to type weighting.')
-            weighting = 'type'
-        # elif weights is not None and weighting == 'type':
-        #     raise ValueError("Type weighting doesn't require any frequencies.")
 
         def get_weights(A):
             """Provides weights for the source cell.
@@ -494,7 +487,7 @@ class PatternDistribution(object):
             Todo:
                 Remove this function and use the frequency API
             """
-            if weighting == 'token':
+            if token:
                 return A.apply(lambda x: weights.loc[
                     (x.name[0], str(x.name[1]).strip(' ')),
                     'value'], axis=1)
@@ -514,7 +507,7 @@ class PatternDistribution(object):
 
         return A, B
 
-    def cond_entropy_OA_log(self, A, B, subset=None, weighting='type',
+    def cond_entropy_OA_log(self, A, B, subset=None, token=False,
                             **kwargs):
         """
         Print a log of the probability distribution for
@@ -532,8 +525,7 @@ class PatternDistribution(object):
             A (:class:`pandas.core.series.Series`): A series of data.
             B (:class:`pandas.core.series.Series`): A series of data.
             subset (Optional[iterable]): Only give the distribution for a subset of values.
-            weighting (str): which kind of approach should be used for weighting : type, \
-            mixed, token.
+            token (bool): Whether to use token frequencies instead of type frequencies. Default False.
             **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
         Return:
@@ -608,7 +600,7 @@ class PatternDistribution(object):
                     floatfmt=[".3f", ".3f", ".3f", ".0f"])+"\n")
         return None
 
-    def cond_entropy_OA(self, A, B, subset=None, weighting='type', beta=[1], **kwargs):
+    def cond_entropy_OA(self, A, B, subset=None, token=False, beta=[1], **kwargs):
         """Writes down the distributions
         :math:`P( patterns_{c1, c2} | classes_{c1, c2} )`
         for all unordered combinations of two column
@@ -620,8 +612,7 @@ class PatternDistribution(object):
             A (:class:`pandas.core.series.Series`): A series of data.
             B (:class:`pandas.core.series.Series`): A series of data.
             subset (Optional[iterable]): Only give the distribution for a subset of values.
-            weighting (str): which kind of approach should be used for weighting : type, \
-            mixed, token.
+            token (bool): Whether to use token frequencies instead of type frequencies. Default False.
             beta (List(float): values of beta to test if using a softmax computation.
             **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
