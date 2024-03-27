@@ -172,7 +172,8 @@ def main(args):
                                         {'computation': computation,
                                          'content': 'metrics'})
         if overabundant:
-            distrib.entropy_matrix_OA(beta=args.beta,
+            distrib.entropy_matrix_OA(function=args.function,
+                                      beta=args.beta,
                                       token=args.token,
                                       grad_success=args.grad_success,
                                       cat_pattern=args.cat_pattern)
@@ -190,6 +191,7 @@ def main(args):
         if args.debug:
             if overabundant:
                 check = distrib.entropy_matrix_OA(debug=True,
+                                                  function=args.function,
                                                   beta=args.beta,
                                                   token=args.token,
                                                   grad_success=args.grad_success,
@@ -309,6 +311,12 @@ def H_command():
     parser.add_argument("-o", "--overabundant",
                         help="Use overabundant entries for computation.",
                         action="store_true", default=False)
+
+    parser.add_argument("--function",
+                        help="Function to use to infer pattern"
+                             "probabilities from pattern"
+                             "frequencies",
+                        type=str, default="norm")
 
     parser.add_argument("--beta",
                         help="Value of beta to use for softmax.",

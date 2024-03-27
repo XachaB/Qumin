@@ -332,7 +332,8 @@ class PatternDistribution(object):
             debug (bool): Whether to enable debug logging. Default False.
             token (bool): Whether to use token frequencies instead of type frequencies. Default False.
             sanity_check (bool): Whether to perform a slow computation check. Default False.
-            **kwargs: optional keyword arguments.
+            **kwargs: optional keyword arguments passed to :func:`cond_entropy_OA`
+                or :func:`cond_entropy_OA_log`
 
         Note:
             As opposed to :func:`entropy_matrix`, this function allows overabundant forms.

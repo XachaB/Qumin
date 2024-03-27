@@ -175,7 +175,8 @@ def main(args):
                     cmap_name=args.cmap,
                     feat_order=feat_order,
                     short_name=args.dense,
-                    beta=args.beta)
+                    beta=args.beta,
+                    annot=args.annot)
     md.save_metadata()
 
 
@@ -209,6 +210,10 @@ def heatmap_command():
 
     parser.add_argument("-d", "--dense",
                         help="Will use initials instead of full labels",
+                        action="store_true", default=False)
+
+    parser.add_argument("-a", "--annot",
+                        help="Display values on the heatmap.",
                         action="store_true", default=False)
 
     options = parser.add_argument_group('Options')

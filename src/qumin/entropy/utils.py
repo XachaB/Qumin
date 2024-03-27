@@ -79,7 +79,7 @@ def cross_entropy(A, B):
 
 
 def matrix_analysis(matrix, weights=None,
-                    phi="soft", beta=1, full=False,
+                    function="norm", beta=1, full=False,
                     grad_success=False, cat_pattern=False):
     """Given an overabundance matrix and a function, computes the probability of
     each individual pattern and the accuracy for each lexeme.
@@ -87,7 +87,7 @@ def matrix_analysis(matrix, weights=None,
     Arguments:
         matrix (:class:`numpy.array`): A matrix of 0 and 1.
         weights: TODO
-        phi (str): One of the following distributions: `norm` (normalized),\
+        function (str): One of the following distributions: `norm` (normalized),\
         `soft` (softmax), `uni` (bare uniform).
         beta (float): The value of beta when using `softmax`.
         full (bool): whether to return all mesures or only accuracy and entropy. Defaults to False.
@@ -97,14 +97,14 @@ def matrix_analysis(matrix, weights=None,
     Return:
         A list of objects: The global accuracy (`float`), the global entropy, H(A|B) (`float`),\
         the probability of each row to be correctly predicted (matrix), \
-        the probability of each pattern to be applied (list[float]).
+        the probability of each pattern to be applied (List[float]).
 
     Todo:
         Add a grid search option ?
     """
 
     phi_dic = {
-        "norm": lambda x: x/np.sum(x, axis=1),
+        "norm": lambda x: x/np.sum(x),
         "soft": lambda x: sp.softmax(x*beta),
         "uni": lambda x: np.matrix([[1/x.shape[1]]*x.shape[1]]),
     }
@@ -127,7 +127,10 @@ def matrix_analysis(matrix, weights=None,
         pat_freq = np.nansum(matrix*weights.reshape(-1, 1), axis=0)/np.nansum(weights)
 
     # Apply transformation to pattern probabilities
-    phi_pat = phi_dic[phi](pat_freq)
+    if np.sum(pat_freq) == 0:  # We should find a general strategy to handle such cases
+        phi_pat = pat_freq
+    else:
+        phi_pat = phi_dic[function](pat_freq)
 
     # Compute entropy based on patterns
     with np.errstate(divide='ignore'):
