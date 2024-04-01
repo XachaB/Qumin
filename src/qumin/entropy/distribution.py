@@ -558,8 +558,11 @@ class PatternDistribution(object):
             members[patterns] = members[patterns].apply(lambda x: x[0].split(';'))
             weight = np.array(list(members['w']))
             group = members.explode(group_name[0:2])
+            group = group.reset_index().groupby(
+                    list(group.index.names) + [patterns]).sum().reset_index(level=patterns)
             pivoted = group.pivot(values=group_name[1],
                                   columns=patterns)
+
             pat2id = {p: n for n, p in enumerate(pivoted.columns)}
             id2pat = list(pivoted.columns)
             pivoted.rename(pat2id, inplace=True, axis=1)
@@ -629,14 +632,22 @@ class PatternDistribution(object):
             # Each subclass (forms with similar properties) is analyzed.
             def group_analysis(group):
                 group_name = list(group.columns)
-                pattern = group_name[0]
-                group[pattern] = group[pattern].apply(lambda x: x[0].split(';'))
+                patterns = group_name[0]
+                group[patterns] = group[patterns].apply(lambda x: x[0].split(';'))
                 weight = np.array(list(group['w']))
                 group = group.explode(group_name[0:2])
+
+                # This step is mandatory because in some very rare cases, the same pattern can
+                # apply several times to one form. We simply reduce this case, since it's marginal.
+                # Yet it could be interesting to find another solution.
+                group = group.reset_index().groupby(
+                    list(group.index.names) + [patterns]).sum().reset_index(level=patterns)
+
+                # We turn our results into a matrix where rows arepredictors and columns patterns.
                 matrix = np.nan_to_num(
                     group.pivot(
                         values=group_name[1],
-                        columns=pattern)
+                        columns=patterns)
                     .to_numpy()
                     .astype(float))
 
