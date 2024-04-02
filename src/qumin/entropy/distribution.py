@@ -187,13 +187,13 @@ class PatternDistribution(object):
             index_r = (out, pred, column[1])
             metric = column[0]
         else:
-            index = (pred, out)
-            index_r = (out, pred)
+            index = (pred, out, '')
+            index_r = (out, pred, '')
             metric = column
 
-        self.results.at[index, ('metrics', metric)] = round(value, 10) + 0
+        self.results.loc[index, ('metrics', metric)] = round(value, 10) + 0
         if both:
-            self.results.at[index_r, ('metrics', metric)] = round(value, 10) + 0
+            self.results.loc[index_r, ('metrics', metric)] = round(value, 10) + 0
 
         self.results.sort_index(inplace=True)
 
