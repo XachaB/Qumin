@@ -63,7 +63,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         df = df[df['beta'].isin(beta)]
 
     df.replace(['entropies', 'accuracies'],
-               ['Utterance probability', 'Successful utterance probability'],
+               ['Utterance probability (H)', 'Successful utterance probability (E)'],
                inplace=True)
 
     def draw_heatmap(*args, **kwargs):
@@ -71,7 +71,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         annot = kwargs.pop('annot')
 
         # For entropies, we want a reversed colormap.
-        if 'Utterance probability' in list(df['metric']):
+        if 'Utterance probability (H)' in list(df['metric']):
             reverse = ''
         else:
             reverse = '_r'
@@ -119,9 +119,11 @@ def entropy_heatmap(results, md, cmap_name="vlag",
     cg.map_dataframe(draw_heatmap, 'pred', 'out', 'values', annot=annot, square=True, cbar=False)
 
     # Setting labels
+    rotate = 0 if short_name else 50
+
     cg.tick_params(axis='x', labelbottom=False, labeltop=True,
                    bottom=False, top=True,
-                   labelrotation=0)
+                   labelrotation=rotate)
     cg.tick_params(axis='y',
                    labelrotation=0)
     cg.set_ylabels('Predictor')
