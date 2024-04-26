@@ -604,7 +604,7 @@ class PatternDistribution(object):
                     floatfmt=[".3f", ".3f", ".3f", ".0f"])+"\n")
         return None
 
-    def cond_entropy_OA(self, A, B, subset=None, token=False, beta=[1], **kwargs):
+    def cond_entropy_OA(self, A, B, subset=None, token=False, beta=[5], function="norm", **kwargs):
         """Writes down the distributions
         :math:`P( patterns_{c1, c2} | classes_{c1, c2} )`
         for all unordered combinations of two column
@@ -617,7 +617,7 @@ class PatternDistribution(object):
             B (:class:`pandas.core.series.Series`): A series of data.
             subset (Optional[iterable]): Only give the distribution for a subset of values.
             token (bool): Whether to use token frequencies instead of type frequencies. Default False.
-            beta (List(float): values of beta to test if using a softmax computation.
+            beta (List(float): values of beta to be tested when using a softmax computation.
             **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
         Return:
@@ -643,7 +643,7 @@ class PatternDistribution(object):
                 group = group.reset_index().groupby(
                     list(group.index.names) + [patterns]).sum().reset_index(level=patterns)
 
-                # We turn our results into a matrix where rows arepredictors and columns patterns.
+                # We turn our results into a matrix where rows are predictors and columns patterns.
                 matrix = np.nan_to_num(
                     group.pivot(
                         values=group_name[1],
@@ -652,9 +652,13 @@ class PatternDistribution(object):
                     .astype(float))
 
                 return [i*(np.nansum(weight)/population)
-                        for i in matrix_analysis(matrix, weights=weight, beta=b, **kwargs)[0:2]]
-
-            results.loc[b] = np.nansum(list(grouped_A.apply(group_analysis)), axis=0)
+                        for i in matrix_analysis(matrix, weights=weight, beta=b,
+                                                 function=function, **kwargs)[0:2]]
+            if function != "soft":
+                param = function
+            else:
+                param = function + ' - ' + str(b)
+            results.loc[param] = np.nansum(list(grouped_A.apply(group_analysis)), axis=0)
         return results
 
     def entropy_matrix(self):

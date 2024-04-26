@@ -52,6 +52,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         cmap_name (str): name of the cmap to use.
         short_name (bool): whether to use short cell names or not.
         annot (bool): whether to add an annotation overlay.
+        beta (List[int]): values of beta to plot
 
     """
 
@@ -115,7 +116,12 @@ def entropy_heatmap(results, md, cmap_name="vlag",
                     **kwargs)
 
     # Plotting the heatmap
-    cg = sns.FacetGrid(df, col='metric', row='beta', height=4, margin_titles=True)
+    # breakpoint()
+    if df['beta'].any():
+        cg = sns.FacetGrid(df, col='metric', row='beta', height=4, margin_titles=True)
+    else:
+        cg = sns.FacetGrid(df, col='metric', height=4, margin_titles=True)
+
     cg.map_dataframe(draw_heatmap, 'pred', 'out', 'values', annot=annot, square=True, cbar=False)
 
     # Setting labels
@@ -128,7 +134,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
                    labelrotation=0)
     cg.set_ylabels('Predictor')
     cg.set_xlabels('Target')
-    cg.set_titles(row_template='{row_var} is {row_name}', col_template='{col_name}')
+    cg.set_titles(row_template='{row_name}', col_template='{col_name}')
     cg.tight_layout()
 
     # We add a custom global colorbar
