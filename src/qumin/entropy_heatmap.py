@@ -64,7 +64,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         df = df[df['beta'].isin(beta)]
 
     df.replace(['entropies', 'accuracies'],
-               ['Utterance probability (H)', 'Successful utterance probability (E)'],
+               ['Naive PCFP, $H(X)$', 'Lexically conforming PCFP, $P(Y_1)$'],
                inplace=True)
 
     def draw_heatmap(*args, **kwargs):
@@ -72,7 +72,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         annot = kwargs.pop('annot')
 
         # For entropies, we want a reversed colormap.
-        if 'Utterance probability (H)' in list(df['metric']):
+        if 'Naive PCFP, $H(X)$' in list(df['metric']):
             reverse = ''
         else:
             reverse = '_r'
