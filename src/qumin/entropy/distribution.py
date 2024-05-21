@@ -357,6 +357,9 @@ class PatternDistribution(object):
                                          known_ab, subset=selector, weights=col_weights,
                                          token=token)
 
+            # If the target is overabundant but unattested, we need to set the weights to 0
+            A['w'] = A['w']*A[f'{list(A.columns)[0]}_w'].apply(sum)
+
             if debug:
                 log.debug("# Distribution of {} → {}".format(a, b))
                 self.cond_entropy_OA_log(A, B, subset=selector, **kwargs)
@@ -364,7 +367,10 @@ class PatternDistribution(object):
                 results_dict = self.cond_entropy_OA(A, B, subset=selector, **kwargs).unstack().to_dict()
                 for param, result in results_dict.items():
                     self._add_metric(a, b, param, result)
-                self._add_metric(a, b, 'effectifs', sum(selector))
+
+                # The size of the sample corresponds to the number of pairs of forms that have a
+                # weight for both predictor and target.
+                self._add_metric(a, b, 'effectifs', A['w'].sum())
 
         if debug:
             log.debug("Logging one predictor probabilities")
@@ -555,6 +561,7 @@ class PatternDistribution(object):
 
             group_name = list(members.columns)
             patterns = group_name[0]
+
             members[patterns] = members[patterns].apply(lambda x: x[0].split(';'))
             weight = np.array(list(members['w']))
             group = members.explode(group_name[0:2])
@@ -623,6 +630,7 @@ class PatternDistribution(object):
         Return:
             list[float]: A list of metrics. First the global accuracy, then H(A|B).
         """
+
         population = A['w'].sum(skipna=True)
         grouped_A = A.groupby(B, sort=False)
         results = pd.DataFrame(columns=['accuracies', 'entropies'])
