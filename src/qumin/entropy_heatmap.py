@@ -55,7 +55,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         beta (List[int]): values of beta to plot
 
     """
-
+    plt.rcParams['figure.constrained_layout.use'] = True
     log.info("Drawing")
     df = results['metrics'].stack()
     df = df.reset_index().rename({0: 'values', 'params': 'beta', 'name': 'metric'}, axis=1)
@@ -66,6 +66,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
     df.replace(['entropies', 'accuracies'],
                ['Naive PCFP, $H(X)$', 'Lexically conforming PCFP, $P(Y_1)$'],
                inplace=True)
+    height = round(len(df['pred'].unique())/2)
 
     def draw_heatmap(*args, **kwargs):
         df = kwargs.pop('data')
@@ -112,20 +113,21 @@ def entropy_heatmap(results, md, cmap_name="vlag",
                     mask=df_m,
                     cmap=plt.get_cmap(cmap_name+reverse),
                     fmt=".2f",
-                    linewidths=2,
+                    linewidths=1,
                     **kwargs)
 
     # Plotting the heatmap
     # breakpoint()
     if df['beta'].any():
-        cg = sns.FacetGrid(df, col='metric', row='beta', height=4, margin_titles=True)
+        cg = sns.FacetGrid(df, col='metric', row='beta', height=height, margin_titles=True)
     else:
-        cg = sns.FacetGrid(df, col='metric', height=4, margin_titles=True)
+        cg = sns.FacetGrid(df, col='metric', height=height, margin_titles=True)
 
     cg.map_dataframe(draw_heatmap, 'pred', 'out', 'values', annot=annot, square=True, cbar=False)
+    #  , annot_kws={'size': 5})
 
     # Setting labels
-    rotate = 0 if short_name else 50
+    rotate = 0 if short_name else 90
 
     cg.tick_params(axis='x', labelbottom=False, labeltop=True,
                    bottom=False, top=True,
@@ -135,7 +137,6 @@ def entropy_heatmap(results, md, cmap_name="vlag",
     cg.set_ylabels('Predictor')
     cg.set_xlabels('Target')
     cg.set_titles(row_template='{row_name}', col_template='{col_name}')
-    cg.tight_layout()
 
     # We add a custom global colorbar
     # The last value is the width
