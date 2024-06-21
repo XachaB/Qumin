@@ -20,22 +20,29 @@ log = logging.getLogger()
 def get_features_order(features_file, results, sort_order=False):
     """Returns an ordered list of the cells from a Paralex compliant
     cell file."""
-    log.info("Reading features")
-    features = pd.read_csv(features_file, index_col=0)
-    df = results.reset_index()
-    cells = set(df['pred'].to_list() + df['out'].to_list())
-    df_c = pd.DataFrame(index=list(cells))
-    for c in cells:
-        feat_order = {}
+    if features_file:
+        log.info("Reading features")
+        features = pd.read_csv(features_file, index_col=0)
+        df = results.reset_index()
+        cells = set(df['pred'].to_list() + df['out'].to_list())
+        df_c = pd.DataFrame(index=list(cells))
+        for c in cells:
+            feat_order = {}
 
-        for f in c.split('.'):
-            feat_order[features.loc[f, 'feature']] = features.loc[f, 'canonical_order']
-        for f, v in feat_order.items():
-            df_c.loc[c, f] = v
+            for f in c.split('.'):
+                feat_order[features.loc[f, 'feature']] = features.loc[f, 'canonical_order']
+            for f, v in feat_order.items():
+                df_c.loc[c, f] = v
 
-    if not sort_order:
-        sort_order = list(df_c.columns)
-    return df_c.sort_values(by=sort_order, axis=0).index.to_list()
+        if not sort_order:
+            sort_order = list(df_c.columns)
+        return df_c.sort_values(by=sort_order, axis=0).index.to_list()
+    else:
+        if sort_order:
+            return sort_order
+        else:
+            raise ValueError("""If no features are passed,
+    the --order argument should contain an ordered list of cells.""")
 
 
 def entropy_heatmap(results, md, cmap_name="vlag",
@@ -197,12 +204,12 @@ def heatmap_command():
                         help="results file, full path (csv or tsv)",
                         type=str)
 
-    parser.add_argument("features",
+    parser.add_argument("--features",
                         help="features file, full path (csv or tsv)",
                         type=str)
 
     parser.add_argument("--order",
-                        help="Priority list for sorting features",
+                        help="Priority list for sorting features or ordered list of all cells",
                         nargs='+',
                         type=str,
                         default=False)
