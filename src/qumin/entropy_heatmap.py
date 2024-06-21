@@ -45,7 +45,7 @@ def get_features_order(features_file, results, sort_order=False):
     the --order argument should contain an ordered list of cells.""")
 
 
-def entropy_heatmap(results, md, cmap_name="vlag",
+def entropy_heatmap(results, md, cmap_name=False,
                     feat_order=None, short_name=False, annot=False,
                     beta=False):
     """Make a FacetGrid heatmap of all metrics.
@@ -56,13 +56,18 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         md: MetaData handler
         feat_order (List[str]): an ordered list of each cell name.
             Used to sort the labels.
-        cmap_name (str): name of the cmap to use.
+        cmap_name (str): name of the cmap to use. Defaults to the following cubehelix
+            map: `sns.cubehelix_palette(start=2, rot=0.5, dark=0, light=1, as_cmap=True)`.
         short_name (bool): whether to use short cell names or not.
         annot (bool): whether to add an annotation overlay.
         beta (List[int]): values of beta to plot
 
     """
-    plt.rcParams['figure.constrained_layout.use'] = True
+
+    if not cmap_name:
+        cmap = sns.cubehelix_palette(start=2, rot=0.5, dark=0, light=1, as_cmap=True)
+    else:
+        cmap = plt.get_cmap(cmap_name)
     log.info("Drawing")
     df = results['metrics'].stack()
     df = df.reset_index().rename({0: 'values', 'params': 'beta', 'name': 'metric'}, axis=1)
@@ -71,7 +76,7 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         df = df[df['beta'].isin(beta)]
 
     df.replace(['entropies', 'accuracies'],
-               ['Naive PCFP, $H(X)$', 'Lexically conforming PCFP, $P(Y_1)$'],
+               ['Predictive diversity estimate, $H(X)$', 'Prediction reliability estimate, $P(Y_1)$'],
                inplace=True)
     height = round(len(df['pred'].unique())/2)
 
@@ -80,11 +85,10 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         annot = kwargs.pop('annot')
 
         # For entropies, we want a reversed colormap.
-        if 'Naive PCFP, $H(X)$' in list(df['metric']):
-            reverse = ''
+        if 'Predictive diversity estimate, $H(X)$' not in list(df['metric']):
+            hm_cmap = cmap.reversed()
         else:
-            reverse = '_r'
-
+            hm_cmap = cmap
         df.index.name = 'predictor'
         df.columns.name = 'target'
         df = df.pivot(index=args[0], columns=args[1], values=args[2])
@@ -118,17 +122,18 @@ def entropy_heatmap(results, md, cmap_name="vlag",
         sns.heatmap(df,
                     annot=annot,
                     mask=df_m,
-                    cmap=plt.get_cmap(cmap_name+reverse),
+                    cmap=hm_cmap,
                     fmt=".2f",
                     linewidths=1,
                     **kwargs)
 
     # Plotting the heatmap
-    # breakpoint()
-    if df['beta'].any():
+    if len(df['beta'].unique()) > 1:
         cg = sns.FacetGrid(df, col='metric', row='beta', height=height, margin_titles=True)
+        cg.set_titles(row_template='{row_name}', col_template='{col_name}')
     else:
         cg = sns.FacetGrid(df, col='metric', height=height, margin_titles=True)
+        cg.set_titles(row_template='', col_template='{col_name}')
 
     cg.map_dataframe(draw_heatmap, 'pred', 'out', 'values', annot=annot, square=True, cbar=False)
     #  , annot_kws={'size': 5})
@@ -143,12 +148,11 @@ def entropy_heatmap(results, md, cmap_name="vlag",
                    labelrotation=0)
     cg.set_ylabels('Predictor')
     cg.set_xlabels('Target')
-    cg.set_titles(row_template='{row_name}', col_template='{col_name}')
 
     # We add a custom global colorbar
     # The last value is the width
-    cbar_ax = cg.fig.add_axes([0.09, -0.06, 0.84, 0.04])
-    cbar = cg.fig.colorbar(cm.ScalarMappable(norm=None, cmap=plt.get_cmap(cmap_name)),
+    cbar_ax = cg.fig.add_axes([0.09, -0.04, 0.84, 0.04])
+    cbar = cg.fig.colorbar(cm.ScalarMappable(norm=None, cmap=cmap),
                            cax=cbar_ax,
                            drawedges=False,
                            orientation='horizontal'
@@ -161,7 +165,8 @@ def entropy_heatmap(results, md, cmap_name="vlag",
                             {"computation": "entropy_heatmap",
                              "content": "figure"})
     log.info("Saving file to: " + name)
-    cg.savefig(name, pad_inches=0)
+    cg.tight_layout()
+    cg.savefig(name, pad_inches=0.1)
 
 
 def main(args):
@@ -217,7 +222,7 @@ def heatmap_command():
     parser.add_argument("-c", "--cmap",
                         help="cmap name",
                         type=str,
-                        default="vlag")
+                        default=False)
 
     parser.add_argument("-e", "--exhaustive_labels",
                         help="by default, seaborn shows only some labels on the heatmap for readability."
