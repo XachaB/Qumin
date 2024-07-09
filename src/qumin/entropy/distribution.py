@@ -7,7 +7,6 @@ Encloses distribution of patterns on paradigms.
 
 import pandas as pd
 from collections import Counter, defaultdict
-from prettytable import PrettyTable, ALL
 from itertools import combinations
 
 from functools import reduce
@@ -380,9 +379,7 @@ class PatternDistribution(object):
                                                              reverse=True)):
                     headers = ("Pattern", "Example",
                                "Size", "P(Pattern|class)")
-                    table = PrettyTable(headers,
-                                        hrules=ALL)  # TODO: change to remove prettytable
-                    # table.set_style(PLAIN_COLUMNS)
+                    table = []
 
                     log.debug("\n## Class n°%s (%s members).", i, len(members))
                     counter = Counter()
@@ -408,9 +405,10 @@ class PatternDistribution(object):
                                    counter[my_pattern] / total)
                         else:
                             row = (str(my_pattern), "-", 0, 0)
-                        table.add_row(row)
+                        table.append(row)
 
-                    log.debug(table.get_string())
+                    log.debug("\n"+pd.DataFrame(table,
+                              columns=headers).to_markdown())
 
         if sanity_check:
             return value_norm(entropies_check)
@@ -610,8 +608,7 @@ class PatternDistribution(object):
                         sorted(cond_events, key=lambda x: len(x[1]), reverse=True)):
                     headers = ("Patterns", "Example",
                                "Size", "P(Pattern|class)")
-                    table = PrettyTable(headers, hrules=ALL)
-                    # table.set_style(PLAIN_COLUMNS)
+                    table = []
 
                     log.debug("\n## Class n°%s (%s members).", i, len(members))
                     counter = Counter()
@@ -628,9 +625,9 @@ class PatternDistribution(object):
                                examples[my_pattern],
                                counter[my_pattern],
                                counter[my_pattern] / total)
-                        table.add_row(row)
+                        table.append(row)
 
-                    log.debug(table.get_string())
+                    log.debug("\n"+pd.DataFrame(table, columns=headers).to_markdown())
 
         if sanity_check:
             return value_norm(entropies_check)
