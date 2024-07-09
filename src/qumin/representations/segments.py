@@ -267,9 +267,9 @@ class Inventory(object):
                               index_col=False, sep=sep or snif_separator(filename),
                               encoding="utf-8")
         shorten_feature_names(table)
-        sound_id = "sound_id"  # name in Paralex
-        if sound_id not in table.columns:  # backward compatibility
-            sound_id = "Seg."
+        sound_id = "sound_id"
+        if sound_id not in table.columns:
+            raise ValueError("Paralex sound tables must have a sound_id.")
 
         table[sound_id] = table[sound_id].astype(str)
         na_vals = {c: "-1" for c in table.columns}
@@ -599,8 +599,7 @@ def normalize(ipa, features):
             same_features_as_seg = (table == seg_features).all(axis=1)
         except ValueError:
             if seg_features.shape[0] > 1:
-                raise ValueError(
-                    "You have more than one segment definition for {}\n{}".format(segment,
+                raise ValueError("You have multiple definitions for {}\n{}".format(segment,
                                                                                   seg_features))
         return same_features_as_seg
 
@@ -618,7 +617,8 @@ def normalize(ipa, features):
 
 
 def shorten_feature_names(table):
-    if "Seg." in list(table.iloc[0]):
+    headers = list(table.iloc[0])
+    if "Seg." in headers or "sound_id" in headers:
         raise ValueError("Using a second row of headers is not supported anymore.")
     short_features_names = []
     for name in table.columns:
