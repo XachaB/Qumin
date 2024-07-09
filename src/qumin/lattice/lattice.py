@@ -365,6 +365,7 @@ class ICLattice(object):
             return {"color": colors[0], "zorder": custom_zorder(node)}
 
         params = dict(leavesfunc=leaves_label,
+                      nodefunc=lambda n: "",
                       edge_attributes=default_edge_attr,
                       point=point_function if point else None,
                       horizontal=False, square=False, layout="qumin",
