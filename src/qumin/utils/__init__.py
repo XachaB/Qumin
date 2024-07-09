@@ -9,7 +9,7 @@ import json
 import os
 from pathlib import Path
 from .. import __version__
-
+from frictionless import Package
 log = logging.getLogger()
 
 
@@ -59,6 +59,10 @@ class Metadata():
         self.result_dir_absolute.mkdir(exist_ok=True, parents=True)
         self.result_dir_absolute = str(self.result_dir_absolute)
 
+        if hasattr(args, "data"):
+            self.data_dir_relative = args.data.parent
+            self.dataset = Package(args.data)
+
         if relative:
             self.prefix = "{}/{}_{}".format(self.result_dir_relative,
                                             self.day, self.now)
@@ -70,12 +74,18 @@ class Metadata():
         self.arguments = args.__dict__
         self.output = []
 
+    def get_table_path(self, name):
+        return self.data_dir_relative / self.dataset.get_resource(name).path
     def save_metadata(self, path=None):
         """ Save the metadata as a JSON file.
 
         Arguments:
             path (str) : path to the metadata file.
             Defaults to prefx_metadata.json"""
+        def default_serializer(x):
+            if type(x) is Package:
+                return x.to_dict()
+            return str(x)
 
         if path is None:
             path = self.prefix + "_metadata.json"
@@ -84,7 +94,7 @@ class Metadata():
             log.info("Writing metadata to %s", path)
 
         with open(path, 'w', encoding='utf-8') as f:
-            json.dump(self.__dict__, f, ensure_ascii=False, indent=4)
+            json.dump(self.__dict__, f, ensure_ascii=False, indent=4, default=default_serializer)
 
     def register_file(self, suffix, properties=None):
         """ Register a file to save. Returns a normalized name.
@@ -167,7 +177,7 @@ class ArgumentDefaultsRawTextHelpFormatter(argparse.RawDescriptionHelpFormatter)
         return help
 
 
-def get_default_parser(usage, patterns=False, paradigms=True, multipar=False):
+def get_default_parser(usage, patterns=False):
     parser = argparse.ArgumentParser(description=usage,
                                      formatter_class=ArgumentDefaultsRawTextHelpFormatter)
 
@@ -177,26 +187,9 @@ def get_default_parser(usage, patterns=False, paradigms=True, multipar=False):
                                  " (csv separated by ‘, ’)",
                             type=str)
 
-    if paradigms and multipar:
-        parser.add_argument("paradigms",
-                            help="paradigm file, full path"
-                                 " (csv separated by ‘, ’)",
-                            nargs="+",
-                            type=str)
-    elif paradigms:
-        parser.add_argument("paradigms",
-                            help="paradigms file, full path"
-                                 " (csv separated by ‘, ’)",
-                            type=str)
-
-    parser.add_argument("segments",
-                        help="segments file, full path (csv or tsv)",
-                        type=str)
-
-    if paradigms:
-        parser.add_argument("-c", "--cols_names",
-                            help="In long form, specify the name of respectively the lexeme, cell and form columns.",
-                            nargs=3, type=str, default=["lexeme", "cell", "phon_form"])
+    parser.add_argument("data",
+                            help="path to paralex metadata `paralex-dataset.package.json`",
+                            type=Path)
 
     options = parser.add_argument_group('Options')
 

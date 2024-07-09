@@ -26,34 +26,29 @@ def unique_lexemes(series, file_type):
 
     if duplicated:
         raise ValueError(f"""There are {len(duplicated)} duplicates among lexemes.
-            Please check the {file_type} dataset.
+            Please check the {file_type} table.
             Duplicates are: {", ".join(duplicated)}""")
 
 
-def create_features(data_file_name):
+def create_features(md, feature_cols):
     """Read feature and preprocess to be coindexed with paradigms."""
-    features = pd.read_csv(data_file_name)
-    # First column has to be lexemes
-    lexemes = features.columns[0]
-    unique_lexemes(features[lexemes], "features")
-    features.set_index(lexemes, inplace=True)
+    features = pd.read_csv(md.get_table_path('lexemes'))
+    unique_lexemes(features["lexeme_id"], "lexemes")
+    features.set_index("lexeme_id", inplace=True)
     features.fillna(value="", inplace=True)
-    return features
+    return features.loc[:, feature_cols]
 
 
-def create_paradigms(data_file_name,
-                     cols=None, verbose=False, fillna=True,
+def create_paradigms(data_file_name, verbose=False, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
-                     col_names=("lexeme", "cell", "form"),
-                     cells=[]):
+                     cells=None):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
     Arguments:
         data_file_name (str): path to the paradigm csv file.
         All characters occuring in the paradigms except the first column
         should be inventoried in this class.
-        cols (list of str): a subset of columns to use from the paradigm file.
         verbose (bool): verbosity switch.
         merge_duplicates (bool): should identical columns be merged ?
         fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ? Otherwise they are filled with empty strings ("").
@@ -61,7 +56,6 @@ def create_paradigms(data_file_name,
         defective (bool): Defaults to False. Should I keep rows with defective forms ?
         overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
         merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
-        cols (tuple): names of the lexeme, cells and form columns (in this order).
         cells (List[str]): List of cell names to consider. Defaults to all.
 
     Returns:
@@ -80,10 +74,13 @@ def create_paradigms(data_file_name,
                     unknowns[char].append(form + " " + name)
 
     # Reading the paradigms.
-    paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False)
+    lexemes, cell_col, form_col = ("lexeme", "cell", "phon_form")
+    paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False,
+                            usecols=["form_id", lexemes, cell_col, form_col])
+    paradigms = paradigms.drop_duplicates([lexemes, cell_col, form_col])
 
     def aggregator(s):
-        if s.shape[0] == 1 and pd.isna(s.iloc[0]):
+        if s.isnull().all():
             return None
         return ";".join(s.values)
 
@@ -93,51 +90,27 @@ def create_paradigms(data_file_name,
             raise ValueError(f"You specified some cells which aren't in the paradigm : {' '.join(unknown_cells)}")
         return sorted(list(set(par_cols)-set(cells)))
 
-    # Long form
-    if set(col_names) < set(paradigms.columns):
-        lexemes, cell_col, form_col = col_names
 
-        # Filter cells before pivoting for speed reasons
-        if cells is not None:
-            to_drop = check_cells(cells, paradigms[cell_col].unique())
-            if len(to_drop) > 0:
-                log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
-                paradigms = paradigms[(paradigms[cell_col].isin(cells))]
+    if not {lexemes, cell_col, form_col} < set(paradigms.columns):
+        log.warning("Please use Paralex-style long-form table (http://www.paralex-standard.org).")
 
-        paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
-                                          columns=cell_col,
-                                          aggfunc=aggregator)
+    # Filter cells before pivoting for speed reasons
+    if cells is not None:
+        to_drop = check_cells(cells, paradigms[cell_col].unique())
+        if len(to_drop) > 0:
+            log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
+            paradigms = paradigms[(paradigms[cell_col].isin(cells))]
 
-        paradigms.reset_index(inplace=True, drop=False)
+    paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
+                                      columns=cell_col,
+                                      aggfunc=aggregator)
 
-    else:
-        log.warning("Wide form table is deprecated ! Please use Paralex-style long-form table (http://www.paralex-standard.org).")
-        # If the original file has two identical lexeme rows.
-        if "variants" in paradigms.columns:
-            log.info("Dropping the columns named 'variants'")
-            paradigms.drop("variants", axis=1, inplace=True)
-
-        if cells is not None:
-            cells.append('lexeme')
-            to_drop = check_cells(cells, paradigms.columns)
-            if len(to_drop) > 0:
-                log.info(f"Dropping columns with following cell headers: {', '.join(sorted(to_drop))}")
-                paradigms.drop(to_drop, axis=1, inplace=True)
-
-        # First column has to be lexemes
-        lexemes = paradigms.columns[0]
+    paradigms.reset_index(inplace=True, drop=False)
 
     if not defective:
         paradigms.dropna(axis=0, inplace=True)
 
     log.debug(paradigms)
-
-    if cols:
-        cols.append(lexemes)
-        try:
-            paradigms = paradigms[cols]
-        except KeyError as e:
-            raise ValueError("The paradigm's columns are: {}".format(paradigms.columns)) from e
 
     # Lexemes must be unique identifiers
     unique_lexemes(paradigms[lexemes], 'paradigms')

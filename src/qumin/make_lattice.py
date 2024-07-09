@@ -5,13 +5,14 @@
 Author: Sacha Beniamine.
 """
 
-from .clustering import find_microclasses
-from .representations import segments, patterns
-from .utils import get_default_parser, Metadata
-from .lattice.lattice import ICLattice
+import logging
 
 import pandas as pd
-import logging
+
+from .clustering import find_microclasses
+from .lattice.lattice import ICLattice
+from .representations import segments, patterns
+from .utils import get_default_parser, Metadata
 
 
 def main(args):
@@ -39,14 +40,17 @@ def main(args):
     md = Metadata(args, __file__)
 
     # Loading files and paths
-    features_file_name = args.segments
     data_file_path = args.patterns
 
-    if features_file_name != "ORTHO":
-
+    if args.ortho:
+        log.info("Reading patterns...")
+        pat_table = pd.read_csv(data_file_path, index_col=0)
+        collections = False
+    else:
         # Initializing segments
         log.info("Initializing segments...")
-        segments.Inventory.initialize(features_file_name)
+        sounds_file_name = md.get_table_path("sounds")
+        segments.Inventory.initialize(sounds_file_name)
 
         log.info("Reading patterns...")
         pat_table, _ = patterns.from_csv(data_file_path)
@@ -63,10 +67,6 @@ def main(args):
                 pat_table2 = pd.read_csv(args.bipartite, index_col=0).fillna("")
                 pat_table2.columns = [comp + c for c in pat_table2.columns]
             pat_table = pat_table.join(pat_table2)
-    else:
-        log.info("Reading patterns...")
-        pat_table = pd.read_csv(data_file_path, index_col=0)
-        collections = False
 
     microclasses = find_microclasses(pat_table.map(str))
 
@@ -118,8 +118,11 @@ def main(args):
 
 
 def lattice_command():
-    parser = get_default_parser(main.__doc__, patterns=True,
-                                paradigms=False)
+    parser = get_default_parser(main.__doc__, patterns=True)
+
+    parser.add_argument("--ortho",
+                        help="the patterns are orthographic",
+                        action="store_true", default=False)
 
     parser.add_argument('--shorten',
                         help="Drop redundant columns altogether."

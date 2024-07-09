@@ -79,8 +79,8 @@ def main(args):
     md = Metadata(args, __file__)
 
     categories = None
-    if args.labels:
-        categories = pd.read_csv(args.labels, index_col=0, squeeze=True)
+    if args.label:
+        categories = pd.read_csv(md.get_table_path("lexemes"), index_col=0)[args.label]
     pat_table = pd.read_csv(args.patterns, index_col=0)
     log.info("Looking for microclasses")
     microclasses = find_microclasses(pat_table)
@@ -94,12 +94,10 @@ def main(args):
 
 
 def heatmap_command():
-    parser = get_default_parser(main.__doc__,
-                                paradigms=False, patterns=True)
+    parser = get_default_parser(main.__doc__,patterns=True)
 
-    parser.add_argument("-l", "--labels",
-                        help="csv files with class membership to compare"
-                             " (csv separated by ‘, ’)",
+    parser.add_argument("-l", "--label",
+                        help="lexeme column to use as label (eg. inflection_class)",
                         type=str,
                         default=None)
 

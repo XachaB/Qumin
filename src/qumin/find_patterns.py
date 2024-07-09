@@ -39,9 +39,8 @@ def main(args):
     kind = args.kind
     defective = args.defective
     overabundant = args.overabundant
-    features_file_name = args.segments
-    data_file_path = args.paradigms
     cells = args.cells
+    data_file_path = md.get_table_path("forms")
     if cells and len(cells) == 1:
         raise argparse.ArgumentTypeError("You can't provide only one cell.")
 
@@ -49,10 +48,11 @@ def main(args):
     segcheck = True
 
     # Initializing segments
-    if features_file_name != "ORTHO":
-        segments.Inventory.initialize(features_file_name)
+    if not args.ortho:
+        sounds_file_name = md.get_table_path("sounds")
+        segments.Inventory.initialize(sounds_file_name)
     elif is_of_pattern_type:
-        raise argparse.ArgumentTypeError("You can't find patterns on orthographic material.")
+        raise argparse.ArgumentTypeError("You can't find patterns on orthographic material, only alternations or endings.")
     else:
         segcheck = False
 
@@ -69,7 +69,7 @@ def main(args):
         merge_cols = True
 
     paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols,
-                                 segcheck=segcheck, col_names=args.cols_names, cells=cells)
+                                 segcheck=segcheck, cells=cells)
 
     log.info("Looking for patterns...")
     if kind.startswith("endings"):
@@ -136,7 +136,11 @@ def main(args):
 
 
 def pat_command():
-    parser = get_default_parser(main.__doc__, paradigms=True, patterns=False)
+    parser = get_default_parser(main.__doc__, patterns=False)
+
+    parser.add_argument("--ortho",
+                        help="Compute orthographic alternations.",
+                        action="store_true", default=False)
 
     parser.add_argument('-k', '--kind',
                         help="Kind of patterns to infer:"

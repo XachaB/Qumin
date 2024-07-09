@@ -13,7 +13,6 @@ from .representations import segments, patterns, create_paradigms, create_featur
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
 from .utils import get_default_parser, Metadata
 
-
 def main(args):
     r"""Compute entropies of flexional paradigms' distributions.
 
@@ -33,8 +32,9 @@ def main(args):
     md = Metadata(args, __file__)
 
     patterns_file_path = args.patterns
-    paradigms_file_path = args.paradigms
-    features_file_name = args.segments
+    sounds_file_name = md.get_table_path("sounds")
+    paradigms_file_path = md.get_table_path("forms")
+
 
     preds = sorted(args.nPreds)
     onePred = preds[0] == 1
@@ -58,14 +58,12 @@ def main(args):
     log = logging.getLogger()
     log.info(args)
 
-    # Initialize the class of segments.
-    segments.Inventory.initialize(features_file_name)
+    segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: columns are cells, rows are lexemes.
     paradigms = create_paradigms(paradigms_file_path, defective=True, overabundant=False,
                                  merge_cols=args.cols_merged,
-                                 segcheck=True,
-                                 col_names=args.cols_names, cells=cells)
+                                 segcheck=True, cells=cells)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path, defective=True,
                                            overabundant=False)
 
@@ -81,7 +79,7 @@ def main(args):
     sanity_check = args.debug and len(pat_table.columns) < 10
 
     if args.features is not None:
-        features = create_features(args.features)
+        features = create_features(md, args.features)
     else:
         features = None
 
@@ -234,25 +232,19 @@ def main(args):
 
 
 def H_command():
-    parser = get_default_parser(main.__doc__, paradigms=True, patterns=True)
+    parser = get_default_parser(main.__doc__, patterns=True)
 
     parser.add_argument('-b', '--bipartite',
-                        help="Add a second paradigm dataset, for bipartite systems.",
+                        help="Add a second dataset, for bipartite systems.",
                         nargs=2,
                         type=str,
                         default=None)
 
     parser.add_argument('--features',
-                        help="Feature file. Features will "
+                        help="Lexeme columns to use as extra predictor. Features will"
                              "be considered known in conditional probabilities:"
                              " P(X~Y|X,f1,f2...)",
-                        type=str,
-                        default=None)
-
-    parser.add_argument('--names',
-                        help="Ordered names of bipartite systems (-b argument is 2nd)",
-                        nargs=2,
-                        type=str,
+                        nargs='+',
                         default=None)
 
     parser.add_argument("-d", "--debug",

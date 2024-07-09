@@ -1,4 +1,3 @@
-
 The phonological segments file
 ================================
 
@@ -19,32 +18,32 @@ Each row of the segments file describes a single phoneme. The first column gives
 .. warning::
     The columns `ALIAS`, `UNICODE` and `value` are all also deprecated
 
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
   sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  p      0        0            1               0         0       0            0                   1                     0       0         
-  b      0        0            1               0         0       0            0                   1                     1       0         
-  t      0        0            1               0         0       0            0                   1           1         0       0         
-  s      0        0            1               1         0       0            0                   1           1         0       1         
-  i      1        1            0               1         0       1      0     0         0                               1       1         
-  y      1        1            0               1         0       1      0     0         1                               1       1         
-  u      1        1            0               1         0       1      0     1         1                               1       1         
-  o      1        1            0               1         0       0            1         1                               1       1        
-  a      1        1            0               1         0       0      1     1         0                               1       1         
-  ɑ̃      1        1            0               1         1       0      1     1         0                               1       1      
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========  
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  p          0        0            1               0         0       0            0                   1                     0       0
+  b          0        0            1               0         0       0            0                   1                     1       0
+  t          0        0            1               0         0       0            0                   1           1         0       0
+  s          0        0            1               1         0       0            0                   1           1         0       1
+  i          1        1            0               1         0       1      0     0         0                               1       1
+  y          1        1            0               1         0       1      0     0         1                               1       1
+  u          1        1            0               1         0       1      0     1         1                               1       1
+  o          1        1            0               1         0       0            1         1                               1       1
+  a          1        1            0               1         0       0      1     1         0                               1       1
+  ɑ̃          1        1            0               1         1       0      1     1         0                               1       1
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
 
 Some conventions:
 
 -  The first column must be called ``sound_id``.
 -  The phonological symbols, in the ``sound_id`` column cannot be one of he reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
 
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
   sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
-  p      0        0            1               0         0       0            0                   1                     0       0
-  b      0        0            1               0         0       0            0                   1                     1       0        
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========  
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  p          0        0            1               0         0       0            0                   1                     0       0
+  b          0        0            1               0         0       0            0                   1                     1       0
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
 
 The file is encoded in utf-8 and can be either a csv table (preferred) or a tabulation separated table (tsv).
 
@@ -74,13 +73,13 @@ Qumin used to support a second header row to provide distinctive feature shortha
 
 One can provide some extra rows in the table to define shorthand names for some natural classes. These names have to start and end by “#”. Here an example for the French segments file, giving shorthands for C (consonants), V (vowels) and G (glides):
 
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
-  #C#             0            1                                                                                                          
-  #V#    1        1            0               1                                                                        1       1         
-  #G#    1        0            0               1         0       1      0                         0                     1       1         
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+ sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  #C#                   0            1
+  #V#          1        1            0               1                                                                        1       1
+  #G#          1        0            0               1         0       1      0                         0                     1       1
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
 
 Values of distinctive features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -102,13 +101,13 @@ Monovalent or bivalent features
 
 Internally, Qumin will construct the following table, which looks almost identical because we used monovalued features:
 
-===== ======= ===== ====== ======= ======= ===========
-sound_id   +high  +low  +front  +back  +round   +Non-round
-===== ======= ===== ====== ======= ======= ===========
-a               x            x                x
-i        x             x                      x
-u        x                   x       x         
-===== ======= ===== ====== ======= ======= ===========
+ ========== ======= ===== ====== ======= ======= ===========
+ sound_id   +high   +low  +front  +back  +round   +Non-round
+ ========== ======= ===== ====== ======= ======= ===========
+ a                    x            x                x
+ i             x             x                      x
+ u             x                   x       x
+ ========== ======= ===== ====== ======= ======= ===========
 
 This will then result in the following natural class hierarchy:
 
@@ -125,13 +124,13 @@ The same thing can be achieved with less columns using binary features:
 
 Internally, these will be expanded to:
 
-===== ======= ===== ====== ======= ======= ===========
+========= ======= ===== ====== ======= ======= ===========
 sound_id   +high  -high +front  -front  +round   -round
-===== ======= ===== ====== ======= ======= ===========
-a               x            x                x
-i        x             x                      x
-u        x                   x       x         
-===== ======= ===== ====== ======= ======= ===========
+========= ======= ===== ====== ======= ======= ===========
+a                   x            x                x
+i            x             x                      x
+u            x                   x       x
+========= ======= ===== ====== ======= ======= ===========
 
 Which is the same thing as previously, with different names. The class hierarchy is also very similar:
 

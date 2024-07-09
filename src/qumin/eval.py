@@ -47,9 +47,9 @@ def prepare_arguments(paradigms, iterations, methods, features):
     idx = pd.IndexSlice
 
     def get_set(table, a, b, index_range):
-        return table.loc[:, idx[:, [a, b]]].iloc[index_range, :].dropna()
+        return table.loc[:, [a, b]].iloc[index_range, :].dropna()
 
-    cells = paradigms.columns.levels[1].tolist()
+    cells = paradigms.columns.tolist()
     shuffled_indexes = np.random.permutation(paradigms.shape[0])
     folds = np.array_split(shuffled_indexes, 10)
     l_folds = len(folds)
@@ -81,23 +81,19 @@ def evaluate(task):
         row: The dictionnary passed in argument, with stats for this evaluation.
     """
     test_items, train_items, method, features, row = task  # because multiprocessing does not have "istarmap"
-    table_ids = test_items.columns.levels[0].tolist()
     ab_predictions = None
     ba_predictions = None
     counts = 0
-    for id in table_ids:
-        test = test_items[id]
-        train = train_items[id]
-        pred_ab, pred_ba, count = predict_two_directions(test, train, method, features=features)
-        if ab_predictions is None and ba_predictions is None:
-            ab_predictions = pred_ab
-            ba_predictions = pred_ba
-        else:
-            ab_predictions &= pred_ab
-            ba_predictions &= pred_ba
-        counts += count
+    pred_ab, pred_ba, count = predict_two_directions(test_items, train_items, method, features=features)
+    if ab_predictions is None and ba_predictions is None:
+        ab_predictions = pred_ab
+        ba_predictions = pred_ba
+    else:
+        ab_predictions &= pred_ab
+        ba_predictions &= pred_ba
+    counts += count
 
-    a, b = test_items[id].columns  # any of the previous values for table id would work
+    a, b = test_items.columns  # any of the previous values for table id would work
     row["count"] = counts
     row["total_train"] = train_items.shape[0]
     row["total_test"] = test_items.shape[0]
@@ -185,27 +181,17 @@ def predict_two_directions(test_items, train_items, method, features=None):
     return predicted_correct1, predicted_correct2, len(dic[(a, b)])
 
 
-def prepare_data(args):
+def prepare_data(args, md):
     """Create a multi-index paradigm table and if given a path, a features table."""
     paradigms = []
 
-    # Read all files
-    for file in args.paradigms:
-        table = create_paradigms(file, segcheck=True, fillna=False, merge_cols=True,
-                                 overabundant=False, defective=True, col_names=args.cols_names)
-        paradigms.append(table)
-
-    # Keep only common indexes
-    indexes = list(set.intersection(*[set(t.index.tolist()) for t in paradigms]))
-    assert len(indexes) > 0, "No common indexes in your tables"
-    paradigms = [t.loc[indexes, :] for t in paradigms]
-
-    # Make a multi-index df composed of all tables
-    paradigms = pd.concat(paradigms, axis=1, keys=range(len(args.paradigms))).drop_duplicates()
-
+    paradigms = create_paradigms(md.get_table_path("forms"), segcheck=True, fillna=False, merge_cols=True,
+                             overabundant=False, defective=True)
+    indexes = paradigms.index
     features = None
-    if features is not None:
-        features = create_features(args.features)
+
+    if args.features is not None:
+        features = create_features(md, args.features)
         features, _ = pd.DataFrame.sum(features.map(lambda x: (str(x),)), axis=1).factorize()
         features = features[indexes].apply(lambda x: (x,))
 
@@ -266,23 +252,28 @@ def main(args):
     now = md.day + "_" + md.now
     np.random.seed(0)  # make random generator determinist
 
-    segments.Inventory.initialize(args.segments)
-    paradigms, features = prepare_data(args)
+    sounds_file_name = md.get_table_path("sounds")
+    paradigms_file_path = md.get_table_path("forms")
 
-    files = [Path(file).stem for file in args.paradigms]
+    segments.Inventory.initialize(sounds_file_name)
+    paradigms, features = prepare_data(args, md)
+
 
     general_infos = {"Qumin_version": md.version,
                      "lexemes": paradigms.shape[0],
-                     "paradigms": ";".join(files),
+                     "paradigms": paradigms_file_path,
                      "day_time": now}
 
     tasks = prepare_arguments(paradigms, args.iterations,
                               args.methods, features)
+    l = args.iterations if args.iterations else 10
+    l = l * len(list(combinations(range(paradigms.shape[1]), 2)))
+
     if args.workers == 1:
-        results = list(chain(*(evaluate(t) for t in tqdm(tasks))))
+        results = list(chain(*(evaluate(t) for t in tqdm(tasks, total=l))))
     else:
         pool = Pool(args.workers)
-        results = list(chain(*tqdm(pool.imap_unordered(evaluate, tasks))))
+        results = list(chain(*tqdm(pool.imap_unordered(evaluate, tasks), total=l)))
         pool.close()
 
     results = pd.DataFrame(results)
@@ -293,7 +284,7 @@ def main(args):
     filename = md.register_file("eval_patterns.csv",
                                 {"computation": computation,
                                  "content": "scores",
-                                 "source": files})
+                                 "source": paradigms_file_path})
     results.to_csv(filename)
 
     print_summary(results, general_infos)
@@ -303,14 +294,13 @@ def main(args):
                                    {"computation": computation,
                                     "content": "heatmap",
                                     "name": name,
-                                    "source": files})
+                                    "source": paradigms_file_path})
         fig.savefig(figname, dpi=300, bbox_inches='tight', pad_inches=0.5)
     md.save_metadata()
 
 
 def eval_command():
-    parser = get_default_parser(main.__doc__, paradigms=True,
-                                patterns=False, multipar=True)
+    parser = get_default_parser(main.__doc__, patterns=False)
 
     parser.add_argument('-i', '--iterations',
                         help="How many test/train folds to do. Defaults to full cross validation.",

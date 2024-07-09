@@ -17,7 +17,7 @@ Qumin (QUantitative Modelling of INflection) is a package for the computational 
 
 This is version 2, which was significantly updated since the publications cited below.
 
-For more detail, you can refer to my dissertation (in French, `Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_). If you use(d) Qumin in a publication, send me an email with the reference at s.<last name>@surrey.ac.uk
+For more detail, you can refer to Sacha's dissertation (in French, `Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_). If you use(d) Qumin in a publication, send me an email with the reference at s.<last name>@surrey.ac.uk
 
 
 Quick Start
@@ -39,7 +39,7 @@ Install the Qumin package: ::
 Data
 -----
 
-The package expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
+The package expects full paradigm data in phonemic transcription, as well as a feature key for the transcription.
 
 For compatible data, see the `Paralex datasets <http://www.paralex-standard.org>`_. The sounds files may sometimes require edition, as Qumin as more constraints on sound definitions.
 
@@ -55,15 +55,15 @@ Alternation patterns serve as a basis for all the other scripts. An early versio
 
 **Computing automatically aligned patterns** for  macroclass (ignore defective lexemes and overabundant forms)::
 
-    bin/$ qumin.patterns <paradigm.csv> <segments.csv>
+    bin/$ qumin.patterns <dataset.package.json>
 
 **Computing automatically aligned patterns** for paradigm entropy (keep defective lexemes, but not overabundant forms)::
 
-    bin/$ qumin.patterns -d <paradigm.csv> <segments.csv>
+    bin/$ qumin.patterns -d <dataset.package.json>
 
 **Computing automatically aligned patterns** for lattices (keep defective lexemes and overabundant forms)::
 
-    bin/$ qumin.patterns -d -o <paradigm.csv> <segments.csv>
+    bin/$ qumin.patterns -d -o <dataset.package.json>
 
 The option -k allows one to choose the algorithm for inferring alternation patterns.
 
@@ -97,13 +97,13 @@ Microclasses
 
 To visualize the microclasses and their similarities, one can compute a **microclass heatmap**::
 
-    bin/$ qumin.heatmap <paradigm.csv> <output_path>
+    bin/$ qumin.heatmap <dataset.package.json> <output_path>
 
 **Computing a microclass heatmap, comparing with class labels**::
 
-    bin/$ qumin.heatmap -l  <labels.csv> -- <paradigm.csv> <output_path>
+    bin/$ qumin.heatmap -l  "inflection_class" -- <dataset.package.json> <output_path>
 
-The labels file is a csv file. The first column give lexemes names, the second column provides inflection class labels. This allows to visually compare a manual classification with pattern-based similarity. This command relies heavily on `seaborn's clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ function.
+The labels is the name of the column in the Paralex `lexemes` table to use as labels. This allows to visually compare a manual classification with pattern-based similarity. This command relies heavily on `seaborn's clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ function.
 
 **Full usage and more details:**::
 
@@ -118,15 +118,17 @@ This software was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/
 
 **Computing entropies from one cell** ::
 
-    bin/$ qumin.H -n 1 -- <patterns.csv> <paradigm.csv> <segments.csv>
+    bin/$ qumin.H -n 1 -- <patterns.csv> <dataset.package.json>
 
 **Computing entropies from two cells** (you can specify any number of predictors, e.g. `-n 1 2 3` works too) ::
 
-    bin/$ qumin.H -n 2 -- <patterns.csv> <paradigm.csv> <segments.csv>
+    bin/$ qumin.H -n 2 -- <patterns.csv> <dataset.package.json>
 
-**Add a file with features to help prediction** (for example gender -- features will be added to the known information when predicting) ::
+**Take into account some features to help prediction** (for example gender and inflection class -- features will be added to the known information when predicting) ::
 
-    bin/$ qumin.H -n 2 --features <features.csv> -- <patterns.csv> <paradigm.csv> <segments.csv>
+    bin/$ qumin.H -n 2 --features "gender" "inflection_class" -- <patterns.csv> <dataset.package.json>
+
+The features are names of columns from the Paralex `lexemes` table.
 
 With `-n` and N>2 the computation can get quite long on large datasets.
 
@@ -143,7 +145,7 @@ Our work on automatical inference of macroclasses was published in `Beniamine, B
 
 **Inferring macroclasses** ::
 
-    bin/$ qumin.macroclasses  <patterns.csv> <segments.csv>
+    bin/$ qumin.macroclasses  <patterns.csv> <dataset.package.json>
 
 **Full usage and more details:**::
 
@@ -157,7 +159,7 @@ This software was used in `Beniamine (2021) <https://langsci-press.org/catalog/b
 
 **Inferring a lattice of inflection classes, with html output** ::
 
-    bin/$ qumin.lattice --html <patterns.csv> <segments.csv>
+    bin/$ qumin.lattice --html <patterns.csv> <dataset.package.json>
 
 **Full usage and more details:**::
 

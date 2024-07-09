@@ -48,7 +48,6 @@ def main(args):
     md = Metadata(args, __file__)
 
     # Loading files and paths
-    features_file_name = args.segments
     data_file_path = args.patterns
     data_file_name = Path(data_file_path).name.rstrip("_")
 
@@ -62,19 +61,15 @@ def main(args):
 
     # Initializing segments
 
-    if features_file_name != "ORTHO":
-        segments.Inventory.initialize(features_file_name)
+    if args.ortho:
+        pat_table = pd.read_csv(data_file_path, index_col=0)
+    else:
+        sounds_file_name = md.get_table_path("sounds")
+        segments.Inventory.initialize(sounds_file_name)
         pat_table, pat_dic = patterns.from_csv(data_file_path, defective=False, overabundant=False)
         pat_table = pat_table.map(str)
-    else:
-        pat_table = pd.read_csv(data_file_path, index_col=0)
 
     preferences = {"md": md}
-
-    # if args.randomised:
-    #     func = preferences["clustering_algorithm"]
-    #     randomised_algo = partial(algorithms.randomised, func, n=args.randomised)
-    #     preferences["clustering_algorithm"] = randomised_algo
 
     node = algorithms.hierarchical_clustering(pat_table, descriptionlength.BUDLClustersBuilder, **preferences)
 
@@ -114,7 +109,12 @@ def main(args):
 
 
 def macroclasses_command():
-    parser = get_default_parser(main.__doc__, patterns=True, paradigms=False)
+    parser = get_default_parser(main.__doc__, patterns=True)
+
+    parser.add_argument("--ortho",
+                        help="the patterns are orthographic",
+                        action="store_true", default=False)
+
     args = parser.parse_args()
     main(args)
 

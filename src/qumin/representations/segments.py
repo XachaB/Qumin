@@ -291,7 +291,7 @@ class Inventory(object):
                 "label", "tier"  # Unused Paralex columns
                 }
         deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS"})
-        if ~deprecated_cols.empty:
+        if not deprecated_cols.empty:
             log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
         for col in drop:
             if col in table.columns:
@@ -316,10 +316,14 @@ class Inventory(object):
         log.debug("Normalization map: %s", cls._normalization)
 
         def feature_formatter(columns):
-            signs = ["-", "+"] + [str(x) for x in range(2, 11)]
+            signs = ["-", "+"]
             for c in columns:
                 key, val = c.split("=")
-                yield signs[int(float(val))] + key.replace(" ", "_")
+                i = int(float(val))
+                if i < 2:
+                    yield signs[int(float(val))] + key.replace(" ", "_")
+                else:
+                    yield c
 
         table = table.map(lambda x: str(x))
 
