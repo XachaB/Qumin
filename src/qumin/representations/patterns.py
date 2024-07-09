@@ -365,7 +365,7 @@ class Pattern(object):
         for cell in self.cells:
             formatted = []
             for segs in self.alternation[cell]:
-                formatted.append("".join(segs))  # TODO: used restore
+                formatted.append("".join(segs))
             yield formatted
 
     def _init_from_alignment(self, alignment):
@@ -490,7 +490,7 @@ class BinaryPattern(Pattern):
             return x + " "
 
         def iter_alternation(alt):
-            for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)):  # TODO: used Charclass
+            for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)):
                 if is_transform:
                     for x in group:
                         yield is_transform, x

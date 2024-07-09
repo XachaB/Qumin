@@ -138,14 +138,14 @@ Which is the same thing as previously, with different names. The class hierarchy
    :alt: Natural classes for three vowels
 
 
-Warning, some of the segments aren't actual leaves 
->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Warning, some segments are  ancestors of other segments
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 The following error occurs when the table is well formed, but specifies a natural class hierarchy which is not usable by Qumin:
 
 ::
 
-     Exception: Warning, some of the segments aren't actual leaves :
+     Exception: Warning, some segments are  ancestors of other segments :
         p is the same node as [p-kʷ]
             [p-kʷ] ([pĸ]) = [+cons -son -syll +lab -round -voice -cg -cont -strid -lat -del.rel -nas -long]
             kʷ (ĸ) = [+cons -son -syll +lab -round +dor +highC -lowC +back -tense -voice -cg -cont -strid -lat -del.rel -nas -long]

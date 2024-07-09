@@ -130,7 +130,7 @@ class Inventory(object):
             # The non capturing group of each segment
             cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
             cls._regexes_end[id] = "(?:" + "|".join(x for x in ordered) + ")"
-            cls._pretty_str[id] = "{" + ",".join(ordered) + "}"  # TODO: change to "{a,b,c}"
+            cls._pretty_str[id] = "{" + ",".join(ordered) + "}"
         cls._classes[id] = set(classes)
         cls._features[id] = set(intent)
         cls._features_str[id] = shorthand or "[{}]".format(" ".join(sorted(intent)))
@@ -384,8 +384,7 @@ class Inventory(object):
                 for o in other:
                     alert += "\n\t\t" + cls.infos(o)
 
-            raise Exception("Warning, some segments are "  # TODO: change doc!!!
-                            "ancestors of other segments:" + alert)
+            raise Exception("Warning, some segments are  ancestors of other segments:" + alert)
 
         cls._max = max(cls._classes, key=len)
 
