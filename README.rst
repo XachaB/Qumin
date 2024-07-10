@@ -51,6 +51,9 @@ For compatible data, see the `Paralex datasets <http://www.paralex-standard.org>
 Scripts
 --------
 
+.. note::
+    We now rely on `hydra <https://hydra.cc/>`_ to manage CLI interface and configurations. Hydra will create a folder ``outputs/<yyyy-mm-dd>/<hh-mm-ss>/`` containing all results. A subfolder ``outputs/<yyyy-mm-dd>/<hh-mm-ss>/.hydra/`` contains details of the configuration as it was when the script was run.
+
 
 Patterns
 ^^^^^^^^^
