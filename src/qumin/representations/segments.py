@@ -12,7 +12,6 @@ import functools
 import re
 from tqdm import tqdm
 
-from ..utils import snif_separator
 from ..lattice.lattice import table_to_context
 import logging
 log = logging.getLogger()
@@ -253,7 +252,7 @@ class Inventory(object):
         return len(ca & cb) / len(ca | cb)
 
     @classmethod
-    def initialize(cls, filename, sep=None):
+    def initialize(cls, filename):
         """ Initializes the inventory
 
         Args:
@@ -264,7 +263,7 @@ class Inventory(object):
         log.info("Reading table %s", filename)
 
         table = pd.read_table(filename, header=0, dtype=str,
-                              index_col=False, sep=sep or snif_separator(filename),
+                              index_col=False, sep=',',
                               encoding="utf-8")
         shorten_feature_names(table)
         sound_id = "sound_id"
