@@ -1,9 +1,8 @@
+Alternation patterns
+=================================
 
 .. note::
     This script generates a human readable file `human_readable_<kind>.csv` which is only intended for manual inspection, as well as a file `<kind>.csv`, eg `patternsPhonsim.csv`, which is intended to be passed to further Qumin scripts.
-
-More configuration
-^^^^^^^^^^^^^^^^^^
 
 The patterns can be further configurated, modifying the following keys: ::
 
@@ -24,8 +23,9 @@ values for these keys can be given through the command line, eg::
 
     /$ qumin.patterns verbose=True cells=="[ind.prs.1.sg,ind.fut.1.sg]" pats.defective=True data=<dataset.package.json>
 
+
 Patterns kinds
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~
 
 Qumin can compute various kinds of patterns. Only the ones prefixed by "patterns" can support entropy calculation.
 
