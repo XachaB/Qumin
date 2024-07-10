@@ -31,7 +31,7 @@ class UtilsTestCase(unittest.TestCase):
         # slow step-by-step entropy
         cond_p = entropy.cond_P(eventsA, eventsB)
         known_p = entropy.P(eventsB)
-        h = sum(known_p * cond_p.groupby(level=0, sort=False).apply(utils.entropy))
+        h = sum(known_p * cond_p.groupby(level=0, sort=False).apply(entropy.entropy))
 
         h2 = entropy.cond_entropy(eventsA, eventsB)
         self.assertAlmostEqual(h, expected)
