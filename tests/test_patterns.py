@@ -10,7 +10,7 @@ class PatternsTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         segs_file = Path(__file__).parent / "data" / "portuguese_phonemes.csv"
-        segments.Inventory.initialize(segs_file, sep=",")
+        segments.Inventory.initialize(segs_file)
 
     def test_identity(self):
         c = ("a", "b")
