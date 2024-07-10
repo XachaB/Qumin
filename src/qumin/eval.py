@@ -286,7 +286,7 @@ def eval_command(cfg):
     results.to_csv(filename)
 
     print_summary(results, general_infos)
-    figs = to_heatmap(results, paradigms.columns.levels[1].tolist())
+    figs = to_heatmap(results, paradigms.columns.tolist())
     for name, fig in figs:
         figname = md.register_file("eval_patterns_{}.png".format(name),
                                    {"computation": computation,
