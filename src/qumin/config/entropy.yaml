@@ -1,0 +1,21 @@
+defaults:
+  - help
+  - qumin
+  - _self_
+
+# These should not be overriden
+scriptname: H
+descr: Compute entropies of flexional paradigms' distributions.
+
+
+patterns: null        # pre-computed patterns
+entropy:
+  n:                  # Compute entropy for prediction from with n predictors.
+    - 1
+  features: null      # Feature column in the Lexeme table.
+                      # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
+  importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
+  merged: False       # Whether identical columns are merged in the input.
+  comp: False         # Thorough comparison for bipartite systems:
+                      # Logs H(c1->c2), H(c1'->c2'), I(c1'->c2';c1->c2) and  NMI(c1'->c2';c1->c2)
+  stacked: False      # whether to stack results in long form

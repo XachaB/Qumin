@@ -11,7 +11,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
 import logging
-from .utils import get_default_parser, Metadata
+import hydra
+from .utils import Metadata
 
 log = logging.getLogger()
 
@@ -58,63 +59,26 @@ def distance_matrix(pat_table, microclasses, **kwargs):
     return distances
 
 
-def main(args):
+@hydra.main(version_base=None, config_path="config", config_name="heatmap")
+def heatmap_command(cfg):
     r"""Draw a clustermap of microclass similarities using seaborn.
-
-    For a detailed explanation, see the html doc.::
-
-          ____
-         / __ \                    /)
-        | |  | | _   _  _ __ ___   _  _ __
-        | |  | || | | || '_ ` _ \ | || '_ \
-        | |__| || |_| || | | | | || || | | |
-         \___\_\ \__,_||_| |_| |_||_||_| |_|
-          Quantitative modeling of inflection
-
     """
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    log.info(args)
+    log.info(cfg)
     log.info("Reading files")
 
-    md = Metadata(args, __file__)
+    md = Metadata(cfg, __file__)
 
     categories = None
-    if args.label:
-        categories = pd.read_csv(md.get_table_path("lexemes"), index_col=0)[args.label]
-    pat_table = pd.read_csv(args.patterns, index_col=0)
+    if cfg.label:
+        categories = pd.read_csv(md.get_table_path("lexemes"), index_col=0)[cfg.label]
+    pat_table = pd.read_csv(cfg.patterns, index_col=0)
     log.info("Looking for microclasses")
     microclasses = find_microclasses(pat_table)
     log.info("Computing distances")
     distances = distance_matrix(pat_table, microclasses)
     log.info("Drawing")
     microclass_heatmap(distances, md, labels=categories,
-                       cmap_name=args.cmap,
-                       exhaustive_labels=args.exhaustive_labels)
+                       cmap_name=cfg.cmap,
+                       exhaustive_labels=cfg.exhaustive_labels)
     md.save_metadata()
-
-
-def heatmap_command():
-    parser = get_default_parser(main.__doc__,patterns=True)
-
-    parser.add_argument("-l", "--label",
-                        help="lexeme column to use as label (eg. inflection_class)",
-                        type=str,
-                        default=None)
-
-    parser.add_argument("-c", "--cmap",
-                        help="cmap name",
-                        type=str,
-                        default="BuPu")
-
-    parser.add_argument("-e", "--exhaustive_labels",
-                        help="by default, seaborn shows only some labels on the heatmap for readability."
-                             " This forces seaborn to print all labels.",
-                        action="store_true")
-
-    args = parser.parse_args()
-
-    main(args)
-
-
-if __name__ == '__main__':
-    heatmap_command()

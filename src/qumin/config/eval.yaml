@@ -1,0 +1,25 @@
+defaults:
+  - help
+  - qumin
+  - _self_
+
+# These should not be overriden
+scriptname: eval
+descr: Evaluate pattern's accuracy with 10 folds
+
+entropy:
+  features: null      # Feature column in the Lexeme table.
+
+eval:
+  iter: 10            # How many 90/10 train/test folds to do.
+  workers: 1          # Number of threads for multithreading
+  sample: null        # (int) A number of lexemes to sample, for debug purposes
+
+pats:
+  kind:              # Patterns types to evaluate (defaults to all)
+    - patternsLevenshtein
+    - patternsPhonsim
+    - patternsSuffix
+    - patternsPrefix
+    - patternsBaseline
+

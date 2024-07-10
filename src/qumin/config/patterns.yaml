@@ -1,0 +1,10 @@
+defaults:
+  - help
+  - qumin
+  - _self_
+  - pats: macroclasses
+
+# These should not be overriden
+scriptname: patterns
+descr: Find pairwise alternation patterns from paradigms.
+

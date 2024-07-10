@@ -1,0 +1,13 @@
+defaults:
+  - help
+  - qumin
+  - _self_
+
+# These should not be overriden
+scriptname: macroclasses
+descr: Cluster lexemes in macroclasses according to alternation patterns.
+
+
+patterns: null        # pre-computed patterns
+pats:
+  ortho: False        # whether patterns were orthographic

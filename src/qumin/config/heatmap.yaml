@@ -1,0 +1,16 @@
+defaults:
+  - help
+  - qumin
+  - _self_
+
+# These should not be overriden
+scriptname: heatmap
+descr: Draw a clustermap of microclass similarities using seaborn.
+
+# These can be overriden
+patterns: ???             # Path to patterns
+label: null              # lexeme column to use as label (eg. inflection_class)
+cmap: null               # colormap name
+exhaustive_labels: False # by default, seaborn shows only some labels on
+                         # the heatmap for readability.
+                         # This forces seaborn to print all labels.

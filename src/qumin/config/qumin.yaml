@@ -1,0 +1,5 @@
+
+data: ???         # path to paralex.package.json paradigms, segments
+verbose: False    # Activate logs
+debug: False      # Even more logs; extra debug steps
+cells: null       # List of cells to use (subset)

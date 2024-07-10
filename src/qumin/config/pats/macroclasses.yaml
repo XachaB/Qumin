@@ -1,0 +1,8 @@
+kind: patternsPhonsim   # Options are (see docs): endings, endingsPairs, globalAlt, localAlt, endingsDisc,
+                        # patternsLevenshtein, patternsPhonsim, patternsSuffix, patternsPrefix, patternsBaseline
+defective: False        # Whether to keep defective entries
+overabundant: False     # Whether to keep overabundant entries
+gap_proportion: .4      # Proportion of the median score used to set the gap score
+optim_mem: False        # Attempt to use a little bit less memory
+merged: False       # Whether to merge identical columns in the data
+ortho: False            # Whether these are orthographic paradigms (only compatible with endings and alt)

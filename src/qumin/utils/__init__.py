@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 # !/usr/bin/python3
-import argparse
-from collections import defaultdict
-from tqdm import tqdm
-import logging
-import time
 import json
+import logging
 import os
+import time
+from collections import defaultdict
 from pathlib import Path
-from .. import __version__
+
+import hydra
 from frictionless import Package
+from tqdm import tqdm
+
+from .. import __version__
+
 log = logging.getLogger()
 
 
@@ -29,23 +32,21 @@ class Metadata():
             md.save_metadata(path)
 
     Arguments:
-        args (:class:`pandas:pandas.DataFrame`):
+        cfg (:class:`pandas:pandas.DataFrame`):
             arguments passed to the script
         filename (str): name of the main script, passing __file__ is fine.
-        relative (bool) : whether to use absolute or relative paths. Relative refers to working_dir
 
     Attributes:
-        nom (:class:`time.strftime`)
+        now (:class:`time.strftime`)
         day (:class:`time.strftime`)
         version (str) : svn/git version or '' if unknown
-        result_dir (str) : output directory
         prefix (str) : normalized prefix for the output files
         arguments (dict): all arguments passed to the python script
         output (dict) : all output files produced by the script.
-
+        datasets (list): a list of (directory path, Package) tuples; each representing a dataset.
     """
 
-    def __init__(self, args, filename, relative=True):
+    def __init__(self, cfg, filename):
         # Basic information
         self.now = time.strftime("%Hh%M")
         self.day = time.strftime("%Y%m%d")
@@ -54,44 +55,31 @@ class Metadata():
         self.working_dir = os.getcwd()
 
         # Check directory
-        self.result_dir_relative = str(Path(args.folder) / self.day)
-        self.result_dir_absolute = Path(args.folder).absolute() / self.day
-        self.result_dir_absolute.mkdir(exist_ok=True, parents=True)
-        self.result_dir_absolute = str(self.result_dir_absolute)
+        self.prefix = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir + "/"
 
-        if hasattr(args, "data"):
-            self.data_dir_relative = args.data.parent
-            self.dataset = Package(args.data)
-
-        if relative:
-            self.prefix = "{}/{}_{}".format(self.result_dir_relative,
-                                            self.day, self.now)
-        else:
-            self.prefix = "{}/{}_{}".format(self.result_dir_absolute,
-                                            self.day, self.now)
+        # Make it robust to multiple
+        if "data" in cfg:
+            data = [cfg.data] if type(cfg.data) is str else cfg.data
+            self.datasets = [(Path(path).parent, Package(path)) for path in data]
 
         # Additional CLI arguments
-        self.arguments = args.__dict__
+        self.arguments = dict(cfg)
         self.output = []
 
-    def get_table_path(self, name):
-        return self.data_dir_relative / self.dataset.get_resource(name).path
-    def save_metadata(self, path=None):
-        """ Save the metadata as a JSON file.
+    def get_table_path(self, table_name, num=0):
+        data_dir, dataset = self.datasets[num]
+        return data_dir / dataset.get_resource(table_name).path
 
-        Arguments:
-            path (str) : path to the metadata file.
-            Defaults to prefx_metadata.json"""
+    def save_metadata(self):
+        """ Save the metadata as a JSON file."""
+
         def default_serializer(x):
             if type(x) is Package:
                 return x.to_dict()
             return str(x)
 
-        if path is None:
-            path = self.prefix + "_metadata.json"
-            log.info('No metadata path provided. Writing to %s', path)
-        else:
-            log.info("Writing metadata to %s", path)
+        path = self.prefix + "metadata.json"
+        log.info("Writing metadata to %s", path)
 
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(self.__dict__, f, ensure_ascii=False, indent=4, default=default_serializer)
@@ -107,11 +95,11 @@ class Metadata():
             (str): the full registered path"""
 
         # Always check if the folder still exists.
-        Path(self.result_dir_absolute).mkdir(exist_ok=True, parents=True)
-        filename = self.prefix + "_" + suffix
+        filename = self.prefix + suffix
         self.output.append({'filename': filename,
                             'properties': properties})
         return filename
+
 
 def get_version():
     """Return an ID for the current git or svn revision.
@@ -147,47 +135,3 @@ def merge_duplicate_columns(df, sep=";", keep_names=True):
 
     log.info("Reduced from %s to %s columns", l, len(new_df.columns))
     return new_df
-
-
-class ArgumentDefaultsRawTextHelpFormatter(argparse.RawDescriptionHelpFormatter):
-    """Combines RawTextHelpFormatter & class ArgumentDefaultsHelpFormatter
-    """
-
-    def _split_lines(self, text, width):
-        return text.splitlines()
-
-    def _get_help_string(self, action):
-        help = action.help
-        if '%(default)' not in action.help:
-            if action.default is not argparse.SUPPRESS:
-                defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
-                if action.option_strings or action.nargs in defaulting_nargs:
-                    help += ' (default: %(default)s)'
-        return help
-
-
-def get_default_parser(usage, patterns=False):
-    parser = argparse.ArgumentParser(description=usage,
-                                     formatter_class=ArgumentDefaultsRawTextHelpFormatter)
-
-    if patterns:
-        parser.add_argument("patterns",
-                            help="patterns file, full path"
-                                 " (csv separated by ‘, ’)",
-                            type=str)
-
-    parser.add_argument("data",
-                            help="path to paralex metadata `paralex-dataset.package.json`",
-                            type=Path)
-
-    options = parser.add_argument_group('Options')
-
-    options.add_argument("-v", "--verbose",
-                         help="Activate debug logs.",
-                         action="store_true", default=False)
-
-    options.add_argument("-f", "--folder",
-                         help="Output folder name",
-                         type=str, default=os.getcwd())
-
-    return parser

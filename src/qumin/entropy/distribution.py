@@ -675,6 +675,9 @@ class SplitPatternDistribution(PatternDistribution):
         self.patterns_list = patterns_list
         self.classes_list = classes_list
 
+    def add_features(self, series):
+        return series
+
     def mutual_information(self, normalize=False):
         """ Information mutuelle entre les deux systèmes."""
 

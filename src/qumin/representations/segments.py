@@ -257,7 +257,6 @@ class Inventory(object):
 
         Args:
             filename: path to a csv or tsv file with distinctive features
-            sep: separator in the file
         """
         # TODO: this is now much slower !
         log.info("Reading table %s", filename)
@@ -405,7 +404,7 @@ class Inventory(object):
             cls._score_matrix[(a, b)] = cls._score_matrix[(b, a)] = cost
             costs.append(cost)
 
-        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop  # TODO: update gap score
+        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop
         for a in simple_sounds:
             cls._score_matrix[(a, a)] = 0
 
@@ -595,12 +594,11 @@ def normalize(ipa, features):
     def find_identical_rows(segment, table):
         seg_features = table.loc[segment, :]
         try:
-            same_features_as_seg = (table == seg_features).all(axis=1)
+            return (table == seg_features).all(axis=1)
         except ValueError:
             if seg_features.shape[0] > 1:
                 raise ValueError("You have multiple definitions for {}\n{}".format(segment,
                                                                                   seg_features))
-        return same_features_as_seg
 
     ipa["Normalized"] = ""
 

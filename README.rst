@@ -35,6 +35,10 @@ Install the Qumin package: ::
     cd Qumin
     pip install -e ./
 
+Navigate to your working directory: ::
+
+    cd ~/my/workdir/
+
 
 Data
 -----
@@ -53,89 +57,93 @@ Patterns
 
 Alternation patterns serve as a basis for all the other scripts. An early version of the algorithm to find the patterns was presented in `Beniamine (2017) <https://halshs.archives-ouvertes.fr/hal-01615899>`_. An updated description of the algorithm figures in `Beniamine, Bonami and  Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_.
 
-**Computing automatically aligned patterns** for  macroclass (ignore defective lexemes and overabundant forms)::
-
-    bin/$ qumin.patterns <dataset.package.json>
-
-**Computing automatically aligned patterns** for paradigm entropy (keep defective lexemes, but not overabundant forms)::
-
-    bin/$ qumin.patterns -d <dataset.package.json>
-
-**Computing automatically aligned patterns** for lattices (keep defective lexemes and overabundant forms)::
-
-    bin/$ qumin.patterns -d -o <dataset.package.json>
-
-The option -k allows one to choose the algorithm for inferring alternation patterns.
-
-* **Affixal strategies**:
-    * ``endings``: Removes the longest common initial string for each row.
-    * ``endingsPairs``: Endings, tabulated as pairs for all combinations of columns.
-    * ``endingsDisc``: Discontinuous endings. Removes the longest common substring, left aligned
-* **Alternations**:  Alternations have no contextes. These were used for comparing macroclass strategies on French and European Portuguese.
-    * ``globalAlt``: As ``EndingsDisc``, tabulated as pairs for all combinations of columns.
-    * ``localAlt``:  Inferred from pairs of cells, left aligned.
-* **Patterns**: Binary alternation Patterns. All patterns have alternations and generalized contexts. Various alignment strategies are offered for comparison. Arbitrary number of changes supported.
-    * ``patternsLevenshtein``: Aligned with simple edit distance.
-    * ``patternsPhonsim``: Aligned with edit distances based on phonological similarity.
-    * ``patternsSuffix``: Fixed left alignment, only interesting for suffixal languages.
-    * ``patternsPrefix``: Fixed right alignment, only interesting for prefixal languages.
-    * ``patternsBaseline``: Baseline alignment, follows Albright & Hayes 2002. A single change, with a priority order: Suffixation > Prefixation > Stem-internal alternation (ablaut/infixation)
-
-Most of these were implemented for comparison purposes. I recommend to use the default `patternsPhonsim` in most cases. To avoid relying on your phonological features files for alignment scores, use `patternsLevenshtein`. Only these two are full patterns with generalization both in the context and alternation.
-
-For lattices, we keep defective and overabundant entries. We do not usually keep them for other applications.
-The latest code for entropy can handle defective entries.
-The file you should use as input for the below scripts has a name that ends in "_patterns". The "_human_readable_patterns" file is nicer to review but is only meant for human usage.
-
 **Full usage and more details:**::
 
-    bin/$ qumin.patterns --help
+    /$ qumin.patterns --help
 
+The patterns script comes with a few presets for typical configurations. For more details on alternate configurations, see `qumin.patterns --help` and the `patterns docs page<patterns>`_
+
+**For macroclasses**: ignore defective lexemes and overabundant forms::
+
+    qumin.patterns data=<dataset.package.json>
+
+**For paradigm entropy:** keep defective lexemes, but not overabundant forms::
+
+    /$ qumin.patterns pats=entropy data=<dataset.package.json>
+
+**For inflection class lattices** keep defective lexemes and overabundant forms::
+
+    /$ qumin.patterns pats=lattice data=<dataset.package.json>
 
 Microclasses
 ^^^^^^^^^^^^^
+**Full usage and more details:**::
+
+    /$ qumin.heatmap --help
 
 To visualize the microclasses and their similarities, one can compute a **microclass heatmap**::
 
-    bin/$ qumin.heatmap <dataset.package.json> <output_path>
+    /$ qumin.heatmap patterns=<path/to/patterns.csv> data=<dataset.package.json>
 
 **Computing a microclass heatmap, comparing with class labels**::
 
-    bin/$ qumin.heatmap -l  "inflection_class" -- <dataset.package.json> <output_path>
+    /$ qumin.heatmap label=inflection_class patterns=<path/to/patterns.csv> data=<dataset.package.json>
 
 The labels is the name of the column in the Paralex `lexemes` table to use as labels. This allows to visually compare a manual classification with pattern-based similarity. This command relies heavily on `seaborn's clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ function.
 
-**Full usage and more details:**::
+A few more parameters can be changed: ::
 
-    bin/$ qumin.heatmap --help
+    patterns: ???             # Path to patterns
+    label: null              # lexeme column to use as label (eg. inflection_class)
+    cmap: null               # colormap name
+    exhaustive_labels: False # by default, seaborn shows only some labels on
+                             # the heatmap for readability.
+                             # This forces seaborn to print all labels.
 
 
 Paradigm entropy
 ^^^^^^^^^^^^^^^^^^
 
-
 This software was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_,  `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
-
-**Computing entropies from one cell** ::
-
-    bin/$ qumin.H -n 1 -- <patterns.csv> <dataset.package.json>
-
-**Computing entropies from two cells** (you can specify any number of predictors, e.g. `-n 1 2 3` works too) ::
-
-    bin/$ qumin.H -n 2 -- <patterns.csv> <dataset.package.json>
-
-**Take into account some features to help prediction** (for example gender and inflection class -- features will be added to the known information when predicting) ::
-
-    bin/$ qumin.H -n 2 --features "gender" "inflection_class" -- <patterns.csv> <dataset.package.json>
-
-The features are names of columns from the Paralex `lexemes` table.
-
-With `-n` and N>2 the computation can get quite long on large datasets.
 
 **Full usage and more details:**::
 
-    bin/$ qumin.H --help
+    /$ qumin.H --help
 
+**Computing entropies from one cell** ::
+
+    /$ qumin.H  patterns=<patterns.csv> data=<dataset.package.json>
+
+**Computing entropies for other number of predictors**::
+
+    /$ qumin.H  n=2 patterns=<patterns.csv> data=<dataset.package.json>
+    /$ qumin.H  n="[2,3]" patterns=<patterns.csv> data=<dataset.package.json>
+
+**Take into account some features to help prediction** (for example gender and inflection class -- features will be added to the known information when predicting) ::
+
+    /$ qumin.H  feature=inflection_class patterns=<patterns.csv> data=<dataset.package.json>
+    /$ qumin.H  feature="[inflection_class,gender]" patterns=<patterns.csv> data=<dataset.package.json>
+
+The features are names of columns from the Paralex `lexemes` table.
+With `-n` and N>2 the computation can get quite long on large datasets.
+
+The config file contains the following keys, which can be set through the command line: ::
+
+    patterns: null        # pre-computed patterns
+    entropy:
+      n:                  # Compute entropy for prediction from with n predictors.
+        - 1
+      features: null      # Feature column in the Lexeme table.
+                          # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
+      importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
+      merged: False       # Whether identical columns are merged in the input.
+      comp: False         # Thorough comparison for bipartite systems:
+                          # Logs H(c1->c2), H(c1'->c2'), I(c1'->c2';c1->c2) and  NMI(c1'->c2';c1->c2)
+      stacked: False      # whether to stack results in long form
+
+For bipartite systems, it is possible to pass two values to both patterns and data, eg: ::
+
+    /$ qumin.H  comp=True patterns="[<patterns1.csv>,<patterns2.csv>]" data="[<dataset1.package.json>,<dataset2.package.json>]"
 
 
 Macroclass inference
@@ -145,11 +153,11 @@ Our work on automatical inference of macroclasses was published in `Beniamine, B
 
 **Inferring macroclasses** ::
 
-    bin/$ qumin.macroclasses  <patterns.csv> <dataset.package.json>
+    /$ qumin.macroclasses  patterns=<patterns.csv> data=<dataset.package.json>
 
 **Full usage and more details:**::
 
-    bin/$ qumin.macroclasses --help
+    /$ qumin.macroclasses --help
 
 
 Lattices
@@ -157,11 +165,30 @@ Lattices
 
 This software was used in `Beniamine (2021) <https://langsci-press.org/catalog/book/262>`_".
 
-**Inferring a lattice of inflection classes, with html output** ::
+**Inferring a lattice of inflection classes, with (default) html output** ::
 
-    bin/$ qumin.lattice --html <patterns.csv> <dataset.package.json>
+    /$ qumin.lattice patterns=<patterns.csv> data=<dataset.package.json>
 
 **Full usage and more details:**::
 
-    bin/$ qumin.lattice --help
+    /$ qumin.lattice --help
 
+
+**Further config options**: ::
+
+    patterns: null        # pre-computed patterns
+    pats:
+      ortho: False        # whether patterns were orthographic
+    lattice:
+      shorten: False      # Drop redundant columns altogether.
+                          #  Useful for big contexts, but loses information.
+                          # The lattice shape and stats will be the same.
+                          # Avoid using with --html
+      aoc: False          # Only attribute and object concepts
+
+    export:
+      html: False         # Export to html
+      ctxt: False         # Export as a context
+      stat: False         # Output stats about the lattice
+      pdf: True           # Export as pdf
+      png: False          # Export as png

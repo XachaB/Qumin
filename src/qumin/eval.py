@@ -8,14 +8,14 @@ from .entropy import cond_P, P
 import numpy as np
 from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
-from .utils import get_default_parser, Metadata
+from .utils import Metadata
 from itertools import combinations, chain
 from multiprocessing import Pool
-from pathlib import Path
 from tqdm import tqdm
 import seaborn as sns
 from matplotlib import pyplot as plt
 import logging
+import hydra
 
 sns.set()
 
@@ -181,22 +181,22 @@ def predict_two_directions(test_items, train_items, method, features=None):
     return predicted_correct1, predicted_correct2, len(dic[(a, b)])
 
 
-def prepare_data(args, md):
+def prepare_data(cfg, md):
     """Create a multi-index paradigm table and if given a path, a features table."""
     paradigms = []
 
     paradigms = create_paradigms(md.get_table_path("forms"), segcheck=True, fillna=False, merge_cols=True,
-                             overabundant=False, defective=True)
+                                 overabundant=False, defective=True)
     indexes = paradigms.index
     features = None
 
-    if args.features is not None:
-        features = create_features(md, args.features)
+    if cfg.entropy.features is not None:
+        features = create_features(md, cfg.entropy.features)
         features, _ = pd.DataFrame.sum(features.map(lambda x: (str(x),)), axis=1).factorize()
         features = features[indexes].apply(lambda x: (x,))
 
-    if args.randomsample:
-        paradigms = paradigms.sample(args.randomsample)
+    if cfg.eval.sample:
+        paradigms = paradigms.sample(cfg.eval.sample)
 
     return paradigms, features
 
@@ -233,22 +233,11 @@ def to_heatmap(results, cells):
         plt.close(fig)
 
 
-def main(args):
-    r"""Evaluate pattern's accuracy with 10 folds.
-
-    For a detailed explanation, see the html doc. ::
-
-          ____
-         / __ \                    /)
-        | |  | | _   _  _ __ ___   _  _ __
-        | |  | || | | || '_ ` _ \ | || '_ \
-        | |__| || |_| || | | | | || || | | |
-         \___\_\ \__,_||_| |_| |_||_||_| |_|
-          Quantitative modeling of inflection
-
-    """
-    log.info(args)
-    md = Metadata(args, __file__)
+@hydra.main(version_base=None, config_path="config", config_name="eval")
+def eval_command(cfg):
+    r"""Evaluate pattern's accuracy with 10 folds."""
+    log.info(cfg)
+    md = Metadata(cfg, __file__)
     now = md.day + "_" + md.now
     np.random.seed(0)  # make random generator determinist
 
@@ -256,23 +245,32 @@ def main(args):
     paradigms_file_path = md.get_table_path("forms")
 
     segments.Inventory.initialize(sounds_file_name)
-    paradigms, features = prepare_data(args, md)
-
+    paradigms, features = prepare_data(cfg, md)
 
     general_infos = {"Qumin_version": md.version,
                      "lexemes": paradigms.shape[0],
                      "paradigms": paradigms_file_path,
                      "day_time": now}
 
-    tasks = prepare_arguments(paradigms, args.iterations,
-                              args.methods, features)
-    l = args.iterations if args.iterations else 10
-    l = l * len(list(combinations(range(paradigms.shape[1]), 2)))
+    kind_to_method = {
+        'patternsLevenshtein': 'levenshtein',
+        'patternsPhonsim': 'similarity',
+        'patternsSuffix': 'suffix',
+        'patternsPrefix': 'prefix',
+        'patternsBaseline': 'baseline'
+    }
 
-    if args.workers == 1:
+    methods = [kind_to_method[k] for k in cfg.pats.kind]
+    tasks = prepare_arguments(paradigms,
+                              cfg.eval.iter,
+                              methods,
+                              features)
+    l = cfg.eval.iter * len(list(combinations(range(paradigms.shape[1]), 2)))
+
+    if cfg.eval.workers == 1:
         results = list(chain(*(evaluate(t) for t in tqdm(tasks, total=l))))
     else:
-        pool = Pool(args.workers)
+        pool = Pool(cfg.eval.workers)
         results = list(chain(*tqdm(pool.imap_unordered(evaluate, tasks), total=l)))
         pool.close()
 
@@ -297,41 +295,6 @@ def main(args):
                                     "source": paradigms_file_path})
         fig.savefig(figname, dpi=300, bbox_inches='tight', pad_inches=0.5)
     md.save_metadata()
-
-
-def eval_command():
-    parser = get_default_parser(main.__doc__, patterns=False)
-
-    parser.add_argument('-i', '--iterations',
-                        help="How many test/train folds to do. Defaults to full cross validation.",
-                        type=int,
-                        default=None)
-
-    parser.add_argument('-m', '--methods',
-                        help="Methods to align forms. Default: compare all.",
-                        choices=["suffix", "prefix", "baseline", "levenshtein",
-                                 "similarity"],
-                        nargs="+",
-                        default=["suffix", "prefix", "baseline", "levenshtein",
-                                 "similarity"])
-
-    parser.add_argument('-w', '--workers',
-                        help="number of workers",
-                        type=int,
-                        default=1)
-
-    parser.add_argument('-r', '--randomsample',
-                        help="Mostly for debug",
-                        type=int,
-                        default=None)
-
-    parser.add_argument('--features',
-                        help="Feature file. Features will be considered known when predicting",
-                        type=str,
-                        default=None)
-
-    args = parser.parse_args()
-    main(args)
 
 
 if __name__ == '__main__':

@@ -4,12 +4,14 @@
 
 Utility functions for representations.
 """
-import pandas as pd
-import numpy as np
-from collections import defaultdict
-from ..utils import merge_duplicate_columns
-from .segments import Inventory, Form
 import logging
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+
+from .segments import Inventory, Form
+from ..utils import merge_duplicate_columns
 
 log = logging.getLogger()
 
@@ -32,6 +34,8 @@ def unique_lexemes(series, file_type):
 
 def create_features(md, feature_cols):
     """Read feature and preprocess to be coindexed with paradigms."""
+    if type(feature_cols) == str:
+        feature_cols = [feature_cols]
     features = pd.read_csv(md.get_table_path('lexemes'))
     unique_lexemes(features["lexeme_id"], "lexemes")
     features.set_index("lexeme_id", inplace=True)
@@ -88,8 +92,7 @@ def create_paradigms(data_file_name, verbose=False, fillna=True,
         unknown_cells = set(cells) - set(par_cols)
         if unknown_cells:
             raise ValueError(f"You specified some cells which aren't in the paradigm : {' '.join(unknown_cells)}")
-        return sorted(list(set(par_cols)-set(cells)))
-
+        return sorted(list(set(par_cols) - set(cells)))
 
     if not {lexemes, cell_col, form_col} < set(paradigms.columns):
         log.warning("Please use Paralex-style long-form table (http://www.paralex-standard.org).")

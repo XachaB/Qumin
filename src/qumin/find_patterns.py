@@ -4,55 +4,46 @@
 
 Author: Sacha Beniamine.
 """
-from .utils import get_default_parser, Metadata
-from .representations import patterns, segments, create_paradigms
-from .clustering import find_microclasses
-from itertools import combinations
 import logging
-import argparse
+from itertools import combinations
+
+import hydra
+
+from .clustering import find_microclasses
+from .representations import patterns, segments, create_paradigms
+from .utils import Metadata
 
 
-def main(args):
-    r"""Find pairwise alternation patterns from paradigms.
+@hydra.main(version_base=None, config_path="config", config_name="patterns")
+def pat_command(cfg):
+    r"""Find pairwise alternation patterns from paradigms."""
 
-    For a detailed explanation, see the html doc.::
-
-          ____
-         / __ \                    /)
-        | |  | | _   _  _ __ ___   _  _ __
-        | |  | || | | || '_ ` _ \ | || '_ \
-        | |__| || |_| || | | | | || || | | |
-         \___\_\ \__,_||_| |_| |_||_||_| |_|
-          Quantitative modeling of inflection
-
-    """
-
-    if args.verbose:
+    if cfg.verbose:
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     else:
         logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     log = logging.getLogger()
-    log.info(args)
-    md = Metadata(args, __file__)
+    log.info(cfg)
+    md = Metadata(cfg, __file__)
 
     # Loading files and paths
-    kind = args.kind
-    defective = args.defective
-    overabundant = args.overabundant
-    cells = args.cells
+    kind = cfg.pats.kind
+    defective = cfg.pats.defective
+    overabundant = cfg.pats.overabundant
+    cells = cfg.cells
     data_file_path = md.get_table_path("forms")
     if cells and len(cells) == 1:
-        raise argparse.ArgumentTypeError("You can't provide only one cell.")
+        raise ValueError("You can't provide only one cell.")
 
     is_of_pattern_type = kind.startswith("patterns")
     segcheck = True
 
     # Initializing segments
-    if not args.ortho:
+    if not cfg.pats.ortho:
         sounds_file_name = md.get_table_path("sounds")
         segments.Inventory.initialize(sounds_file_name)
     elif is_of_pattern_type:
-        raise argparse.ArgumentTypeError("You can't find patterns on orthographic material, only alternations or endings.")
+        raise ValueError("You can't find patterns on orthographic material, only alternations or endings.")
     else:
         segcheck = False
 
@@ -78,12 +69,12 @@ def main(args):
             patterns_df = patterns.make_pairs(patterns_df)
             log.info(patterns_df)
     elif is_of_pattern_type:
-        patterns_df, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=args.optim_mem,
-                                                  gap_prop=args.gap_proportion)
+        patterns_df, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=cfg.pats.optim_mem,
+                                                  gap_prop=cfg.pats.gap_proportion)
     else:
         patterns_df = patterns.find_alternations(paradigms, method[kind])
 
-    if merge_cols and not args.merge_cols:  # Re-build duplicate columns
+    if merge_cols and not cfg.pats.merged:  # Re-build duplicate columns
         for a, b in patterns_df.columns:
             if "#" in a:
                 cols = a.split("#")
@@ -110,77 +101,26 @@ def main(args):
 
     microclasses = find_microclasses(patterns_df.map(str))
     filename = md.register_file("microclasses.txt",
-                                {'computation': args.kind, 'content': 'microclasses'})
+                                {'computation': cfg.pats.kind, 'content': 'microclasses'})
     log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
     patfilename = md.register_file(kind + ".csv",
-                                   {'computation': args.kind, 'content': 'patterns'})
+                                   {'computation': cfg.pats.kind, 'content': 'patterns'})
     log.info("Writing patterns (importable by other scripts) to %s", patfilename)
     if is_of_pattern_type:
-        if args.optim_mem:
+        if cfg.pats.optim_mem:
             patterns.to_csv(patterns_df, patfilename, pretty=True)  # uses str because optim_mem already used repr
             log.warning("Since you asked for args.optim_mem, I will not export the human_readable file ")
         else:
             patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
             pathumanfilename = md.register_file("human_readable_" + kind + ".csv",
-                                                {'computation': args.kind, 'content': 'patterns_human'})
+                                                {'computation': cfg.pats.kind, 'content': 'patterns_human'})
             log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
             patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
     else:
         patterns_df.to_csv(patfilename, sep=",")
 
     md.save_metadata()
-
-
-def pat_command():
-    parser = get_default_parser(main.__doc__, patterns=False)
-
-    parser.add_argument("--ortho",
-                        help="Compute orthographic alternations.",
-                        action="store_true", default=False)
-
-    parser.add_argument('-k', '--kind',
-                        help="Kind of patterns to infer:"
-                             "Patterns with various alignments (patterns_);"
-                             " alternations as in Beniamine et al. (2017) (_Alt);"
-                             "endings (endings_), ",
-                        choices=['endings', 'endingsPairs', 'globalAlt', 'localAlt', 'endingsDisc',
-                                 'patternsLevenshtein', 'patternsPhonsim', 'patternsSuffix', 'patternsPrefix',
-                                 'patternsBaseline'],
-                        default='patternsPhonsim')
-
-    parser.add_argument("-d", "--defective",
-                        help="Keep defective entries.",
-                        action="store_true", default=False)
-
-    parser.add_argument("-o", "--overabundant",
-                        help="Keep overabundant entries.",
-                        action="store_true", default=False)
-
-    parser.add_argument("--gap_proportion",
-                        help="Proportion of the median similarity cost assigned to the insertion cost.",
-                        type=float, default=.4)
-
-    parser.add_argument("--optim_mem",
-                        help="Attempt to optimize RAM usage",
-                        action="store_true", default=False)
-
-    parser.add_argument("-m", "--merge_cols",
-                        help="Whether to merge identical columns before looking for patterns.",
-                        action="store_true", default=False)
-
-    parser.add_argument("--cells",
-                        help="List of cells to use. Defaults to all.",
-                        nargs='+', default=None)
-
-
-    args = parser.parse_args()
-
-    main(args)
-
-
-if __name__ == '__main__':
-    pat_command()
