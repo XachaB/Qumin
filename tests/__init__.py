@@ -1,11 +1,12 @@
-
 from unittest import TestCase
-from pandas.testing import assert_frame_equal
+
 import pandas as pd
+from pandas.testing import assert_frame_equal
+
 
 class TestCaseWithPandas(TestCase):
 
-    def __init__(self, *args,  **kwargs):
+    def __init__(self, *args, **kwargs):
         super(TestCaseWithPandas, self).__init__(*args, **kwargs)
         self.addTypeEqualityFunc(pd.DataFrame, self.assertDataframeEqual)
 

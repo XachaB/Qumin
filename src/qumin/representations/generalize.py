@@ -17,7 +17,7 @@ def generalize_patterns(pats):
     """Generalize these patterns' context.
 
     Arguments:
-        patterns: an iterable of :class:`Patterns.Pattern`
+        pats: an iterable of :class:`Patterns.Pattern`
 
     Return:
         a new :class:`Patterns.Pattern`.
@@ -49,7 +49,8 @@ def generalize_patterns(pats):
 def incremental_generalize_patterns(*args):
     """Merge patterns incrementally as long as the pattern has the same coverage.
 
-    Attempt to merge each patterns two by two, and refrain from doing so if the pattern doesn't match all the lexemes that lead to its inference.
+    Attempt to merge each patterns two by two, and refrain from doing so if the pattern doesn't match all the lexemes
+    that lead to its inference.
     Also attempt to merge together patterns that have not been merged with others.
 
     Arguments:

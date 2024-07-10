@@ -407,8 +407,8 @@ class PatternDistribution(object):
                             row = (str(my_pattern), "-", 0, 0)
                         table.append(row)
 
-                    log.debug("\n"+pd.DataFrame(table,
-                              columns=headers).to_markdown())
+                    log.debug("\n" + pd.DataFrame(table,
+                                                  columns=headers).to_markdown())
 
         if sanity_check:
             return value_norm(entropies_check)
@@ -627,7 +627,7 @@ class PatternDistribution(object):
                                counter[my_pattern] / total)
                         table.append(row)
 
-                    log.debug("\n"+pd.DataFrame(table, columns=headers).to_markdown())
+                    log.debug("\n" + pd.DataFrame(table, columns=headers).to_markdown())
 
         if sanity_check:
             return value_norm(entropies_check)

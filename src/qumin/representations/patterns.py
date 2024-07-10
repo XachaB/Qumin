@@ -193,10 +193,7 @@ class Pattern(object):
                 ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}"))
 
         def get_class(s):
-            if "," in s:
-                separator = ","
-            elif "-" in s:
-                separator = "-"
+            separator = "," if "," in s else "-"
             segments = s[1:-1].split(separator)
             return frozenset(segments)
 

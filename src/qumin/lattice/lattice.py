@@ -415,7 +415,7 @@ class ICLattice(object):
             filter(lambda obj: type(obj) is matplotlib.collections.PathCollection,
                    fig.axes[0].get_children(), ))
         lines = list(filter(lambda obj: type(obj) is matplotlib.lines.Line2D and
-                            len(obj.get_xdata(orig=True)) > 1,
+                                        len(obj.get_xdata(orig=True)) > 1,
                             fig.axes[0].get_children()))
         points_ids = []
         corrd_to_points = {}
