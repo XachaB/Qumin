@@ -96,11 +96,20 @@ class PatternDistribution(object):
                                           "n_preds",
                                           "method"])
 
-    def export_file(self, file):
-        """ Export the data DataFrame to file"""
+    def export_file(self, filename):
+        """ Export the data DataFrame to file
+
+        Arguments:
+            filename: the file's path.
+        """
+        def join_if_multiple(preds):
+            if type(preds) is tuple:
+                return "&".join(preds)
+            return preds
+
         data = self.data.copy()
-        data["predictor"] = data.apply(lambda preds: "&".join(preds) if type(preds) is tuple else preds, axis=1)
-        data.to_csv(file, index=False)
+        data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
+        data.to_csv(filename, index=False)
 
     def import_file(self, filename):
         """Read already computed entropies from a file.
@@ -108,8 +117,12 @@ class PatternDistribution(object):
         Arguments:
             filename: the file's path.
         """
+        def split_if_multiple(preds):
+            if "&" in preds:
+                return tuple(preds.split("&"))
+            return preds
         data = pd.read_csv(filename)
-        data["predictor"] = data.apply(lambda preds: preds.split("&") if "&" in preds else preds, axis=1)
+        data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(split_if_multiple)
         self.data = pd.concat(self.data, data)
 
     def add_features(self, series):
