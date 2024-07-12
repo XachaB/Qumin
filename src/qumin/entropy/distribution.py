@@ -91,10 +91,10 @@ class PatternDistribution(object):
         self.data = pd.DataFrame(None,
                                  columns=["predictor",
                                           "predicted",
-                                          "entropy",
+                                          "measure",
+                                          "value",
                                           "n_pairs",
-                                          "n_preds",
-                                          "method"])
+                                          "n_preds"])
 
     def export_file(self, filename):
         """ Export the data DataFrame to file
@@ -157,14 +157,16 @@ class PatternDistribution(object):
         """
 
         def check_zeros(n):
+            log.info("Saving time by listing already known 0 entropies...")
             if n - 1 in self.data.loc[:, "n_preds"]:
-                df = self.data[self.data.loc[:, "n_preds"] == (n - 1)].groupby("predicted")
+                df = self.data[(self.data.loc[:, "n_preds"] == (n - 1)) &
+                               (self.data.loc[:, "measure"] == "cond_entropy")].groupby("predicted")
                 if n - 1 == 1:
                     df = df.agg({"predictor": lambda ps: set(frozenset({pred}) for pred in ps)})
                 else:
                     df = df.agg({"predictor": lambda ps: set(frozenset(pred) for pred in ps)})
                 return df.to_dict(orient="index")
-            return defaultdict(set)
+            return None
 
         if n == 1:
             return self.one_pred_entropy()
@@ -182,11 +184,7 @@ class PatternDistribution(object):
                     return True
             return False
 
-        if any((i in self.data.loc[:, "n_preds"] for i in range(1, n))):
-            log.info("Saving time by listing already known 0 entropies...")
-            zeros = check_zeros(n)
-        else:
-            zeros = None
+        zeros = check_zeros(n)
 
         pat_order = {}
         for a, b in patterns:
@@ -221,8 +219,8 @@ class PatternDistribution(object):
                     B = self.add_features(dfsum(known))
 
                     # Prediction of H(A|B)
-                    yield [predictors, out, cond_entropy(A, B, subset=selector),
-                           sum(selector), len(predictors), self.__class__.__name__]
+                    yield [predictors, out, "cond_entropy", cond_entropy(A, B, subset=selector),
+                           sum(selector), len(predictors)]
 
         rows = chain(*[calc_condent(preds) for preds in combinations(columns, n)])
         self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
@@ -255,11 +253,11 @@ class PatternDistribution(object):
                             columns=rows).reset_index(drop=False,
                                                       names="predictor").melt(id_vars="predictor",
                                                                               var_name="predicted",
-                                                                              value_name="entropy")
+                                                                              value_name="value")
         data = data[data.predictor != data.predicted]  # drop a -> a cases
         data.loc[:, "n_pairs"] = None
         data.loc[:, "n_preds"] = 1
-        data.loc[:, "method"] = self.__class__.__name__
+        data.loc[:, "measure"] = "cond_entropy"
 
         def calc_condent(row):
             a, b = row["predictor"], row["predicted"]
@@ -267,7 +265,7 @@ class PatternDistribution(object):
             row["n_pairs"] = sum(selector)
             known_ab = self.add_features(classes[(a, b)])
             pats = patterns[(a, b)] if (a, b) in patterns else patterns[(b, a)]
-            row["entropy"] = cond_entropy(pats, known_ab, subset=selector)
+            row["value"] = cond_entropy(pats, known_ab, subset=selector)
             return row
 
         data = data.apply(calc_condent, axis=1)

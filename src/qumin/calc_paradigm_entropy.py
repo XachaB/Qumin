@@ -141,7 +141,9 @@ def H_command(cfg):
 
     if onePred:
         distrib.one_pred_entropy()
-        mean = distrib.data.loc[distrib.data.loc[:, "n_preds"] == 1, "entropy"].mean()
+        mean = distrib.data.loc[(distrib.data.loc[:, "n_preds"] == 1) &
+                                (distrib.data.loc[:, "measure"] == "cond_entropy")
+                                , "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
             distrib.one_pred_distrib_log()
@@ -152,8 +154,9 @@ def H_command(cfg):
 
         for n in preds:
             distrib.n_preds_entropy_matrix(n)
-            n_entropies = distrib.data.loc[distrib.data["n_preds"] == n, :]
-            mean = n_entropies.entropy.mean()
+            n_entropies = distrib.data.loc[(distrib.data["n_preds"] == n) &
+                                (distrib.data.loc[:, "measure"] == "cond_entropy"), "value"]
+            mean = n_entropies.mean()
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
             if verbose:
