@@ -211,7 +211,8 @@ class PatternDistribution(object):
                     B = self.add_features(dfsum(known))
 
                     # Prediction of H(A|B)
-                    yield [predictors, out, cond_entropy(A, B, subset=selector), sum(selector), len(predictors), "fast_method"]
+                    yield [predictors, out, cond_entropy(A, B, subset=selector),
+                           sum(selector), len(predictors), self.__class__.__name__]
 
         rows = chain(*[calc_condent(preds) for preds in combinations(columns, n)])
         self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
@@ -248,7 +249,7 @@ class PatternDistribution(object):
         data = data[data.predictor != data.predicted]  # drop a -> a cases
         data.loc[:, "n_pairs"] = None
         data.loc[:, "n_preds"] = 1
-        data.loc[:, "method"] = "fast_method"
+        data.loc[:, "method"] = self.__class__.__name__
 
         def calc_condent(row):
             a, b = row["predictor"], row["predicted"]
