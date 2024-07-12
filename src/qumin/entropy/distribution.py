@@ -96,29 +96,24 @@ class PatternDistribution(object):
                                           "n_preds",
                                           "method"])
 
-    def add_features(self, series):
-        return series + self.features[series.index]
+    def export_file(self, file):
+        """ Export the data DataFrame to file"""
+        data = self.data.copy()
+        data["predictor"] = data.apply(lambda preds: "&".join(preds) if type(preds) is tuple else preds, axis=1)
+        data.to_csv(file, index=False)
 
-    def read_entropy_from_file(self, filename):  # TODO: read it back
+    def import_file(self, filename):
         """Read already computed entropies from a file.
-
-        This now expects a long form table.
 
         Arguments:
             filename: the file's path.
         """
-        entropies = pd.read_csv(filename, sep="\t", index_col=0)
+        data = pd.read_csv(filename)
+        data["predictor"] = data.apply(lambda preds: preds.split("&") if "&" in preds else preds, axis=1)
+        self.data = pd.concat(self.data, data)
 
-        if ", " in entropies.index[0]:
-            entropies.index = [tuple(y.strip(' "\'')
-                                     for y in x.strip("()").split(", "))
-                               for x in entropies.index]
-
-            n = len(entropies.index[0])
-        else:
-            n = 1
-
-        self._register_entropy(n, entropies, None)
+    def add_features(self, series):
+        return series + self.features[series.index]
 
     def n_preds_entropy_matrix(self, n):
         r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies, and one with counts of lexemes.

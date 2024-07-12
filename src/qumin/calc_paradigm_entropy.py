@@ -148,7 +148,7 @@ def H_command(cfg):
 
     if preds:
         if cfg.entropy.importFile:
-            distrib.read_entropy_from_file(cfg.entropy.importFile)
+            distrib.import_file(cfg.entropy.importFile)
 
         for n in preds:
             distrib.n_preds_entropy_matrix(n)
@@ -163,6 +163,6 @@ def H_command(cfg):
                                 {'computation': 'entropies',
                                  'content': 'results'})
     log.info("Writing to: {}".format(ent_file))
-    distrib.data.to_csv(ent_file, index=False)
+    distrib.export_file(ent_file)
 
     md.save_metadata()
