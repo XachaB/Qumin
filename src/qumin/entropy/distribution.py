@@ -17,6 +17,7 @@ from . import cond_entropy
 
 log = logging.getLogger(__name__)
 
+
 def value_norm(df):
     """ Rounding at 10 significant digits, avoiding negative 0s"""
     return df.map(lambda x: round(x, 10)) + 0
@@ -57,7 +58,7 @@ class PatternDistribution(object):
             for the distribution :math:`P(c_{1}, ..., c_{n} → c_{n+1})`.
     """
 
-    def __init__(self, paradigms, patterns, classes, features=None):
+    def __init__(self, paradigms, patterns, classes, name, features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -70,9 +71,10 @@ class PatternDistribution(object):
             features:
                 optional table of features
         """
+        self.name = name
         self.paradigms = paradigms.map(lambda x: x[0] if x else x)
         self.classes = classes
-        self.patterns = patterns.map(lambda x: (str(x),))
+        self.patterns = patterns.map(lambda x: (str(x),) if type(x) is not tuple else x)
 
         if features is not None:
             # Add feature names
@@ -86,7 +88,6 @@ class PatternDistribution(object):
             self.features = None
             self.add_features = lambda x: x
 
-
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
         self.data = pd.DataFrame(None,
                                  columns=["predictor",
@@ -94,7 +95,14 @@ class PatternDistribution(object):
                                           "measure",
                                           "value",
                                           "n_pairs",
-                                          "n_preds"])
+                                          "n_preds",
+                                          "dataset"
+                                          ])
+
+    def get_results(self, measure="cond_entropy", n=1):
+        is_cond_ent = self.data.loc[:, "measure"] == measure
+        is_one_pred = self.data.loc[:, "n_preds"] == n
+        return self.data.loc[is_cond_ent & is_one_pred, :]
 
     def export_file(self, filename):
         """ Export the data DataFrame to file
@@ -102,6 +110,7 @@ class PatternDistribution(object):
         Arguments:
             filename: the file's path.
         """
+
         def join_if_multiple(preds):
             if type(preds) is tuple:
                 return "&".join(preds)
@@ -119,10 +128,12 @@ class PatternDistribution(object):
         Arguments:
             filename: the file's path.
         """
+
         def split_if_multiple(preds):
             if "&" in preds:
                 return tuple(preds.split("&"))
             return preds
+
         data = pd.read_csv(filename)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(split_if_multiple)
         self.data = pd.concat(self.data, data)
@@ -159,8 +170,7 @@ class PatternDistribution(object):
         def check_zeros(n):
             log.info("Saving time by listing already known 0 entropies...")
             if n - 1 in self.data.loc[:, "n_preds"]:
-                df = self.data[(self.data.loc[:, "n_preds"] == (n - 1)) &
-                               (self.data.loc[:, "measure"] == "cond_entropy")].groupby("predicted")
+                df = self.get_results(measure="cond_entropy", n=n - 1).groupby("predicted")
                 if n - 1 == 1:
                     df = df.agg({"predictor": lambda ps: set(frozenset({pred}) for pred in ps)})
                 else:
@@ -220,9 +230,10 @@ class PatternDistribution(object):
 
                     # Prediction of H(A|B)
                     yield [predictors, out, "cond_entropy", cond_entropy(A, B, subset=selector),
-                           sum(selector), len(predictors)]
+                           sum(selector), len(predictors), self.name]
 
         rows = chain(*[calc_condent(preds) for preds in combinations(columns, n)])
+
         self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
 
     def one_pred_entropy(self):
@@ -258,6 +269,7 @@ class PatternDistribution(object):
         data.loc[:, "n_pairs"] = None
         data.loc[:, "n_preds"] = 1
         data.loc[:, "measure"] = "cond_entropy"
+        data.loc[:, "dataset"] = self.name
 
         def calc_condent(row):
             a, b = row["predictor"], row["predicted"]
@@ -394,10 +406,10 @@ class PatternDistribution(object):
 
         pred_numbers = list(range(1, n + 1))
         patterns_string = "\n".join(f"{pred}~{n + 1}" + "= {}" for pred in pred_numbers)
-        classes_string = "\n    * " + "\n    * ".join(f"Class({pred}, {n+1})" + "= {}" for pred in pred_numbers)
+        classes_string = "\n    * " + "\n    * ".join(f"Class({pred}, {n + 1})" + "= {}" for pred in pred_numbers)
         known_pat_string = "\n    * " "\n    * ".join("{!s}~{!s}".format(*preds) +
-                                           "= {}" for preds
-                                           in combinations(pred_numbers, 2))
+                                                      "= {}" for preds
+                                                      in combinations(pred_numbers, 2))
 
         def format_features(features):
             return "\n* Features:\n    * " + "\n    * ".join(str(x) for x in features)
@@ -474,7 +486,6 @@ class PatternDistribution(object):
                     log.debug("\n" + pd.DataFrame(table, columns=headers).to_markdown())
 
 
-
 class SplitPatternDistribution(PatternDistribution):
     """ Implicative entropy distribution for split systems
 
@@ -483,80 +494,62 @@ class SplitPatternDistribution(PatternDistribution):
 
     def __init__(self, paradigms_list, patterns_list, classes_list, names,
                  features=None):
-        if features is not None:
-            raise NotImplementedError(
-                "Split patterns with features is not implemented yet.")
         columns = [tuple(paradigms.columns) for paradigms in paradigms_list]
         assert len(set(columns)) == 1, "Split systems must share same paradigm cells"
 
+        super().__init__(merge_split_df(paradigms_list),
+                         merge_split_df([p.map(lambda x: (str(x),)) for p in patterns_list]),
+                         merge_split_df(classes_list),
+                         "bipartite:" + "&".join(names),
+                         features=features
+                         )
+
+        # Add one pattern distribution for each dataset
         self.distribs = [PatternDistribution(paradigms_list[i],
                                              patterns_list[i],
-                                             classes_list[i]) for i in
+                                             classes_list[i],
+                                             name=names[i],
+                                             features=features
+                                             ) for i in
                          range(len(paradigms_list))]
-
-        self.names = names
-        self.paradigms = merge_split_df(paradigms_list)
-
-        patterns_list = [p.map(lambda x: (str(x),)) for p in patterns_list]
-        self.patterns = merge_split_df(patterns_list)
-        log.info("Looking for classes of applicable patterns")
-
-        self.classes = merge_split_df(classes_list)
 
         # Information on the shape of both dimensions is always available in forms
         for distrib in self.distribs:
             distrib.classes = self.classes
-
-        self.hasforms = {cell: (self.paradigms[cell] != "") for cell in self.paradigms}
-        self.entropies = [None] * 10
-        self.effectifs = [None] * 10
 
         # Extra
         self.columns = columns[0]
         self.patterns_list = patterns_list
         self.classes_list = classes_list
 
-    def add_features(self, series):
-        return series
-
     def mutual_information(self, normalize=False):
         """ Information mutuelle entre les deux systèmes."""
-
         self.distribs[0].one_pred_entropy()
         self.distribs[1].one_pred_entropy()
         self.one_pred_entropy()
 
-        H = self.distribs[0].entropies[1]
-        Hprime = self.distribs[1].entropies[1]
-        Hjointe = self.entropies[1]
+        index = ["predictor", "predicted"]
+        left_ent = self.distribs[0].get_results()
+        right_ent = self.distribs[1].get_results()
+
+        # For operations, we need all of these as simple series of values,
+        # indexed by predictors & predicted
+        H = left_ent.set_index(index).value
+        Hprime = right_ent.set_index(index).value
+        Hjointe = self.get_results().set_index(index).value
 
         I = H + Hprime - Hjointe
+        NMI = (2 * I) / (H + Hprime)
 
-        if normalize:
-            return (2 * I) / (H + Hprime)
-        else:
-            return I
+        # Register results
+        I = I.reset_index(drop=False)
+        I["measure"] = "mutual_information"
+        I["dataset"] = self.name
+        I["n_pairs"] = ""
 
-    def cond_bipartite_entropy(self, target=0, known=1):
-        """ Entropie conditionnelle entre les deux systèmes, H(c1->c2\|c1'->c2') ou H(c1'->c2'\|c1->c2)
-        """
-        # For faster access
-        log.info("Computing implicative H({self.names[target]}|{self.names[known]})")
-        pats = self.patterns_list[target]
+        NMI = NMI.reset_index(drop=False)
+        NMI["measure"] = "normalized_mutual_information"
+        NMI["dataset"] = self.name
+        NMI["n_pairs"] = ""
 
-        predpats = self.patterns_list[known]
-
-        cols = self.columns
-
-        entropies = pd.DataFrame(index=cols, columns=cols)
-
-        for a, b in pats.columns:
-            selector = self.hasforms[a] & self.hasforms[b]
-            entropies.at[a, b] = cond_entropy(pats[(a, b)], self.add_features(
-                self.classes[(a, b)] + predpats[(a, b)]),
-                                              subset=selector)
-            entropies.at[b, a] = cond_entropy(pats[(a, b)], self.add_features(
-                self.classes[(b, a)] + predpats[(a, b)]),
-                                              subset=selector)
-
-        return value_norm(entropies)
+        self.data = pd.concat([self.data, left_ent, right_ent, I, NMI])

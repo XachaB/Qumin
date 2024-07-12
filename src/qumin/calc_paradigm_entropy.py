@@ -9,12 +9,14 @@ import logging
 
 import hydra
 from hydra.core.hydra_config import HydraConfig
+
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
 # Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
 from .utils import Metadata
 
 log = logging.getLogger()
+
 
 @hydra.main(version_base=None, config_path="config", config_name="entropy")
 def H_command(cfg):
@@ -88,46 +90,16 @@ def H_command(cfg):
                                            [classes, classes2],
                                            names,
                                            features=features)
-        if cfg.entropy.comp:
-            computation = 'bipartiteEntropies'
-            ent_file1 = md.register_file('bipartite1.csv',
-                                         {'computation': computation,
-                                          'source': names[0],
-                                          'content': 'entropies'})
-            ent_file2 = md.register_file('bipartite2.csv',
-                                         {'computation': computation,
-                                          'source': names[1],
-                                          'content': 'entropies'})
-            I = md.register_file('I.csv', {'computation': computation,
-                                           'source': names,
-                                           'content': 'I'})
-            NMI = md.register_file('NMI.csv',
-                                   {'computation': computation,
-                                    'source': names,
-                                    'content': 'NMI'})
 
-            distrib.distribs[0].one_pred_entropy()
-            entropies1 = distrib.distribs[0].entropies[1]
-            distrib.distribs[1].one_pred_entropy()
-            entropies2 = distrib.distribs[1].entropies[1]
-            mutual = distrib.mutual_information()
-            normmutual = distrib.mutual_information(normalize=True)
-
-            log.info("Writing to:" + "\n\t".join([ent_file1, ent_file2, I, NMI]))
-            entropies1.to_csv(ent_file1, sep="\t")
-            entropies2.to_csv(ent_file2, sep="\t")
-            mutual.to_csv(I, sep="\t")
-            normmutual.to_csv(NMI, sep="\t")
-            if verbose:
-                # mean on df's index, then on Series' values.
-                mean1 = entropies1.mean().mean()
-                mean2 = entropies2.mean().mean()
-                mean3 = mutual.mean().mean()
-                mean4 = normmutual.mean().mean()
-                log.debug("Mean remaining H(c1 -> c2) for %s = %s", names[0], mean1)
-                log.debug("Mean remaining H(c1 -> c2) for %s = %s", names[1], mean2)
-                log.debug("Mean I(%s,%s) = %s", *names, mean3)
-                log.debug("Mean NMI(%s,%s) = %s", *names, mean4)
+        distrib.mutual_information()
+        mean1 = distrib.distribs[0].get_results().loc[:, "value"].mean()
+        mean2 = distrib.distribs[1].get_results().loc[:, "value"].mean()
+        mean3 = distrib.get_results(measure="mutual_information").loc[:, "value"].mean()
+        mean4 = distrib.get_results(measure="normalized_mutual_information").loc[:, "value"].mean()
+        log.debug("Mean remaining H(c1 -> c2) for %s = %s", names[0], mean1)
+        log.debug("Mean remaining H(c1 -> c2) for %s = %s", names[1], mean2)
+        log.debug("Mean I(%s,%s) = %s", *names, mean3)
+        log.debug("Mean NMI(%s,%s) = %s", *names, mean4)
 
     else:
         log.info("Looking for classes of applicable patterns")
@@ -137,26 +109,23 @@ def H_command(cfg):
         distrib = PatternDistribution(paradigms,
                                       pat_table,
                                       classes,
+                                      "&".join([p.name for p in md.datasets]),
                                       features=features)
 
     if onePred:
-        distrib.one_pred_entropy()
-        mean = distrib.data.loc[(distrib.data.loc[:, "n_preds"] == 1) &
-                                (distrib.data.loc[:, "measure"] == "cond_entropy")
-                                , "value"].mean()
+        if not md.bipartite:  # Already computed in bipartite systems :)
+            distrib.one_pred_entropy()
+        mean = distrib.get_results().loc[:, "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
             distrib.one_pred_distrib_log()
-
     if preds:
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
 
         for n in preds:
             distrib.n_preds_entropy_matrix(n)
-            n_entropies = distrib.data.loc[(distrib.data["n_preds"] == n) &
-                                (distrib.data.loc[:, "measure"] == "cond_entropy"), "value"]
-            mean = n_entropies.mean()
+            mean = distrib.get_results(n=n).loc[:, "value"].mean()
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
             if verbose:

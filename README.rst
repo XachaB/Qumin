@@ -139,13 +139,11 @@ The config file contains the following keys, which can be set through the comman
                           # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
       importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
       merged: False       # Whether identical columns are merged in the input.
-      comp: False         # Thorough comparison for bipartite systems:
-                          # Logs H(c1->c2), H(c1'->c2'), I(c1'->c2';c1->c2) and  NMI(c1'->c2';c1->c2)
       stacked: False      # whether to stack results in long form
 
 For bipartite systems, it is possible to pass two values to both patterns and data, eg: ::
 
-    /$ qumin.H  comp=True patterns="[<patterns1.csv>,<patterns2.csv>]" data="[<dataset1.package.json>,<dataset2.package.json>]"
+    /$ qumin.H  patterns="[<patterns1.csv>,<patterns2.csv>]" data="[<dataset1.package.json>,<dataset2.package.json>]"
 
 
 Macroclass inference
