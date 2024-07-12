@@ -13,16 +13,11 @@ from .clustering import find_microclasses
 from .representations import patterns, segments, create_paradigms
 from .utils import Metadata
 
+log = logging.getLogger()
 
 @hydra.main(version_base=None, config_path="config", config_name="patterns")
 def pat_command(cfg):
     r"""Find pairwise alternation patterns from paradigms."""
-
-    if cfg.verbose:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-    else:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    log = logging.getLogger()
     log.info(cfg)
     md = Metadata(cfg, __file__)
 

@@ -8,17 +8,18 @@ Compute conditional entropies in inflectional patterns.
 import logging
 
 import hydra
-
+from hydra.core.hydra_config import HydraConfig
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
 # Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
 from .utils import Metadata
 
+log = logging.getLogger()
 
 @hydra.main(version_base=None, config_path="config", config_name="entropy")
 def H_command(cfg):
     r"""Compute entropies of flexional paradigms' distributions."""
-
+    verbose = HydraConfig.get().verbose is not False
     md = Metadata(cfg, __file__)
     md.bipartite = False
     if type(cfg.data) is not str or type(cfg.patterns) is not str:
@@ -39,17 +40,6 @@ def H_command(cfg):
     if cells and len(cells) == 1:
         raise ValueError("You can't provide only one cell.")
 
-    # Define logging levels (different depending on verbosity)
-    if cfg.verbose or cfg.debug:
-        logfile_name = md.register_file('debug.log', {'content': 'log'})
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG,
-                            filename=logfile_name, filemode='w')
-        console = logging.StreamHandler()
-        console.setLevel(logging.INFO)
-        logging.getLogger('').addHandler(console)
-    else:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    log = logging.getLogger()
     log.info(cfg)
 
     segments.Inventory.initialize(sounds_file_name)
@@ -66,11 +56,10 @@ def H_command(cfg):
             "It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
         paradigms = paradigms[(paradigms != "").all(axis=1)]
 
-    if cfg.debug and len(pat_table.columns) > 10:
-        log.warning("Using debug mode is strongly "
+    if verbose and len(pat_table.columns) > 10:
+        log.warning("Using verbose mode is strongly "
                     "discouraged on large (>10 cells) datasets."
                     "You should probably stop this process now.")
-    sanity_check = cfg.debug and len(pat_table.columns) < 10
 
     if cfg.entropy.features is not None:
         features = create_features(md, cfg.entropy.features)
@@ -87,10 +76,17 @@ def H_command(cfg):
         pat_table2, pat_dic2 = patterns.from_csv(patterns_file_path[1], defective=True,
                                                  overabundant=False)
 
+        log.info("Looking for classes of applicable patterns")
+        classes = patterns.find_applicable(paradigms, pat_dic)
+        classes2 = patterns.find_applicable(paradigms2, pat_dic2)
+        log.debug("Classes:")
+        log.debug(classes)
+        log.debug(classes2)
+
         distrib = SplitPatternDistribution([paradigms, paradigms2],
                                            [pat_table, pat_table2],
-                                           [pat_dic, pat_dic2],
-                                           names,  # TODO: replace this
+                                           [classes, classes2],
+                                           names,
                                            features=features)
         if cfg.entropy.comp:
             computation = 'bipartiteEntropies'
@@ -110,9 +106,9 @@ def H_command(cfg):
                                     'source': names,
                                     'content': 'NMI'})
 
-            distrib.distribs[0].entropy_matrix()
+            distrib.distribs[0].one_pred_entropy()
             entropies1 = distrib.distribs[0].entropies[1]
-            distrib.distribs[1].entropy_matrix()
+            distrib.distribs[1].one_pred_entropy()
             entropies2 = distrib.distribs[1].entropies[1]
             mutual = distrib.mutual_information()
             normmutual = distrib.mutual_information(normalize=True)
@@ -122,7 +118,7 @@ def H_command(cfg):
             entropies2.to_csv(ent_file2, sep="\t")
             mutual.to_csv(I, sep="\t")
             normmutual.to_csv(NMI, sep="\t")
-            if cfg.debug:
+            if verbose:
                 # mean on df's index, then on Series' values.
                 mean1 = entropies1.mean().mean()
                 mean2 = entropies2.mean().mean()
@@ -134,93 +130,39 @@ def H_command(cfg):
                 log.debug("Mean NMI(%s,%s) = %s", *names, mean4)
 
     else:
+        log.info("Looking for classes of applicable patterns")
+        classes = patterns.find_applicable(paradigms, pat_dic)
+        log.debug("Classes:")
+        log.debug(classes)
         distrib = PatternDistribution(paradigms,
                                       pat_table,
-                                      pat_dic,
+                                      classes,
                                       features=features)
 
     if onePred:
-        computation = 'onePredEntropies'
-        ent_file = md.register_file('entropies.csv',
-                                    {'computation': computation,
-                                     'content': 'entropies'})
-        effectifs_file = md.register_file('effectifs.csv',
-                                          {'computation': computation,
-                                           'content': 'effectifs'})
-
-        distrib.entropy_matrix()
-        entropies = distrib.entropies[1]
-        effectifs = distrib.effectifs[1]
-
-        if cfg.entropy.stacked:
-            entropies = entropies.stack()
-            entropies.index = [' -> '.join(index)
-                               for index in entropies.index.values]
-        log.info("Writing to: {}\n\tand {}".format(ent_file, effectifs_file))
-        entropies.to_csv(ent_file, sep="\t")
-        effectifs.to_csv(effectifs_file, sep="\t")
-        # mean on df's index, then on Series' values.
-        mean = entropies.mean().mean()
+        distrib.one_pred_entropy()
+        mean = distrib.data.loc[distrib.data.loc[:, "n_preds"] == 1, "entropy"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
-
-        if cfg.debug:
-            check = distrib.one_pred_distrib_log(sanity_check=sanity_check)
-
-            if sanity_check:
-                check_file = md.register_file('entropies_slow_method.csv',
-                                              {'computation': computation,
-                                               'content': 'entropies_slow_method'})
-
-                log.info("Writing slowly computed entropies to: %s", check_file)
-
-                check.to_csv(check_file, sep="\t")
+        if verbose:
+            distrib.one_pred_distrib_log()
 
     if preds:
-
         if cfg.entropy.importFile:
             distrib.read_entropy_from_file(cfg.entropy.importFile)
 
         for n in preds:
-            computation = 'nPredsEntropies'
-            n_ent_file = md.register_file('npreds{}_entropies.csv'.format(n),
-                                          {'computation': computation,
-                                           'content': 'entropies',
-                                           'n': n})
-            effectifs_file = md.register_file('npreds{}_effectifs.csv'.format(n),
-                                              {'computation': computation,
-                                               'content': 'effectifs',
-                                               'n': n})
-
             distrib.n_preds_entropy_matrix(n)
-            n_entropies = distrib.entropies[n]
-            effectifs = distrib.effectifs[n]
-            log.info("\nWriting to: {}\n\tand {}".format(n_ent_file, effectifs_file))
-            if cfg.entropy.stacked:
-                n_entropies = n_entropies.stack()
-                n_entropies.index = [' -> '.join(index)
-                                     for index in n_entropies.index.values]
-            n_entropies.to_csv(n_ent_file, sep="\t")
-            effectifs.to_csv(effectifs_file, sep="\t")
-            mean = n_entropies.mean().mean()
-            log.info("Mean H(c1, ..., c%s-> c) = %s", n, mean)
+            n_entropies = distrib.data.loc[distrib.data["n_preds"] == n, :]
+            mean = n_entropies.entropy.mean()
+            log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
-            if cfg.debug:
-                n_check = distrib.n_preds_distrib_log(n, sanity_check=sanity_check)
+            if verbose:
+                distrib.n_preds_distrib_log(n)
 
-                if sanity_check:
-                    n_check_file = md.register_file('npreds{}_entropies_slow.csv',
-                                                    {'computation': computation,
-                                                     'content': 'entropies_slow_method',
-                                                     'n': n})
-
-                    log.info("Writing slowly computed"
-                             " entropies to: {}".format(n_check_file))
-                    n_check.to_csv(n_check_file, sep="\t")
-
-            if onePred and cfg.debug:
-                distrib.value_check(n)
-
-    if cfg.debug:
-        log.info("Wrote log to: {}".format(logfile_name))
+    ent_file = md.register_file('entropies.csv',
+                                {'computation': 'entropies',
+                                 'content': 'results'})
+    log.info("Writing to: {}".format(ent_file))
+    distrib.data.to_csv(ent_file, index=False)
 
     md.save_metadata()

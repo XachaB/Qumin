@@ -1,5 +1,25 @@
+hydra:
+  job_logging:
+    formatters:
+      simple:
+        format: '[%(asctime)s][%(name)s][%(levelname)s] - %(message)s'
+      raw:
+        format: '%(message)s'
+    disable_existing_loggers: false
+    handlers:
+      file:
+        class: logging.FileHandler
+        mode: w
+        formatter: raw
+        delay: true
+      console:
+        class: logging.StreamHandler
+        formatter: simple
+        stream: ext://sys.stdout
+    root:
+      level: INFO
+      handlers: [console, file]
 
+disable_existing_loggers: false
 data: ???         # path to paralex.package.json paradigms, segments
-verbose: False    # Activate logs
-debug: False      # Even more logs; extra debug steps
 cells: null       # List of cells to use (subset)

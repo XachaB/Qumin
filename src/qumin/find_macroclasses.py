@@ -24,15 +24,11 @@ import pandas as pd
 import logging
 import hydra
 
+log = logging.getLogger()
 
 @hydra.main(version_base=None, config_path="config", config_name="macroclasses")
 def macroclasses_command(cfg):
     r"""Cluster lexemes in macroclasses according to alternation patterns."""
-    if cfg.verbose:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-    else:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    log = logging.getLogger()
     log.info(cfg)
     md = Metadata(cfg, __file__)
 

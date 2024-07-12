@@ -15,28 +15,10 @@ from .lattice.lattice import ICLattice
 from .representations import segments, patterns
 from .utils import Metadata
 
-
+log = logging.getLogger()
 @hydra.main(version_base=None, config_path="config", config_name="lattice")
 def lattice_command(cfg):
-    r"""Infer Inflection classes as a lattice from alternation patterns.
-
-    For a detailed explanation, see the html doc.::
-
-          ____
-         / __ \                    /)
-        | |  | | _   _  _ __ ___   _  _ __
-        | |  | || | | || '_ ` _ \ | || '_ \
-        | |__| || |_| || | | | | || || | | |
-         \___\_\ \__,_||_| |_| |_||_||_| |_|
-           Quantitative modeling of inflection
-
-
-    """
-    if cfg.verbose:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-    else:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    log = logging.getLogger()
+    r"""Infer Inflection classes as a lattice from alternation patterns."""
     log.info(cfg)
 
     md = Metadata(cfg, __file__)
