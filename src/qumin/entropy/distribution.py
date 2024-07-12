@@ -109,6 +109,8 @@ class PatternDistribution(object):
 
         data = self.data.copy()
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
+        if "entropy" in data.columns:
+            data.loc[:, "entropy"] = value_norm(data.loc[:, "entropy"])
         data.to_csv(filename, index=False)
 
     def import_file(self, filename):
