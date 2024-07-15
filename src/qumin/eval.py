@@ -232,7 +232,6 @@ def to_heatmap(results, cells):
 
 def eval_command(cfg, md):
     r"""Evaluate pattern's accuracy with 10 folds."""
-    log.info(cfg)
     now = md.day + "_" + md.now
     np.random.seed(0)  # make random generator determinist
 

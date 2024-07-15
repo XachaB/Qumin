@@ -16,7 +16,7 @@ def qumin_command(cfg):
     log.info(cfg)
     md = Metadata(cfg, __file__)
 
-    if cfg.patterns is None or "patterns" in cfg.actions:
+    if cfg.patterns is None or cfg.action == "patterns":
         overab = cfg.pats.overabundant == False
         for_H = cfg.action == "H"
         for_m = cfg.action == "macroclasses"

@@ -60,14 +60,12 @@ def distance_matrix(pat_table, microclasses, **kwargs):
 
 
 @hydra.main(version_base=None, config_path="config", config_name="heatmap")
-def heatmap_command(cfg):
+def heatmap_command(cfg, md):
     r"""Draw a clustermap of microclass similarities using seaborn.
     """
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     log.info(cfg)
     log.info("Reading files")
-
-    md = Metadata(cfg, __file__)
 
     categories = None
     if cfg.heatmap.label:
@@ -81,4 +79,3 @@ def heatmap_command(cfg):
     microclass_heatmap(distances, md, labels=categories,
                        cmap_name=cfg.heatmap.cmap,
                        exhaustive_labels=cfg.heatmap.exhaustive_labels)
-    md.save_metadata()
