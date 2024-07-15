@@ -59,7 +59,6 @@ def distance_matrix(pat_table, microclasses, **kwargs):
     return distances
 
 
-@hydra.main(version_base=None, config_path="config", config_name="heatmap")
 def heatmap_command(cfg, md):
     r"""Draw a clustermap of microclass similarities using seaborn.
     """
