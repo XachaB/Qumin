@@ -60,15 +60,15 @@ class Metadata():
         # Make it robust to multiple
         if "data" in cfg:
             data = [cfg.data] if type(cfg.data) is str else cfg.data
-            self.datasets = [(Path(path).parent, Package(path)) for path in data]
+            self.datasets = [Package(path) for path in data]
 
         # Additional CLI arguments
         self.arguments = dict(cfg)
         self.output = []
 
     def get_table_path(self, table_name, num=0):
-        data_dir, dataset = self.datasets[num]
-        return data_dir / dataset.get_resource(table_name).path
+        dataset = self.datasets[num]
+        return Path(dataset.basepath) / dataset.get_resource(table_name).path
 
     def save_metadata(self):
         """ Save the metadata as a JSON file."""

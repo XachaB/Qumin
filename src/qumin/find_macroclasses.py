@@ -17,21 +17,15 @@ except ImportError:
     matplotlib = None
     plt = None
 
-from .utils import Metadata
 from .representations import segments, patterns
 from .clustering import algorithms, descriptionlength, find_min_attribute
 import pandas as pd
 import logging
-import hydra
 
 log = logging.getLogger()
 
-@hydra.main(version_base=None, config_path="config", config_name="macroclasses")
-def macroclasses_command(cfg):
+def macroclasses_command(cfg, md):
     r"""Cluster lexemes in macroclasses according to alternation patterns."""
-    log.info(cfg)
-    md = Metadata(cfg, __file__)
-
     # Loading files and paths
     data_file_path = cfg.patterns
 
@@ -81,8 +75,5 @@ def macroclasses_command(cfg):
     flow.write("\n" + experiment_id)
     flow.close()
 
-    md.save_metadata()
 
 
-if __name__ == '__main__':
-    macroclasses_command()

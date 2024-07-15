@@ -7,22 +7,17 @@ Compute conditional entropies in inflectional patterns.
 
 import logging
 
-import hydra
 from hydra.core.hydra_config import HydraConfig
 
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
-# Our libraries
 from .representations import segments, patterns, create_paradigms, create_features
-from .utils import Metadata
 
 log = logging.getLogger()
 
 
-@hydra.main(version_base=None, config_path="config", config_name="entropy")
-def H_command(cfg):
+def H_command(cfg, md):
     r"""Compute entropies of flexional paradigms' distributions."""
     verbose = HydraConfig.get().verbose is not False
-    md = Metadata(cfg, __file__)
     md.bipartite = False
     if type(cfg.data) is not str or type(cfg.patterns) is not str:
         assert len(cfg.data) == len(
@@ -41,8 +36,6 @@ def H_command(cfg):
     cells = cfg.cells
     if cells and len(cells) == 1:
         raise ValueError("You can't provide only one cell.")
-
-    log.info(cfg)
 
     segments.Inventory.initialize(sounds_file_name)
 
@@ -136,5 +129,3 @@ def H_command(cfg):
                                  'content': 'results'})
     log.info("Writing to: {}".format(ent_file))
     distrib.export_file(ent_file)
-
-    md.save_metadata()

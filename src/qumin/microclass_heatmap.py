@@ -70,8 +70,8 @@ def heatmap_command(cfg):
     md = Metadata(cfg, __file__)
 
     categories = None
-    if cfg.label:
-        categories = pd.read_csv(md.get_table_path("lexemes"), index_col=0)[cfg.label]
+    if cfg.heatmap.label:
+        categories = pd.read_csv(md.get_table_path("lexemes"), index_col=0)[cfg.heatmap.label]
     pat_table = pd.read_csv(cfg.patterns, index_col=0)
     log.info("Looking for microclasses")
     microclasses = find_microclasses(pat_table)
@@ -79,6 +79,6 @@ def heatmap_command(cfg):
     distances = distance_matrix(pat_table, microclasses)
     log.info("Drawing")
     microclass_heatmap(distances, md, labels=categories,
-                       cmap_name=cfg.cmap,
-                       exhaustive_labels=cfg.exhaustive_labels)
+                       cmap_name=cfg.heatmap.cmap,
+                       exhaustive_labels=cfg.heatmap.exhaustive_labels)
     md.save_metadata()

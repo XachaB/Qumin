@@ -4,7 +4,7 @@ hydra:
     app_name: Qumin
 
     # Help header, customize to describe your app to your users
-    header: == ${hydra.help.app_name}.${scriptname} ==
+    header: == ${hydra.help.app_name} ==
 
     footer: |-
       Powered by Hydra (https://hydra.cc)
@@ -23,8 +23,6 @@ hydra:
     template: |-
       ${hydra.help.header}
       
-      ${descr}
-      
       For a detailed explanation, see the html doc.::
       
             ____
@@ -39,7 +37,7 @@ hydra:
       This is the config generated for this run.
       You can override everything, for example:
         
-        qumin.${scriptname} key=value
+        qumin actions="[H, patterns, macroclasses]" key=value
       
       -------
       $CONFIG

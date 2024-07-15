@@ -8,18 +8,13 @@ from .entropy import cond_P, P
 import numpy as np
 from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
-from .utils import Metadata
 from itertools import combinations, chain
 from multiprocessing import Pool
 from tqdm import tqdm
 import seaborn as sns
 from matplotlib import pyplot as plt
 import logging
-import hydra
 
-sns.set()
-
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 log = logging.getLogger()
 sns.set()
 
@@ -183,10 +178,12 @@ def predict_two_directions(test_items, train_items, method, features=None):
 
 def prepare_data(cfg, md):
     """Create a multi-index paradigm table and if given a path, a features table."""
-    paradigms = []
-
-    paradigms = create_paradigms(md.get_table_path("forms"), segcheck=True, fillna=False, merge_cols=True,
-                                 overabundant=False, defective=True)
+    paradigms = create_paradigms(md.get_table_path("forms"),
+                                 segcheck=True,
+                                 fillna=False,
+                                 merge_cols=cfg.pats.merged,
+                                 overabundant=cfg.pats.overabundant,
+                                 defective=cfg.pats.defective)
     indexes = paradigms.index
     features = None
 
@@ -233,11 +230,9 @@ def to_heatmap(results, cells):
         plt.close(fig)
 
 
-@hydra.main(version_base=None, config_path="config", config_name="eval")
-def eval_command(cfg):
+def eval_command(cfg, md):
     r"""Evaluate pattern's accuracy with 10 folds."""
     log.info(cfg)
-    md = Metadata(cfg, __file__)
     now = md.day + "_" + md.now
     np.random.seed(0)  # make random generator determinist
 
@@ -294,8 +289,3 @@ def eval_command(cfg):
                                     "name": name,
                                     "source": paradigms_file_path})
         fig.savefig(figname, dpi=300, bbox_inches='tight', pad_inches=0.5)
-    md.save_metadata()
-
-
-if __name__ == '__main__':
-    eval_command()

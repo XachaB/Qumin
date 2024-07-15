@@ -8,20 +8,16 @@ Author: Sacha Beniamine.
 import logging
 
 import pandas as pd
-import hydra
 
 from .clustering import find_microclasses
 from .lattice.lattice import ICLattice
 from .representations import segments, patterns
-from .utils import Metadata
+
 
 log = logging.getLogger()
-@hydra.main(version_base=None, config_path="config", config_name="lattice")
-def lattice_command(cfg):
-    r"""Infer Inflection classes as a lattice from alternation patterns."""
-    log.info(cfg)
 
-    md = Metadata(cfg, __file__)
+def lattice_command(cfg, md):
+    r"""Infer Inflection classes as a lattice from alternation patterns."""
     md.bipartite = type(cfg.patterns) is not str
 
     # Loading files and paths
@@ -60,30 +56,30 @@ def lattice_command(cfg):
                         aoc=cfg.lattice.aoc,
                         keep_names=(not cfg.lattice.shorten))
 
-    if cfg.export.stat:
+    if cfg.lattice.stat:
         statname = md.register_file('stats.txt', {"computation": cfg.scriptname,
                                                   "content": "stats"})
         with open(statname, "w", encoding="utf-8") as flow:
             flow.write(lattice.stats().to_frame().T.to_latex())
             log.info(lattice.stats().to_frame().T.to_latex())
 
-    if cfg.export.png:
+    if cfg.lattice.png:
         lattpng = md.register_file('lattice.png', {'computation': cfg.scriptname,
                                                    'content': 'figure'})
         lattice.draw(lattpng, figsize=(20, 10), title=None, point=True)
 
-    if cfg.export.pdf:
+    if cfg.lattice.pdf:
         lattpdf = md.register_file('lattice.pdf', {'computation': cfg.scriptname,
                                                    'content': 'figure'})
         lattice.draw(lattpdf, figsize=(20, 10), title=None, point=True)
 
-    if cfg.export.html:
+    if cfg.lattice.html:
         latthtml = md.register_file('lattice.html', {'computation': cfg.scriptname,
                                                      'content': 'figure'})
         log.info("Exporting to html: " + latthtml)
         lattice.to_html(latthtml)
 
-    if cfg.export.ctxt:
+    if cfg.lattice.ctxt:
         lattcxt = md.register_file('lattice.cxt', {'computation': cfg.scriptname,
                                                    'content': 'figure'})
         log.info(" ".join(["Exporting context to file:", lattcxt]))
@@ -97,5 +93,3 @@ def lattice_command(cfg):
     for child in lattice.nodes.children:
         extent, common = child.labels, child.attributes["common"]
         log.info(" ".join(["\n\textent:", str(extent), "\n\tdefines:", str(common), ">"]))
-
-    md.save_metadata()

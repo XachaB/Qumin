@@ -7,20 +7,14 @@ Author: Sacha Beniamine.
 import logging
 from itertools import combinations
 
-import hydra
-
 from .clustering import find_microclasses
 from .representations import patterns, segments, create_paradigms
-from .utils import Metadata
 
 log = logging.getLogger()
 
-@hydra.main(version_base=None, config_path="config", config_name="patterns")
-def pat_command(cfg):
-    r"""Find pairwise alternation patterns from paradigms."""
-    log.info(cfg)
-    md = Metadata(cfg, __file__)
 
+def pat_command(cfg, md):
+    r"""Find pairwise alternation patterns from paradigms."""
     # Loading files and paths
     kind = cfg.pats.kind
     defective = cfg.pats.defective
@@ -118,4 +112,4 @@ def pat_command(cfg):
     else:
         patterns_df.to_csv(patfilename, sep=",")
 
-    md.save_metadata()
+    return patfilename
