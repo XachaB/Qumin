@@ -6,7 +6,7 @@ Utility functions for representations.
 """
 import logging
 from collections import defaultdict
-
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
@@ -43,14 +43,14 @@ def create_features(md, feature_cols):
     return features.loc[:, feature_cols]
 
 
-def create_paradigms(data_file_name, verbose=False, fillna=True,
+def create_paradigms(dataset, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
-                     cells=None):
+                     cells=None, sample=None, most_freq=None):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
     Arguments:
-        data_file_name (str): path to the paradigm csv file.
+        dataset (str): paralex frictionless Package
         All characters occuring in the paradigms except the first column
         should be inventoried in this class.
         verbose (bool): verbosity switch.
@@ -78,10 +78,18 @@ def create_paradigms(data_file_name, verbose=False, fillna=True,
                     unknowns[char].append(form + " " + name)
 
     # Reading the paradigms.
+    data_file_name = Path(dataset.basepath) / dataset.get_resource("forms").path
     lexemes, cell_col, form_col = ("lexeme", "cell", "phon_form")
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False,
                             usecols=["form_id", lexemes, cell_col, form_col])
-    paradigms = paradigms.drop_duplicates([lexemes, cell_col, form_col])
+    if most_freq:
+        lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
+        lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
+        selected = set(lexemes_df.sort_values("frequency").iloc[:most_freq,:].loc[:,"lexeme_id"].to_list())
+        paradigms = paradigms.loc[paradigms.lexeme.isin(selected), :]
+    if sample:
+        paradigms = paradigms.sample(sample)
+
 
     def aggregator(s):
         if s.isnull().all():

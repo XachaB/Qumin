@@ -26,7 +26,6 @@ def H_command(cfg, md):
 
     patterns_file_path = cfg.patterns if md.bipartite else [cfg.patterns]
     sounds_file_name = md.get_table_path("sounds")
-    paradigms_file_path = md.get_table_path("forms")
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
     onePred = preds[0] == 1
@@ -40,9 +39,11 @@ def H_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: columns are cells, rows are lexemes.
-    paradigms = create_paradigms(paradigms_file_path, defective=True, overabundant=False,
+    paradigms = create_paradigms(md.datasets[0], defective=True, overabundant=False,
                                  merge_cols=cfg.entropy.merged,
-                                 segcheck=True, cells=cells)
+                                 segcheck=True, cells=cells,
+                                 sample=cfg.sample,
+                                 most_freq=cfg.most_freq)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], defective=True,
                                            overabundant=False)
 
@@ -63,11 +64,11 @@ def H_command(cfg, md):
 
     if md.bipartite:
         names = [p.name for _, p in md.datasets]
-        paradigms_file_path_2 = md.get_table_path("forms", num=1)
-        paradigms2 = create_paradigms(paradigms_file_path_2, defective=True,
+        paradigms2 = create_paradigms(md.datasets[0], defective=True,
                                       overabundant=False,
                                       merge_cols=cfg.entropy.merged, segcheck=True,
                                       cells=cells)
+        paradigms2 = paradigms2.loc[paradigms.index, :]
         pat_table2, pat_dic2 = patterns.from_csv(patterns_file_path[1], defective=True,
                                                  overabundant=False)
 

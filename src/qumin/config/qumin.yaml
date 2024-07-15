@@ -30,6 +30,9 @@ action: patterns      # Action, one of: patterns, H, lattice, eval, macroclasses
 data: null            # path to paralex.package.json paradigms, segments
 cells: null           # List of cells to use (subset)
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
+most_freq: null       # restrict to N most frequent items (use the lexeme "frequency" column)
+sample: null        # (int) A number of lexemes to sample, for debug purposes
+
 
 lattice:
   shorten: False      # Drop redundant columns altogether.
@@ -62,7 +65,6 @@ entropy:
 eval:
   iter: 10            # How many 90/10 train/test folds to do.
   workers: 1          # Number of threads for multithreading
-  sample: null        # (int) A number of lexemes to sample, for debug purposes
 
 pats:
   kind: patternsPhonsim   # Options are (see docs): endings, endingsPairs, globalAlt, localAlt, endingsDisc,

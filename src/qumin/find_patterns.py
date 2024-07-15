@@ -20,7 +20,6 @@ def pat_command(cfg, md):
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
     cells = cfg.cells
-    data_file_path = md.get_table_path("forms")
     if cells and len(cells) == 1:
         raise ValueError("You can't provide only one cell.")
 
@@ -48,8 +47,12 @@ def pat_command(cfg, md):
     if is_of_pattern_type:
         merge_cols = True
 
-    paradigms = create_paradigms(data_file_path, defective=defective, overabundant=overabundant, merge_cols=merge_cols,
-                                 segcheck=segcheck, cells=cells)
+    paradigms = create_paradigms(md.datasets[0], defective=defective,
+                                 overabundant=overabundant, merge_cols=merge_cols,
+                                 segcheck=segcheck, cells=cells,
+                                 sample=cfg.sample,
+                                 most_freq=cfg.most_freq
+                                 )
 
     log.info("Looking for patterns...")
     if kind.startswith("endings"):
