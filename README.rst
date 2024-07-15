@@ -75,7 +75,7 @@ For paradigm entropy, it is possible to explicitly keep defective lexemes: ::
 
 For inflection class lattices, both can be kept: ::
 
-    /$ qumin pats.defective=True pats.overabundant data=<dataset.package.json>
+    /$ qumin pats.defective=True pats.overabundant=True data=<dataset.package.json>
 
 Microclasses
 ^^^^^^^^^^^^^

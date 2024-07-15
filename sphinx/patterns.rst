@@ -6,17 +6,20 @@ Alternation patterns
 
 The patterns can be further configured, modifying the following keys: ::
 
-    verbose: False
-    debug: False
-    cells: null
+    data: null                # path to paralex.package.json paradigms, segments
+    cells: null               # List of cells to use (subset)
+    patterns: null            # path to pre-computed patterns. If null, will compute patterns.
+    most_freq: null           # (int) restrict to N most frequent items (use the lexeme "frequency" column)
+    sample: null              # ( int) A number of lexemes to sample, for debug purposes
     pats:
-      kind: patternsPhonsim
-      defective: False
-      overabundant: False
-      gap_proportion: 0.4
-      optim_mem: False
-      merge_cols: False
-      ortho: False
+      kind: patternsPhonsim   # Options are (see docs): endings, endingsPairs, globalAlt, localAlt, endingsDisc,
+                              # patternsLevenshtein, patternsPhonsim, patternsSuffix, patternsPrefix, patternsBaseline
+      defective: False        # Whether to keep defective entries
+      overabundant: False     # Whether to keep overabundant entries
+      gap_proportion: .4      # Proportion of the median score used to set the gap score
+      optim_mem: False        # Attempt to use a little bit less memory
+      merged: False           # Whether to merge identical columns in the data
+      ortho: False            # Whether these are orthographic paradigms (only compatible with endings and alt)
 
 values for these keys can be given through the command line, eg::
 
