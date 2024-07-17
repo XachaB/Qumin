@@ -82,6 +82,10 @@ def create_paradigms(dataset, fillna=True,
     lexemes, cell_col, form_col = ("lexeme", "cell", "phon_form")
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False,
                             usecols=["form_id", lexemes, cell_col, form_col])
+
+    if not defective:
+        paradigms.dropna(axis=0, inplace=True)
+
     if most_freq:
         lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
         lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
@@ -91,7 +95,6 @@ def create_paradigms(dataset, fillna=True,
         paradigms = paradigms.loc[paradigms.lexeme.isin(selected), :]
     if sample:
         paradigms = paradigms.sample(sample)
-
 
     def aggregator(s):
         if s.isnull().all():
@@ -120,8 +123,6 @@ def create_paradigms(dataset, fillna=True,
 
     paradigms.reset_index(inplace=True, drop=False)
 
-    if not defective:
-        paradigms.dropna(axis=0, inplace=True)
 
     log.debug(paradigms)
 
