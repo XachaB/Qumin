@@ -85,7 +85,9 @@ def create_paradigms(dataset, fillna=True,
     if most_freq:
         lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
         lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
-        selected = set(lexemes_df.sort_values("frequency").iloc[:most_freq,:].loc[:,"lexeme_id"].to_list())
+        selected = set(lexemes_df.sort_values("frequency",
+                                              ascending=False
+                                              ).iloc[:most_freq,:].loc[:,"lexeme_id"].to_list())
         paradigms = paradigms.loc[paradigms.lexeme.isin(selected), :]
     if sample:
         paradigms = paradigms.sample(sample)
