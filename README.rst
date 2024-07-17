@@ -119,14 +119,14 @@ By default, this will start by computing patterns. To work with pre-computed pat
     /$ qumin action=H  n=2 data=<dataset.package.json>
     /$ qumin action=H  n="[2,3]" data=<dataset.package.json>
 
-**Use features to help prediction** (for example gender and inflection class -- features will be added to the known information when predicting) ::
+.. warning::
+    With `n` and N>2 the computation can get quite long on large datasets, and it might be better to run Qumin on a server.
+
+Predicting with known lexeme-wise features (such as gender or inflection class) is also possible. This feature was used in `Pellegrini (2023) <https://doi.org/10.1007/978-3-031-24844-3>`_. To use features, pass the name of any column(s) from the ``lexemes`` table: ::
 
     /$ qumin.H  feature=inflection_class patterns=<patterns.csv> data=<dataset.package.json>
     /$ qumin.H  feature="[inflection_class,gender]" patterns=<patterns.csv> data=<dataset.package.json>
 
-The features are names of columns from the Paralex `lexemes` table.
-
-With `-n` and N>2 the computation can get quite long on large datasets.
 
 The config file contains the following keys, which can be set through the command line: ::
 
