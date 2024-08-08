@@ -1,5 +1,4 @@
-"Seg.","syllabic","consonantal","sonorant","approximant","voice","nasal","continuant","delayed release","tap","trill","LABIAL","labiodental","CORONAL","anterior","distributed","strident","lateral","DORSAL","C_high","C_low","C_front","C_back","stress","long","round","high","low","front","back","tense","diphthong","diphthong_w","diphthong_j"
-"Seg.","syll","cons","son","approx","voice","nasa","cont","delrel","tap","trill","LAB","lab-dent","COR","ant","dist","strid","lat","DORS","C_high","C_low","C_front","C_back","stress","lg","rd","high","low","front","back","tense","diph","diph_w","diph_j"
+"sound_id","syllabic","consonantal","sonorant","approximant","voice","nasal","continuant","delayed release","tap","trill","LABIAL","labiodental","CORONAL","anterior","distributed","strident","lateral","DORSAL","C_high","C_low","C_front","C_back","stress","long","round","high","low","front","back","tense","diphthong","diphthong_w","diphthong_j"
 "t",0,1,0,0,0,,0,0,,,0,0,1,1,0,0,0,0,,,,,,,,,,,,,,,
 "k",0,1,0,0,0,,0,0,,,0,0,0,,,,0,1,1,0,,,,,,,,,,,,,
 "b",0,1,0,0,1,,0,0,,,1,0,0,,,,0,0,,,,,,,,,,,,,,,

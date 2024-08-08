@@ -8,18 +8,13 @@ from .entropy import cond_P, P
 import numpy as np
 from .representations import segments, create_paradigms, patterns, create_features
 import pandas as pd
-from .utils import get_default_parser, Metadata
 from itertools import combinations, chain
 from multiprocessing import Pool
-from pathlib import Path
 from tqdm import tqdm
 import seaborn as sns
 from matplotlib import pyplot as plt
 import logging
 
-sns.set()
-
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 log = logging.getLogger()
 sns.set()
 
@@ -47,9 +42,9 @@ def prepare_arguments(paradigms, iterations, methods, features):
     idx = pd.IndexSlice
 
     def get_set(table, a, b, index_range):
-        return table.loc[:, idx[:, [a, b]]].iloc[index_range, :].dropna()
+        return table.loc[:, [a, b]].iloc[index_range, :].dropna()
 
-    cells = paradigms.columns.levels[1].tolist()
+    cells = paradigms.columns.tolist()
     shuffled_indexes = np.random.permutation(paradigms.shape[0])
     folds = np.array_split(shuffled_indexes, 10)
     l_folds = len(folds)
@@ -81,23 +76,19 @@ def evaluate(task):
         row: The dictionnary passed in argument, with stats for this evaluation.
     """
     test_items, train_items, method, features, row = task  # because multiprocessing does not have "istarmap"
-    table_ids = test_items.columns.levels[0].tolist()
     ab_predictions = None
     ba_predictions = None
     counts = 0
-    for id in table_ids:
-        test = test_items[id]
-        train = train_items[id]
-        pred_ab, pred_ba, count = predict_two_directions(test, train, method, features=features)
-        if ab_predictions is None and ba_predictions is None:
-            ab_predictions = pred_ab
-            ba_predictions = pred_ba
-        else:
-            ab_predictions &= pred_ab
-            ba_predictions &= pred_ba
-        counts += count
+    pred_ab, pred_ba, count = predict_two_directions(test_items, train_items, method, features=features)
+    if ab_predictions is None and ba_predictions is None:
+        ab_predictions = pred_ab
+        ba_predictions = pred_ba
+    else:
+        ab_predictions &= pred_ab
+        ba_predictions &= pred_ba
+    counts += count
 
-    a, b = test_items[id].columns  # any of the previous values for table id would work
+    a, b = test_items.columns  # any of the previous values for table id would work
     row["count"] = counts
     row["total_train"] = train_items.shape[0]
     row["total_test"] = test_items.shape[0]
@@ -185,32 +176,24 @@ def predict_two_directions(test_items, train_items, method, features=None):
     return predicted_correct1, predicted_correct2, len(dic[(a, b)])
 
 
-def prepare_data(args):
+def prepare_data(cfg, md):
     """Create a multi-index paradigm table and if given a path, a features table."""
-    paradigms = []
-
-    # Read all files
-    for file in args.paradigms:
-        table = create_paradigms(file, segcheck=True, fillna=False, merge_cols=True,
-                                 overabundant=False, defective=True, col_names=args.cols_names)
-        paradigms.append(table)
-
-    # Keep only common indexes
-    indexes = list(set.intersection(*[set(t.index.tolist()) for t in paradigms]))
-    assert len(indexes) > 0, "No common indexes in your tables"
-    paradigms = [t.loc[indexes, :] for t in paradigms]
-
-    # Make a multi-index df composed of all tables
-    paradigms = pd.concat(paradigms, axis=1, keys=range(len(args.paradigms))).drop_duplicates()
-
+    paradigms = create_paradigms(md.datasets[0],
+                                 segcheck=True,
+                                 fillna=False,
+                                 merge_cols=cfg.pats.merged,
+                                 overabundant=cfg.pats.overabundant,
+                                 defective=cfg.pats.defective,
+                                 sample=cfg.sample,
+                                 most_freq=cfg.most_freq
+                                 )
+    indexes = paradigms.index
     features = None
-    if features is not None:
-        features = create_features(args.features)
+
+    if cfg.entropy.features is not None:
+        features = create_features(md, cfg.entropy.features)
         features, _ = pd.DataFrame.sum(features.map(lambda x: (str(x),)), axis=1).factorize()
         features = features[indexes].apply(lambda x: (x,))
-
-    if args.randomsample:
-        paradigms = paradigms.sample(args.randomsample)
 
     return paradigms, features
 
@@ -247,42 +230,42 @@ def to_heatmap(results, cells):
         plt.close(fig)
 
 
-def main(args):
-    r"""Evaluate pattern's accuracy with 10 folds.
-
-    For a detailed explanation, see the html doc. ::
-
-          ____
-         / __ \                    /)
-        | |  | | _   _  _ __ ___   _  _ __
-        | |  | || | | || '_ ` _ \ | || '_ \
-        | |__| || |_| || | | | | || || | | |
-         \___\_\ \__,_||_| |_| |_||_||_| |_|
-          Quantitative modeling of inflection
-
-    """
-    log.info(args)
-    md = Metadata(args, __file__)
+def eval_command(cfg, md):
+    r"""Evaluate pattern's accuracy with 10 folds."""
     now = md.day + "_" + md.now
     np.random.seed(0)  # make random generator determinist
 
-    segments.Inventory.initialize(args.segments)
-    paradigms, features = prepare_data(args)
+    sounds_file_name = md.get_table_path("sounds")
+    paradigms_file_path = md.get_table_path("forms")
 
-    files = [Path(file).stem for file in args.paradigms]
+    segments.Inventory.initialize(sounds_file_name)
+    paradigms, features = prepare_data(cfg, md)
 
     general_infos = {"Qumin_version": md.version,
                      "lexemes": paradigms.shape[0],
-                     "paradigms": ";".join(files),
+                     "paradigms": paradigms_file_path,
                      "day_time": now}
 
-    tasks = prepare_arguments(paradigms, args.iterations,
-                              args.methods, features)
-    if args.workers == 1:
-        results = list(chain(*(evaluate(t) for t in tqdm(tasks))))
+    kind_to_method = {
+        'patternsLevenshtein': 'levenshtein',
+        'patternsPhonsim': 'similarity',
+        'patternsSuffix': 'suffix',
+        'patternsPrefix': 'prefix',
+        'patternsBaseline': 'baseline'
+    }
+
+    methods = [kind_to_method[k] for k in cfg.pats.kind]
+    tasks = prepare_arguments(paradigms,
+                              cfg.eval.iter,
+                              methods,
+                              features)
+    l = cfg.eval.iter * len(list(combinations(range(paradigms.shape[1]), 2)))
+
+    if cfg.eval.workers == 1:
+        results = list(chain(*(evaluate(t) for t in tqdm(tasks, total=l))))
     else:
-        pool = Pool(args.workers)
-        results = list(chain(*tqdm(pool.imap_unordered(evaluate, tasks))))
+        pool = Pool(cfg.eval.workers)
+        results = list(chain(*tqdm(pool.imap_unordered(evaluate, tasks), total=l)))
         pool.close()
 
     results = pd.DataFrame(results)
@@ -293,56 +276,15 @@ def main(args):
     filename = md.register_file("eval_patterns.csv",
                                 {"computation": computation,
                                  "content": "scores",
-                                 "source": files})
+                                 "source": paradigms_file_path})
     results.to_csv(filename)
 
     print_summary(results, general_infos)
-    figs = to_heatmap(results, paradigms.columns.levels[1].tolist())
+    figs = to_heatmap(results, paradigms.columns.tolist())
     for name, fig in figs:
         figname = md.register_file("eval_patterns_{}.png".format(name),
                                    {"computation": computation,
                                     "content": "heatmap",
                                     "name": name,
-                                    "source": files})
+                                    "source": paradigms_file_path})
         fig.savefig(figname, dpi=300, bbox_inches='tight', pad_inches=0.5)
-    md.save_metadata()
-
-
-def eval_command():
-    parser = get_default_parser(main.__doc__, paradigms=True,
-                                patterns=False, multipar=True)
-
-    parser.add_argument('-i', '--iterations',
-                        help="How many test/train folds to do. Defaults to full cross validation.",
-                        type=int,
-                        default=None)
-
-    parser.add_argument('-m', '--methods',
-                        help="Methods to align forms. Default: compare all.",
-                        choices=["suffix", "prefix", "baseline", "levenshtein",
-                                 "similarity"],
-                        nargs="+",
-                        default=["suffix", "prefix", "baseline", "levenshtein",
-                                 "similarity"])
-
-    parser.add_argument('-w', '--workers',
-                        help="number of workers",
-                        type=int,
-                        default=1)
-
-    parser.add_argument('-r', '--randomsample',
-                        help="Mostly for debug",
-                        type=int,
-                        default=None)
-
-    parser.add_argument('--features',
-                        help="Feature file. Features will be considered known when predicting",
-                        type=str,
-                        default=None)
-
-    args = parser.parse_args()
-    main(args)
-
-
-if __name__ == '__main__':
-    eval_command()

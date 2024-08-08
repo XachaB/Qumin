@@ -1,0 +1,47 @@
+hydra:
+  help:
+    # App name, override to match the name your app is known by
+    app_name: Qumin
+
+    # Help header, customize to describe your app to your users
+    header: == ${hydra.help.app_name} ==
+
+    footer: |-
+      Powered by Hydra (https://hydra.cc)
+      Use --hydra-help to view Hydra specific help
+
+    # Basic Hydra flags:
+    #   $FLAGS_HELP
+    #
+    # Config groups, choose one of:
+    #   $APP_CONFIG_GROUPS: All config groups that does not start with hydra/.
+    #   $HYDRA_CONFIG_GROUPS: All the Hydra config groups (starts with hydra/)
+    #
+    # Configuration generated with overrides:
+    #   $CONFIG : Generated config
+    #
+    template: |-
+      ${hydra.help.header}
+      
+      For a detailed explanation, see the html doc.::
+      
+            ____
+           / __ \                    /)
+          | |  | | _   _  _ __ ___   _  _ __
+          | |  | || | | || '_ ` _ \ | || '_ \
+          | |__| || |_| || | | | | || || | | |
+           \___\_\ \__,_||_| |_| |_||_||_| |_|
+            Quantitative modeling of inflection
+    
+      == Config ==
+      This is the config generated for this run.
+      You can override everything, for example:
+        
+        qumin actions="[H, patterns, macroclasses]" key=value
+      
+      -------
+      $CONFIG
+      -------
+      
+      ${hydra.help.footer}
+    

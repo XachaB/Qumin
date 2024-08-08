@@ -13,8 +13,8 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
+import sys
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -127,7 +127,6 @@ html_theme_options = {
     'description': 'A python package for QUantitative Modelling of INflection'
 }
 
-
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
 # html_title = None
@@ -137,7 +136,7 @@ html_theme_options = {
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo =
+# html_logo =
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -198,26 +197,25 @@ html_show_copyright = False
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Qumindoc'
 
-
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-# The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+    # The paper size ('letterpaper' or 'a4paper').
+    # 'papersize': 'letterpaper',
 
-# The font size ('10pt', '11pt' or '12pt').
-#'pointsize': '10pt',
+    # The font size ('10pt', '11pt' or '12pt').
+    # 'pointsize': '10pt',
 
-# Additional stuff for the LaTeX preamble.
-#'preamble': '',
+    # Additional stuff for the LaTeX preamble.
+    # 'preamble': '',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'Qumin.tex', 'Qumin Documentation',
-   'Sacha Beniamine', 'manual'),
+    ('index', 'Qumin.tex', 'Qumin Documentation',
+     'Sacha Beniamine', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -260,9 +258,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Qumin', 'Qumin Documentation',
-   'Sacha Beniamine', 'Qumin', 'One line description of project.',
-   'Miscellaneous'),
+    ('index', 'Qumin', 'Qumin Documentation',
+     'Sacha Beniamine', 'Qumin', 'One line description of project.',
+     'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.

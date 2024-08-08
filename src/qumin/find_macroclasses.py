@@ -14,72 +14,37 @@ try:
     MATPLOTLIB_LOADED = True
 except ImportError:
     MATPLOTLIB_LOADED = False
+    matplotlib = None
+    plt = None
 
-from .utils import get_default_parser, Metadata
 from .representations import segments, patterns
 from .clustering import algorithms, descriptionlength, find_min_attribute
 import pandas as pd
 import logging
-from pathlib import Path
-import re
 
+log = logging.getLogger()
 
-def main(args):
-    r"""Cluster lexemes in macroclasses according to alternation patterns.
-
-    We strongly recommend the default setting for the measure (-m) and the algorithm (-a)
-    For a detailed explanation, see the html doc.::
-
-          ____
-         / __ \                    /)
-        | |  | | _   _  _ __ ___   _  _ __
-        | |  | || | | || '_ ` _ \ | || '_ \
-        | |__| || |_| || | | | | || || | | |
-         \___\_\ \__,_||_| |_| |_||_||_| |_|
-          Quantitative modeling of inflection
-
-    """
-    if args.verbose:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-    else:
-        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    log = logging.getLogger()
-    log.info(args)
-    md = Metadata(args, __file__)
-
+def macroclasses_command(cfg, md):
+    r"""Cluster lexemes in macroclasses according to alternation patterns."""
     # Loading files and paths
-    features_file_name = args.segments
-    data_file_path = args.patterns
-    data_file_name = Path(data_file_path).name.rstrip("_")
-
-    pattern_type_match = re.match(r".+_(.+)\.csv", data_file_name)
-    if pattern_type_match is None:
-        log.warning("Did you rename the patterns file ? "
-                    "As a result, I do not know which type of pattern you used..")
-        kind = "unknown"
-    else:
-        kind = pattern_type_match.groups()[0]
+    data_file_path = cfg.patterns
 
     # Initializing segments
 
-    if features_file_name != "ORTHO":
-        segments.Inventory.initialize(features_file_name)
+    if cfg.pats.ortho:
+        pat_table = pd.read_csv(data_file_path, index_col=0)
+    else:
+        sounds_file_name = md.get_table_path("sounds")
+        segments.Inventory.initialize(sounds_file_name)
         pat_table, pat_dic = patterns.from_csv(data_file_path, defective=False, overabundant=False)
         pat_table = pat_table.map(str)
-    else:
-        pat_table = pd.read_csv(data_file_path, index_col=0)
 
     preferences = {"md": md}
-
-    # if args.randomised:
-    #     func = preferences["clustering_algorithm"]
-    #     randomised_algo = partial(algorithms.randomised, func, n=args.randomised)
-    #     preferences["clustering_algorithm"] = randomised_algo
 
     node = algorithms.hierarchical_clustering(pat_table, descriptionlength.BUDLClustersBuilder, **preferences)
 
     DL = "Min :" + str(find_min_attribute(node, "DL"))
-    experiment_id = " ".join(["Bottom-up DL clustering on ", kind, DL])
+    experiment_id = " ".join(["Bottom-up DL clustering on ", DL])
 
     computation = "macroclasses"
     # Saving png figure
@@ -110,14 +75,5 @@ def main(args):
     flow.write("\n" + experiment_id)
     flow.close()
 
-    md.save_metadata()
 
 
-def macroclasses_command():
-    parser = get_default_parser(main.__doc__, patterns=True, paradigms=False)
-    args = parser.parse_args()
-    main(args)
-
-
-if __name__ == '__main__':
-    macroclasses_command()

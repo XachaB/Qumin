@@ -5,6 +5,7 @@
 This module is used to align sequences.
 """
 from itertools import zip_longest
+
 import numpy as np
 
 

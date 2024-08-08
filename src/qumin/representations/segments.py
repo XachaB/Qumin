@@ -6,17 +6,30 @@ This module addresses the modelisation of phonological segments.
 """
 
 import pandas as pd
-from ..lattice.lattice import table_to_context
 import numpy as np
 from itertools import combinations
-import re
-from ..utils import snif_separator
 import functools
-import logging
+import re
+from tqdm import tqdm
 
+from ..lattice.lattice import table_to_context
+import logging
 log = logging.getLogger()
 
 inventory = None
+
+_to_short_feature = {'anterior': 'ant', 'approximant': 'appr', 'back': 'back', 'click': 'click', 'consonantal': 'C',
+                     'constr gl': 'cgl', 'constricted': 'constr', 'constricted glottis': 'cgl', 'continuant': 'cont',
+                     'coronal': 'coro', 'delayed release': 'del.rel', 'distributed': 'dist', 'dorsal': 'dors',
+                     'front': 'front', 'high': 'high', 'labial': 'lab', 'laryngeal': 'laryng', 'lateral': 'lat',
+                     'long': 'long', 'low': 'low', 'nasal': 'nas', 'pharyngeal': 'phar', 'place': 'place',
+                     'preaspirated': 'preasp', 'preglottalized': 'pregl', 'prenasal': 'prenas', 'round': 'round',
+                     'sibilant': 'sib', 'sonorant': 'son', 'spread': 'spread', 'spread gl': 'spre.gl',
+                     'spread glottis': 'sg', 'strident': 'stri', 'syllabic': 'syll', 'tap': 'tap', 'tense': 'tens',
+                     'voice': 'voic', 'mid': 'mid', 'central': 'centr', 'compact': 'compact', 'diffuse': 'diff',
+                     'abrupt': 'abrupt', 'checked': 'check', 'grave': 'grave', 'acute': 'acute', 'medial': 'med',
+                     'flat': 'flat', 'sharp': 'sharp', 'trill': 'tril', 'labiodental': 'labdent'}
+_short_features = [y for _, y in _to_short_feature.items()]
 
 
 class Form(str):
@@ -116,7 +129,7 @@ class Inventory(object):
             # The non capturing group of each segment
             cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
             cls._regexes_end[id] = "(?:" + "|".join(x for x in ordered) + ")"
-            cls._pretty_str[id] = "{" + ",".join(ordered) + "}"  # TODO: change to "{a,b,c}"
+            cls._pretty_str[id] = "{" + ",".join(ordered) + "}"
         cls._classes[id] = set(classes)
         cls._features[id] = set(intent)
         cls._features_str[id] = shorthand or "[{}]".format(" ".join(sorted(intent)))
@@ -239,23 +252,22 @@ class Inventory(object):
         return len(ca & cb) / len(ca | cb)
 
     @classmethod
-    def initialize(cls, filename, sep=None):
+    def initialize(cls, filename):
         """ Initializes the inventory
 
         Args:
             filename: path to a csv or tsv file with distinctive features
-            sep: separator in the file
         """
         # TODO: this is now much slower !
         log.info("Reading table %s", filename)
 
         table = pd.read_table(filename, header=0, dtype=str,
-                              index_col=False, sep=sep or snif_separator(filename),
+                              index_col=False, sep=',',
                               encoding="utf-8")
         shorten_feature_names(table)
-        sound_id = "sound_id"  # name in Paralex
-        if sound_id not in table.columns:  # backward compatibility
-            sound_id = "Seg."
+        sound_id = "sound_id"
+        if sound_id not in table.columns:
+            raise ValueError("Paralex sound tables must have a sound_id.")
 
         table[sound_id] = table[sound_id].astype(str)
         na_vals = {c: "-1" for c in table.columns}
@@ -276,6 +288,9 @@ class Inventory(object):
         drop = {"value", "UNICODE", "ALIAS",  # Legacy columns
                 "label", "tier"  # Unused Paralex columns
                 }
+        deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS"})
+        if not deprecated_cols.empty:
+            log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
         for col in drop:
             if col in table.columns:
                 table.drop(col, axis=1, inplace=True)
@@ -299,10 +314,14 @@ class Inventory(object):
         log.debug("Normalization map: %s", cls._normalization)
 
         def feature_formatter(columns):
-            signs = ["-", "+"] + [str(x) for x in range(2, 11)]
+            signs = ["-", "+"]
             for c in columns:
                 key, val = c.split("=")
-                yield signs[int(float(val))] + key.replace(" ", "_")
+                i = int(float(val))
+                if i < 2:
+                    yield signs[int(float(val))] + key.replace(" ", "_")
+                else:
+                    yield c
 
         table = table.map(lambda x: str(x))
 
@@ -330,7 +349,8 @@ class Inventory(object):
         else:
             shorthands = {}
 
-        for extent, intent in cls._lattice:
+        log.info('Building classes of segments...')
+        for extent, intent in tqdm(cls._lattice):
 
             if extent:
                 # Define the shortest expression of this segment if possible
@@ -362,8 +382,7 @@ class Inventory(object):
                 for o in other:
                     alert += "\n\t\t" + cls.infos(o)
 
-            raise Exception("Warning, some segments are "  # TODO: change doc!!!
-                            "ancestors of other segments:" + alert)
+            raise Exception("Warning, some segments are  ancestors of other segments:" + alert)
 
         cls._max = max(cls._classes, key=len)
 
@@ -385,7 +404,7 @@ class Inventory(object):
             cls._score_matrix[(a, b)] = cls._score_matrix[(b, a)] = cost
             costs.append(cost)
 
-        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop  # TODO: update gap score
+        cls._gap_score = np.quantile(np.array(costs), 0.5) * gap_prop
         for a in simple_sounds:
             cls._score_matrix[(a, a)] = 0
 
@@ -575,13 +594,11 @@ def normalize(ipa, features):
     def find_identical_rows(segment, table):
         seg_features = table.loc[segment, :]
         try:
-            same_features_as_seg = (table == seg_features).all(axis=1)
+            return (table == seg_features).all(axis=1)
         except ValueError:
             if seg_features.shape[0] > 1:
-                raise ValueError(
-                    "You have more than one segment definition for {}\n{}".format(segment,
+                raise ValueError("You have multiple definitions for {}\n{}".format(segment,
                                                                                   seg_features))
-        return same_features_as_seg
 
     ipa["Normalized"] = ""
 
@@ -597,20 +614,22 @@ def normalize(ipa, features):
 
 
 def shorten_feature_names(table):
-    if "Seg." in list(table.iloc[0]):
-        # Use shortened names if they exist
-        table.columns = table.iloc[0]
-        table.drop(0, axis=0, inplace=True)
-        return table
-
+    headers = list(table.iloc[0])
+    if "Seg." in headers or "sound_id" in headers:
+        raise ValueError("Using a second row of headers is not supported anymore.")
     short_features_names = []
     for name in table.columns:
         if name in ["sound_id", "Seg.", "UNICODE", "ALIAS",
-                    "value", "label", "tier"] or len(name) <= 3:
+                    "value", "label", "tier"] or len(name) <= 3: # Not a feature name
             short_features_names.append(name)
         else:
-            names = [name[:i] for i in range(3, len(name) + 1)]
-            while names and names[0] in short_features_names:
-                names.pop(0)
-            short_features_names.append(names[0])
+            if name in _to_short_feature:  # Check standard names
+                short_features_names.append(_to_short_feature[name])
+            elif name.lower() in _to_short_feature:  # Uppercase
+                short_features_names.append(_to_short_feature[name.lower()].upper())
+            else:  # Make an abbreviation on the fly
+                names = [name[:i] for i in range(3, len(name) + 1)]
+                while names and names[0] in (_short_features + short_features_names):
+                    names.pop(0)
+                short_features_names.append(names[0])
     table.columns = short_features_names

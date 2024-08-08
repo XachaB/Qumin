@@ -19,10 +19,11 @@ try:
 except:
     nx_loaded = False
 
-import numpy as np
+import logging
 import re
 from collections import defaultdict
-import logging
+
+import numpy as np
 
 log = logging.getLogger()
 
@@ -213,6 +214,7 @@ class Node(object):
         def shortest_path(sim):
             return np.unravel_index(np.argmax(sim, axis=None), sim.shape)
 
+        i = None
         for x in range(li - 1):
             i, j = shortest_path(similarities)
             i_start = paths[i][0]

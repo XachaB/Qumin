@@ -1,4 +1,3 @@
-
 The phonological segments file
 ================================
 
@@ -10,37 +9,41 @@ To create a new segments file, the best is usually to refer to an authoritative 
 Format
 ~~~~~~
 
-The segments file is also written in wide format, with each row describing a phoneme. The first column gives phonemes as they are written in the paradigms file. Each column represents a distinctive feature. Here is an example with just 10 rows of the segments table for French verbs:
+Each row of the segments file describes a single phoneme. The first column gives phonemes as they are written in the paradigms file. Each column represents a distinctive feature. Here is an example with just 10 rows of the segments table for French verbs:
 
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.  
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  p      0        0            1               0         0       0            0                   1                     0       0         
-  b      0        0            1               0         0       0            0                   1                     1       0         
-  t      0        0            1               0         0       0            0                   1           1         0       0         
-  s      0        0            1               1         0       0            0                   1           1         0       1         
-  i      1        1            0               1         0       1      0     0         0                               1       1         
-  y      1        1            0               1         0       1      0     0         1                               1       1         
-  u      1        1            0               1         0       1      0     1         1                               1       1         
-  o      1        1            0               1         0       0            1         1                               1       1        
-  a      1        1            0               1         0       0      1     1         0                               1       1         
-  ɑ̃      1        1            0               1         1       0      1     1         0                               1       1      
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========  
+
+.. warning::
+    The index header used to be `Seg.` (for segment). This is deprecated, and Qumin now expects `sound_id`, per the Paralex standard.
+
+.. warning::
+    The columns `ALIAS`, `UNICODE` and `value` are all also deprecated
+
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  p          0        0            1               0         0       0            0                   1                     0       0
+  b          0        0            1               0         0       0            0                   1                     1       0
+  t          0        0            1               0         0       0            0                   1           1         0       0
+  s          0        0            1               1         0       0            0                   1           1         0       1
+  i          1        1            0               1         0       1      0     0         0                               1       1
+  y          1        1            0               1         0       1      0     0         1                               1       1
+  u          1        1            0               1         0       1      0     1         1                               1       1
+  o          1        1            0               1         0       0            1         1                               1       1
+  a          1        1            0               1         0       0      1     1         0                               1       1
+  ɑ̃          1        1            0               1         1       0      1     1         0                               1       1
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
 
 Some conventions:
 
--  The first column must be called ``Seg.``.
--  The phonological symbols, in the ``Seg.`` column cannot be one of he reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
--  If the file contains a “value” column, it will be ignored. This is used to provide a human-readable description of segments, which can be useful when preparing the data.
--  In order to provide short names for the features, as in [+nas] rather than [+nasal], you can add a second level of header, also beginning by ``Seg.``, which gives abbreviated names:
+-  The first column must be called ``sound_id``.
+-  The phonological symbols, in the ``sound_id`` column cannot be one of he reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
 
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.  
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   son      syl          cons            cont      nas     haut   bas   arr       rond      ant         COR       vois    rel.ret.  
-  p      0        0            1               0         0       0            0                   1                     0       0         
-  b      0        0            1               0         0       0            0                   1                     1       0        
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========  
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  p          0        0            1               0         0       0            0                   1                     0       0
+  b          0        0            1               0         0       0            0                   1                     1       0
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
 
 The file is encoded in utf-8 and can be either a csv table (preferred) or a tabulation separated table (tsv).
 
@@ -51,8 +54,7 @@ The file is encoded in utf-8 and can be either a csv table (preferred) or a tabu
 
 ::
 
-   Seg.,sonant,syllabique,consonantique,continu,nasal,haut,bas,arrière,arrondi,antérieur,CORONAL,voisé,rel.ret.
-   Seg.,son,syl,cons,cont,nas,haut,bas,arr,rond,ant,COR,vois,rel.ret.
+   sound_id,sonant,syllabique,consonantique,continu,nasal,haut,bas,arrière,arrondi,antérieur,CORONAL,voisé,rel.ret.
    p,0,0,1,0,0,0,,0,,1,,0,0
    b,0,0,1,0,0,0,,0,,1,,1,0
    t,0,0,1,0,0,0,,0,,1,1,0,0
@@ -67,16 +69,17 @@ The ALIAS column is not needed anymore.
 Shorthands
 ~~~~~~~~~~~
 
-When writing phonological rules, linguists often use shorthands like “V” for the natural class of all vowels, and “C” for the natural class of all consonants. If you want, you can provide some extra rows in the table to define shorthand names for some natural classes. These names have to start and end by “#”. Here an example for the French segments file, giving shorthands for C (consonants), V (vowels) and G (glides):
+Qumin used to support a second header row to provide distinctive feature shorthands. These are not supported anymore.
 
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.  
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
-  Seg.   son      syl          cons            cont      nas     haut   bas   arr       rond      ant         COR       vois    rel.ret.  
-  #C#             0            1                                                                                                          
-  #V#    1        1            0               1                                                                        1       1         
-  #G#    1        0            0               1         0       1      0                         0                     1       1         
- ====== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ========== 
+One can provide some extra rows in the table to define shorthand names for some natural classes. These names have to start and end by “#”. Here an example for the French segments file, giving shorthands for C (consonants), V (vowels) and G (glides):
+
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+ sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
+  #C#                   0            1
+  #V#          1        1            0               1                                                                        1       1
+  #G#          1        0            0               1         0       1      0                         0                     1       1
+ ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
 
 Values of distinctive features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,20 +94,20 @@ When writing segments file, it is important to be careful of the naturality of n
 Monovalent or bivalent features
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-`Frisch (1996) <https://www.cas.usf.edu/~frisch/publications.html>`__ argues that monovalent features (using only ``-1`` and ``1``) are to be preferred to bivalent features, as the latter implicitly generate natural classes for the complement features ([-coronal]), which is not always desirable. In Qumin, both monovalent and bivalent features are accepted. Internally, the program will expand all ``1`` and ``0``  into + and - values. As an example, take this table which classifies the three vowels /a/, /i/ and /u/:
+`Frisch (1996) <http://www.cas.usf.edu/~frisch/publications.html>`__ argues that monovalent features (using only ``-1`` and ``1``) are to be preferred to bivalent features, as the latter implicitly generate natural classes for the complement features ([-coronal]), which is not always desirable. In Qumin, both monovalent and bivalent features are accepted. Internally, the program will expand all ``1`` and ``0``  into + and - values. As an example, take this table which classifies the three vowels /a/, /i/ and /u/:
 
 .. csv-table::
    :file: segment_examples/V_monovalent.csv
 
 Internally, Qumin will construct the following table, which looks almost identical because we used monovalued features:
 
-===== ======= ===== ====== ======= ======= ===========
-Seg.   +high  +low  +front  +back  +round   +Non-round
-===== ======= ===== ====== ======= ======= ===========
-a               x            x                x
-i        x             x                      x
-u        x                   x       x         
-===== ======= ===== ====== ======= ======= ===========
+ ========== ======= ===== ====== ======= ======= ===========
+ sound_id   +high   +low  +front  +back  +round   +Non-round
+ ========== ======= ===== ====== ======= ======= ===========
+ a                    x            x                x
+ i             x             x                      x
+ u             x                   x       x
+ ========== ======= ===== ====== ======= ======= ===========
 
 This will then result in the following natural class hierarchy:
 
@@ -121,13 +124,13 @@ The same thing can be achieved with less columns using binary features:
 
 Internally, these will be expanded to:
 
-===== ======= ===== ====== ======= ======= ===========
-Seg.   +high  -high +front  -front  +round   -round
-===== ======= ===== ====== ======= ======= ===========
-a               x            x                x
-i        x             x                      x
-u        x                   x       x         
-===== ======= ===== ====== ======= ======= ===========
+========= ======= ===== ====== ======= ======= ===========
+sound_id   +high  -high +front  -front  +round   -round
+========= ======= ===== ====== ======= ======= ===========
+a                   x            x                x
+i            x             x                      x
+u            x                   x       x
+========= ======= ===== ====== ======= ======= ===========
 
 Which is the same thing as previously, with different names. The class hierarchy is also very similar:
 
@@ -135,14 +138,14 @@ Which is the same thing as previously, with different names. The class hierarchy
    :alt: Natural classes for three vowels
 
 
-Warning, some of the segments aren't actual leaves 
->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Warning, some segments are  ancestors of other segments
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 The following error occurs when the table is well formed, but specifies a natural class hierarchy which is not usable by Qumin:
 
 ::
 
-     Exception: Warning, some of the segments aren't actual leaves :
+     Exception: Warning, some segments are  ancestors of other segments :
         p is the same node as [p-kʷ]
             [p-kʷ] ([pĸ]) = [+cons -son -syll +lab -round -voice -cg -cont -strid -lat -del.rel -nas -long]
             kʷ (ĸ) = [+cons -son -syll +lab -round +dor +highC -lowC +back -tense -voice -cg -cont -strid -lat -del.rel -nas -long]

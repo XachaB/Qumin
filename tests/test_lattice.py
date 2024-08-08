@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import unittest
-
-import pandas as pd
-import numpy as np
 import random
-from qumin.lattice import ICLattice, to_dummies_overabundant
-from qumin.clustering import Node
-from . import TestCaseWithPandas
+import unittest
 from itertools import combinations
+
+import numpy as np
+import pandas as pd
+
+from qumin.clustering import Node
+from qumin.lattice import ICLattice, to_dummies_overabundant
+from . import TestCaseWithPandas
 
 
 def parse_lattice(nodes):
@@ -49,6 +50,7 @@ class AOCTestCase(unittest.TestCase):
                 except:
                     print("C1, C2", c1, c2)
                     raise
+
     def test_AOC_simplecase(self):
         """This test checks that non aoc nodes are removed in a minimal case.
 
