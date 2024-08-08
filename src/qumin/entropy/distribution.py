@@ -15,6 +15,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from . import cond_entropy, entropy, P, matrix_analysis
+from .. import representations
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class PatternDistribution(object):
             for the distribution :math:`P(c_{1}, ..., c_{n} → c_{n+1})`.
     """
 
-    def __init__(self, paradigms, patterns, pat_dic, overabundant=False,
+    def __init__(self, paradigms, patterns, classes, name, overabundant=False,
                  features=None, frequencies_file_path=None, paradigms_file_path=None):
         """Constructor for PatternDistribution.
 
@@ -70,8 +71,7 @@ class PatternDistribution(object):
                 patterns (columns are pairs of cells, index are lemmas).
             classes (:class:`pandas:pandas.DataFrame`):
                 classes of applicable patterns from one cell to another.
-            patterns (dict):
-                dictionnary of pairs of cells to patterns
+            overabundant (:
             features:
                 optional table of features
             weights:
@@ -80,18 +80,21 @@ class PatternDistribution(object):
             Remove paradigms_file_path from arguments.
         """
         self.name = name
+
         if not overabundant:
             # Keep the first form for each cell
             self.paradigms = paradigms.map(lambda x: x[0] if x else x)
         else:
             self.paradigms = paradigms
+
         self.classes = classes
-        self.patterns = patterns.map(lambda x: (str(x),) if type(x) is not tuple else x)
 
         self.weights = representations.frequencies.Weights(frequencies_file_path, paradigms_file_path)
 
-        self.pat_dict = pat_dic
         self.patterns = patterns.map(lambda x: (str(x),))
+        # TODO check if the version below is really not useful and why
+        # self.patterns = patterns.map(lambda x: (str(x),) if type(x) is not tuple else x)
+
         if features is not None:
             # Add feature names
             features = features.apply(lambda x: x.name + "=" + x.apply(str), axis=0)
@@ -104,15 +107,6 @@ class PatternDistribution(object):
             self.features = None
             self.add_features = lambda x: x
 
-        log.info("Looking for classes of applicable patterns")
-        if overabundant:
-            self.classes = representations.patterns.find_applicable_OA(self.paradigms,
-                                                                       self.pat_dict)
-        else:
-            self.classes = representations.patterns.find_applicable(self.paradigms,
-                                                                    self.pat_dict)
-        log.debug("Classes:")
-        log.debug(self.classes)
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
         self.data = pd.DataFrame(None,
                                  columns=["predictor",
@@ -262,7 +256,7 @@ class PatternDistribution(object):
 
         self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
 
-    def entropy_matrix_OA(self, debug=False, token=False, sanity_check=False, **kwargs):
+    def one_pred_entropy_OA(self, debug=False, token=False, sanity_check=False, **kwargs):
         r"""Creates a :class:`pandas:pandas.DataFrame`
         with unary entropies, and one with counts of lexemes.
 
@@ -623,7 +617,6 @@ class PatternDistribution(object):
             results.loc[param] = np.nansum(list(grouped_A.apply(group_analysis)), axis=0)
         return results
 
-
     def one_pred_entropy(self):
         r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
 
@@ -642,7 +635,7 @@ class PatternDistribution(object):
                 H( patterns_{c1, c2} | classes_{c1, c2} )
 
         Note:
-            As opposed to :func:`entropy_matrix_OA`, this won't work
+            As opposed to :func:`one_pred_entropy_OA`, this won't work
             with overabundant forms.
         """
         log.info("Computing c1 → c2 entropies")

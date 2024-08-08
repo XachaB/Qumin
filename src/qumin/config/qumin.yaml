@@ -61,6 +61,15 @@ entropy:
   importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
   merged: False       # Whether identical columns are merged in the input.
   stacked: False      # whether to stack results in long form
+  overabundant: False
+  token: False
+  frequencies: False
+  debug: False
+  function: norm
+  grad_success: False
+  cat_pattern: False
+  beta:
+    - 1
 
 eval:
   iter: 10            # How many 90/10 train/test folds to do.

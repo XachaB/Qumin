@@ -11,6 +11,7 @@ from hydra.core.hydra_config import HydraConfig
 
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
 from .representations import segments, patterns, create_paradigms, create_features
+from .utils import check_pattern_cells
 
 log = logging.getLogger()
 
@@ -26,11 +27,15 @@ def H_command(cfg, md):
 
     patterns_file_path = cfg.patterns if md.bipartite else [cfg.patterns]
     sounds_file_name = md.get_table_path("sounds")
-    frequencies_file_path = args.freq
+    freq = cfg.entropy.frequencies
+    frequencies_file_path = md.get_table_path("frequencies") if freq is not None else None
+    paradigms_file_path = md.get_table_path("forms")
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
-    
-    overabundant = args.overabundant
+
+    overabundant = cfg.entropy.overabundant
+    token = cfg.entropy.token
+    debug = cfg.entropy.debug  # remove debug option later
 
     onePred = preds[0] == 1
     if onePred:
@@ -41,11 +46,10 @@ def H_command(cfg, md):
         raise ValueError("You can't provide only one cell.")
     segments.Inventory.initialize(sounds_file_name)
 
-    if args.freq is None and args.token:
+    if freq is None and token:
         log.warning('Frequency computation required but no frequencies were provided.')
         log.warning('Falling back to type frequencies.')
-        args.token = False
-
+        token = False
 
     # Inflectional paradigms: columns are cells, rows are lexemes.
     paradigms = create_paradigms(md.datasets[0], defective=True,
@@ -66,11 +70,11 @@ def H_command(cfg, md):
             "It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
         paradigms = paradigms[(paradigms != "").all(axis=1)]
 
-    if len(args.beta) > 1 and args.debug:
+    if len(cfg.entropy.beta) > 1 and debug:
         raise NotImplementedError("Using debug mode is not possible "
                                   "with multiple values of beta.")
 
-    if args.debug and len(pat_table.columns) > 10:
+    if debug and len(pat_table.columns) > 10:
         log.warning("Using debug mode is strongly "
                     "discouraged on large (>10 cells) datasets."
                     "You should probably stop this process now.")
@@ -115,31 +119,39 @@ def H_command(cfg, md):
 
     else:
         log.info("Looking for classes of applicable patterns")
-        classes = patterns.find_applicable(paradigms, pat_dic)
+
+        if overabundant:
+            classes = patterns.find_applicable_OA(paradigms, pat_dic)
+        else:
+            classes = patterns.find_applicable(paradigms, pat_dic)
         log.debug("Classes:")
         log.debug(classes)
         distrib = PatternDistribution(paradigms,
                                       pat_table,
                                       classes,
-                                      overabundant=overabundant,
                                       "&".join([p.name for p in md.datasets]),
-                                      features=features)
+                                      overabundant=overabundant,
+                                      features=features,
+                                      frequencies_file_path=frequencies_file_path,
+                                      paradigms_file_path=paradigms_file_path)
 
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
-            distrib.one_pred_entropy()
+            if overabundant:
+                distrib.one_pred_entropy_OA(function=cfg.entropy.function,
+                                            beta=cfg.entropy.beta,
+                                            token=token,
+                                            grad_success=cfg.entropy.grad_success,
+                                            cat_pattern=cfg.entropy.cat_pattern)
+            else:
+                distrib.one_pred_entropy()
         mean = distrib.get_results().loc[:, "value"].mean()
+
+        computation = 'onePredEntropies'
         results_file = md.register_file('results.csv',
                                         {'computation': computation,
                                          'content': 'metrics'})
-        if overabundant:
-            distrib.entropy_matrix_OA(function=args.function,
-                                      beta=args.beta,
-                                      token=args.token,
-                                      grad_success=args.grad_success,
-                                      cat_pattern=args.cat_pattern)
-        else:
-            distrib.entropy_matrix()
+
         results = distrib.results
         log.info("Writing to: {}".format(results_file))
         results.to_csv(results_file, sep="\t")
@@ -151,21 +163,22 @@ def H_command(cfg, md):
 
         log.info("Means of H(c1 -> c2) and E(c1 -> c2) are :\n\n %s\n", means.to_markdown())
 
-        if args.debug:
-            if overabundant:
-                check = distrib.entropy_matrix_OA(debug=True,
-                                                  function=args.function,
-                                                  beta=args.beta,
-                                                  token=args.token,
-                                                  grad_success=args.grad_success,
-                                                  cat_pattern=args.cat_pattern,
-                                                  sanity_check=True)
-            else:
-                raise NotImplementedError("""Slow computation for non-overabundant paradigms
-                    is broken and will be back soon.""")
-                check = distrib.one_pred_distrib_log(
-                    sanity_check=sanity_check)
-            if sanity_check and not overabundant:
+        # TODO PRune ?
+        # if debug:
+        #     if overabundant:
+        #         check = distrib.entropy_matrix_OA(debug=True,
+        #                                           function=cfg.function,
+        #                                           beta=cfg.beta,
+        #                                           token=cfg.token,
+        #                                           grad_success=cfg.grad_success,
+        #                                           cat_pattern=cfg.cat_pattern,
+        #                                           sanity_check=True)
+        #     else:
+        #         raise NotImplementedError("""Slow computation for non-overabundant paradigms
+        #             is broken and will be back soon.""")
+        #         check = distrib.one_pred_distrib_log(
+        #             sanity_check=sanity_check)
+
     if preds:
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
