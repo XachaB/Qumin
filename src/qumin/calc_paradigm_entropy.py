@@ -138,46 +138,18 @@ def H_command(cfg, md):
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
             if overabundant:
-                distrib.one_pred_entropy_OA(function=cfg.entropy.function,
-                                            beta=cfg.entropy.beta,
-                                            token=token,
-                                            grad_success=cfg.entropy.grad_success,
-                                            cat_pattern=cfg.entropy.cat_pattern)
+                distrib.one_pred_entropy_OA(cfg.entropy)
             else:
                 distrib.one_pred_entropy()
-        mean = distrib.get_results().loc[:, "value"].mean()
 
-        computation = 'onePredEntropies'
-        results_file = md.register_file('results.csv',
-                                        {'computation': computation,
-                                         'content': 'metrics'})
-
-        results = distrib.results
-        log.info("Writing to: {}".format(results_file))
-        results.to_csv(results_file, sep="\t")
-
-        metrics = ['entropies']
-        if overabundant:
-            metrics.append('accuracies')
-        means = results.groupby(level='params').mean()['metrics'][metrics]
-
-        log.info("Means of H(c1 -> c2) and E(c1 -> c2) are :\n\n %s\n", means.to_markdown())
-
-        # TODO PRune ?
-        # if debug:
-        #     if overabundant:
-        #         check = distrib.entropy_matrix_OA(debug=True,
-        #                                           function=cfg.function,
-        #                                           beta=cfg.beta,
-        #                                           token=cfg.token,
-        #                                           grad_success=cfg.grad_success,
-        #                                           cat_pattern=cfg.cat_pattern,
-        #                                           sanity_check=True)
-        #     else:
-        #         raise NotImplementedError("""Slow computation for non-overabundant paradigms
-        #             is broken and will be back soon.""")
-        #         check = distrib.one_pred_distrib_log(
-        #             sanity_check=sanity_check)
+        results = distrib.get_results(measure=['cond_entropy', 'accuracy'])
+        mean = results.groupby(by="measure")["value"].mean()
+        log.info("Mean H(c1 -> c2) and mean P(success) are \n%s ", mean.to_markdown())
+        if verbose:
+            if overabundant:
+                distrib.one_pred_entropy_OA(cfg.entropy, debug=True)
+            else:
+                distrib.one_pred_distrib_log()
 
     if preds:
         if cfg.entropy.importFile:

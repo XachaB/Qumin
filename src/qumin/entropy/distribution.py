@@ -14,7 +14,7 @@ from itertools import combinations, chain, product
 import pandas as pd
 from tqdm import tqdm
 
-from . import cond_entropy, entropy, P, matrix_analysis
+from . import cond_entropy, matrix_analysis
 from .. import representations
 
 log = logging.getLogger(__name__)
@@ -119,7 +119,8 @@ class PatternDistribution(object):
                                           ])
 
     def get_results(self, measure="cond_entropy", n=1):
-        is_cond_ent = self.data.loc[:, "measure"] == measure
+        measure = [measure] if type(measure) is str else measure
+        is_cond_ent = self.data.loc[:, "measure"].isin(measure)
         is_one_pred = self.data.loc[:, "n_preds"] == n
         return self.data.loc[is_cond_ent & is_one_pred, :]
 
@@ -256,7 +257,7 @@ class PatternDistribution(object):
 
         self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
 
-    def one_pred_entropy_OA(self, debug=False, token=False, sanity_check=False, **kwargs):
+    def one_pred_entropy_OA(self, cfg, debug=False, **kwargs):
         r"""Creates a :class:`pandas:pandas.DataFrame`
         with unary entropies, and one with counts of lexemes.
 
@@ -278,8 +279,7 @@ class PatternDistribution(object):
 
         Arguments:
             debug (bool): Whether to enable debug logging. Default False.
-            token (bool): Whether to use token frequencies instead of type frequencies. Default False.
-            sanity_check (bool): Whether to perform a slow computation check. Default False.
+            cfg (dict): Configuration dictionary.
             **kwargs: optional keyword arguments passed to :func:`cond_entropy_OA`
                 or :func:`cond_entropy_OA_log`
 
@@ -294,8 +294,9 @@ class PatternDistribution(object):
         patterns_dic, weights_dic = self._patterns_to_long(weights)
 
         classes = self.classes
+        rows = list(self.paradigms.columns)
 
-        def _pair_entropy(a, b, selector, **kwargs):
+        def _pair_entropy(a, b, selector, cfg):
             """Produce an entropy analysis for a pair of columns
             """
             known_ab = self.add_features(classes[a][b])
@@ -303,32 +304,59 @@ class PatternDistribution(object):
             A, B = self._prepare_OA_data(pd.concat([patterns_dic[a][b], weights_dic[a][b+"_w"]],
                                                    axis=1),
                                          known_ab, subset=selector, weights=col_weights,
-                                         token=token)
+                                         token=cfg.token)
 
             # If the target is overabundant but unattested, we need to set the weights to 0
             A['w'] = A['w']*A[f'{list(A.columns)[0]}_w'].apply(sum)
 
             if debug:
                 log.debug("# Distribution of {} → {}".format(a, b))
-                self.cond_entropy_OA_log(A, B, subset=selector, **kwargs)
+                self.cond_entropy_OA_log(A, B, cfg, subset=selector)
             else:
-                results_dict = self.cond_entropy_OA(A, B, subset=selector, **kwargs).unstack().to_dict()
-                for param, result in results_dict.items():
-                    self._add_metric(a, b, param, result)
+                return self.cond_entropy_OA(A, B, cfg, subset=selector).unstack()
 
+                # TODO this should not be lost
                 # The size of the sample corresponds to the number of pairs of forms that have a
                 # weight for both predictor and target.
                 self._add_metric(a, b, 'effectifs', A['w'].sum())
 
-        if debug:
-            log.debug("Logging one predictor probabilities")
-            log.debug(" P(x → y) = P(x~y | Class(x))")
-        log.info('Going through each pair of columns')
-        for a, b in tqdm(self.patterns.columns):
+        data = pd.DataFrame(index=rows,
+                            columns=rows).reset_index(drop=False,
+                                                        names="predictor").melt(id_vars="predictor",
+                                                                                var_name="predicted",
+                                                                                value_name="value")
+        data = data[data.predictor != data.predicted]  # drop a -> a cases
+        data.loc[:, "n_pairs"] = None
+        data.loc[:, "n_preds"] = 1
+        data.loc[:, "dataset"] = self.name
+        data.loc[:, "measure"] = "cond_entropy"
+        data.loc[:, "parameters"] = None
+
+        def calc_condent(row):
+            a, b = row["predictor"], row["predicted"]
             selector = self.hasforms[a] & self.hasforms[b]
+            row["n_pairs"] = sum(selector)
+            row['measure'] = ['cond_entropy', 'accuracy']
             if selector[selector].size != 0:
-                _pair_entropy(a, b, selector, **kwargs)
-                _pair_entropy(b, a, selector, **kwargs)
+                results = _pair_entropy(a, b, selector, cfg)
+                if not debug:
+                    results.index.set_names(['measure', 'parameters'], inplace=True)
+                    results = results.reset_index(name="value")
+                    for c in results.columns:
+                        row[c] = results[c].to_list()
+            else:
+                row['value'] = None, None
+            return row
+
+        log.info("Printing log for P(c1 → c2).")
+        log.debug("Logging one predictor probabilities")
+        log.debug(" P(x → y) = P(x~y | Class(x))")
+        log.info('Going through each pair of columns')
+
+        data = data.apply(calc_condent, axis=1)
+        if not debug:
+            data = data.explode(['measure', 'value'])
+            self.data = pd.concat([self.data, data])
 
     def _patterns_to_long(self, weights=None):
         """This function is used to handle overabundant computations.
@@ -462,8 +490,7 @@ class PatternDistribution(object):
 
         return A, B
 
-    def cond_entropy_OA_log(self, A, B, subset=None, token=False,
-                            **kwargs):
+    def cond_entropy_OA_log(self, A, B, cfg, subset=None):
         """
         Print a log of the probability distribution for
         one predictor with overabundance.
@@ -479,9 +506,8 @@ class PatternDistribution(object):
         Arguments:
             A (:class:`pandas.core.series.Series`): A series of data.
             B (:class:`pandas.core.series.Series`): A series of data.
+            cfg (dict): Configuration file for entropy computations.
             subset (Optional[iterable]): Only give the distribution for a subset of values.
-            token (bool): Whether to use token frequencies instead of type frequencies. Default False.
-            **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
         Return:
             list[float]: A list of metrics. First the global accuracy, then H(A|B).
@@ -524,7 +550,7 @@ class PatternDistribution(object):
 
             matrix = np.nan_to_num(pivoted.to_numpy().astype(float))
 
-            res = matrix_analysis(matrix, weights=weight, full=True, **kwargs)
+            res = matrix_analysis(matrix, cfg, weights=weight, full=True)
 
             # Debuging
             myform = "{:5.2f}"
@@ -559,7 +585,7 @@ class PatternDistribution(object):
                     floatfmt=[".3f", ".3f", ".3f", ".0f"])+"\n")
         return None
 
-    def cond_entropy_OA(self, A, B, subset=None, token=False, beta=[5], function="norm", **kwargs):
+    def cond_entropy_OA(self, A, B, cfg, subset=None):
         """Writes down the distributions
         :math:`P( patterns_{c1, c2} | classes_{c1, c2} )`
         for all unordered combinations of two column
@@ -570,10 +596,8 @@ class PatternDistribution(object):
         Arguments:
             A (:class:`pandas.core.series.Series`): A series of data.
             B (:class:`pandas.core.series.Series`): A series of data.
+            cfg (dict): Configuration file for entropy computations.
             subset (Optional[iterable]): Only give the distribution for a subset of values.
-            token (bool): Whether to use token frequencies instead of type frequencies. Default False.
-            beta (List(float): values of beta to be tested when using a softmax computation.
-            **kwargs: optional keyword arguments for :func:`matrix_analysis`.
 
         Return:
             list[float]: A list of metrics. First the global accuracy, then H(A|B).
@@ -581,9 +605,9 @@ class PatternDistribution(object):
 
         population = A['w'].sum(skipna=True)
         grouped_A = A.groupby(B, sort=False)
-        results = pd.DataFrame(columns=['accuracies', 'entropies'])
+        results = pd.DataFrame(columns=['accuracy', 'cond_entropy'])
 
-        for b in beta:
+        for b in cfg.beta:
 
             # Each subclass (forms with similar properties) is analyzed.
             def group_analysis(group):
@@ -608,12 +632,11 @@ class PatternDistribution(object):
                     .astype(float))
 
                 return [i*(np.nansum(weight)/population)
-                        for i in matrix_analysis(matrix, weights=weight, beta=b,
-                                                 function=function, **kwargs)[0:2]]
-            if function != "soft":
-                param = function
+                        for i in matrix_analysis(matrix, cfg, weights=weight, beta=b)[0:2]]
+            if cfg.function != "soft":
+                param = cfg.function
             else:
-                param = function + ' - ' + str(b)
+                param = cfg.function + ' - ' + str(b)
             results.loc[param] = np.nansum(list(grouped_A.apply(group_analysis)), axis=0)
         return results
 

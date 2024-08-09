@@ -20,8 +20,11 @@ def qumin_command(cfg):
         overab = cfg.pats.overabundant == False
         for_H = cfg.action == "H"
         for_m = cfg.action == "macroclasses"
-        assert overab or not (for_H or for_m), "For this calculation, pats.overabundant must be False"
+        assert overab or not for_m, "For this calculation, pats.overabundant must be False"
         assert overab or not for_m, "For this calculation, pats.defective must be False"
+        assert cfg.pats.overabundant == cfg.entropy.overabundant or not for_H, \
+            "For this calculation pats.overabundant must be equal to entropy.overabundant"
+        # TODO set a global overabundant parameter ?
         patterns_file = pat_command(cfg, md)
         cfg.patterns = patterns_file
 
