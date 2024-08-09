@@ -18,10 +18,11 @@ def qumin_command(cfg):
 
     if cfg.patterns is None or cfg.action == "patterns":
         overab = cfg.pats.overabundant == False
+        defect = cfg.pats.defective == False
         for_H = cfg.action == "H"
         for_m = cfg.action == "macroclasses"
         assert overab or not (for_H or for_m), "For this calculation, pats.overabundant must be False"
-        assert overab or not for_m, "For this calculation, pats.defective must be False"
+        assert defect or not for_m, "For this calculation, pats.defective must be False"
         patterns_file = pat_command(cfg, md)
         cfg.patterns = patterns_file
 
