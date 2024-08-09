@@ -60,8 +60,8 @@ class PatternDistribution(object):
             for the distribution :math:`P(c_{1}, ..., c_{n} → c_{n+1})`.
     """
 
-    def __init__(self, paradigms, patterns, classes, name, overabundant=False,
-                 features=None, frequencies_file_path=None, paradigms_file_path=None):
+    def __init__(self, paradigms, patterns, classes, name, md, real_frequencies=False, overabundant=False,
+                 features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -71,7 +71,7 @@ class PatternDistribution(object):
                 patterns (columns are pairs of cells, index are lemmas).
             classes (:class:`pandas:pandas.DataFrame`):
                 classes of applicable patterns from one cell to another.
-            overabundant (:
+            overabundant (bool):
             features:
                 optional table of features
             weights:
@@ -89,7 +89,8 @@ class PatternDistribution(object):
 
         self.classes = classes
 
-        self.weights = representations.frequencies.Weights(frequencies_file_path, paradigms_file_path)
+        self.weights = representations.frequencies.Weights(md,
+                                                           real_frequencies)
 
         self.patterns = patterns.map(lambda x: (str(x),))
         # TODO check if the version below is really not useful and why
@@ -313,18 +314,21 @@ class PatternDistribution(object):
                 log.debug("# Distribution of {} → {}".format(a, b))
                 self.cond_entropy_OA_log(A, B, cfg, subset=selector)
             else:
-                return self.cond_entropy_OA(A, B, cfg, subset=selector).unstack()
 
                 # TODO this should not be lost
                 # The size of the sample corresponds to the number of pairs of forms that have a
                 # weight for both predictor and target.
-                self._add_metric(a, b, 'effectifs', A['w'].sum())
+                results = self.cond_entropy_OA(A, B, cfg, subset=selector).unstack()
+                results.name = "value"
+                results = results.to_frame()
+                results.loc[:, 'n_pairs'] = A['w'].sum()
+                return results
 
         data = pd.DataFrame(index=rows,
                             columns=rows).reset_index(drop=False,
-                                                        names="predictor").melt(id_vars="predictor",
-                                                                                var_name="predicted",
-                                                                                value_name="value")
+                                                      names="predictor").melt(id_vars="predictor",
+                                                                              var_name="predicted",
+                                                                              value_name="value")
         data = data[data.predictor != data.predicted]  # drop a -> a cases
         data.loc[:, "n_pairs"] = None
         data.loc[:, "n_preds"] = 1
@@ -335,13 +339,12 @@ class PatternDistribution(object):
         def calc_condent(row):
             a, b = row["predictor"], row["predicted"]
             selector = self.hasforms[a] & self.hasforms[b]
-            row["n_pairs"] = sum(selector)
             row['measure'] = ['cond_entropy', 'accuracy']
             if selector[selector].size != 0:
                 results = _pair_entropy(a, b, selector, cfg)
                 if not debug:
                     results.index.set_names(['measure', 'parameters'], inplace=True)
-                    results = results.reset_index(name="value")
+                    results = results.reset_index()
                     for c in results.columns:
                         row[c] = results[c].to_list()
             else:
@@ -355,7 +358,7 @@ class PatternDistribution(object):
 
         data = data.apply(calc_condent, axis=1)
         if not debug:
-            data = data.explode(['measure', 'value'])
+            data = data.explode(['measure', 'value', 'parameters', 'n_pairs'])
             self.data = pd.concat([self.data, data])
 
     def _patterns_to_long(self, weights=None):

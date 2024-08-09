@@ -26,7 +26,7 @@ hydra:
 
 disable_existing_loggers: false
 
-action: patterns      # Action, one of: patterns, H, lattice, eval, macroclasses, heatmap
+action: patterns      # Action, one of: patterns, H, lattice, eval, macroclasses, heatmap, ent_heatmap
 data: null            # path to paralex.package.json paradigms, segments
 cells: null           # List of cells to use (subset)
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
@@ -52,6 +52,17 @@ heatmap:
   exhaustive_labels: False # by default, seaborn shows only some labels on
                            # the heatmap for readability.
                            # This forces seaborn to print all labels.
+ent_hm:
+  results: null            # A file with entropy computation results.
+  order: False             # Priority list for sorting features or ordered list of all cells
+  cmap: null               # colormap name
+  exhaustive_labels: False # by default, seaborn shows only some labels on
+                           # the heatmap for readability.
+                           # This forces seaborn to print all labels.
+  dense: False             # Use initials instead of full labels
+  annotate: False          # Display values on the heatmap.
+  beta: False              # Compute only for specific values of beta.
+
 
 entropy:
   n:                  # Compute entropy for prediction from with n predictors.
@@ -63,7 +74,7 @@ entropy:
   stacked: False      # whether to stack results in long form
   overabundant: False
   token: False
-  frequencies: False
+  real_frequencies: False
   debug: False
   function: norm
   grad_success: False

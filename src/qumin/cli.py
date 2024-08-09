@@ -6,6 +6,7 @@ from .find_patterns import pat_command
 from .find_macroclasses import macroclasses_command
 from .make_lattice import lattice_command
 from .microclass_heatmap import heatmap_command
+from .entropy_heatmap import ent_heatmap_command
 from .eval import eval_command
 from .utils import Metadata
 
@@ -16,7 +17,8 @@ def qumin_command(cfg):
     log.info(cfg)
     md = Metadata(cfg, __file__)
 
-    if cfg.patterns is None or cfg.action == "patterns":
+    if (cfg.patterns is None or cfg.action == "patterns") and \
+            cfg.action != 'ent_heatmap':
         overab = cfg.pats.overabundant == False
         for_H = cfg.action == "H"
         for_m = cfg.action == "macroclasses"
@@ -36,6 +38,8 @@ def qumin_command(cfg):
         lattice_command(cfg, md)
     elif cfg.action == "heatmap":
         heatmap_command(cfg, md)
+    elif cfg.action == "ent_heatmap":
+        ent_heatmap_command(cfg, md)
     elif cfg.action == "eval":
         eval_command(cfg, md)
 

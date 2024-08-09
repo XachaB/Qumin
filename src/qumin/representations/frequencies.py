@@ -30,7 +30,7 @@ class Weights(object):
             List of column names on which operation are performed. Usually lexeme, cell, form.
         """
 
-    def __init__(self, filename, paradigms_file_path, filters={},
+    def __init__(self, md, real_frequencies=False, filters={},
                  col_names=["lexeme", "cell", "form"], default_source=None):
         """Constructor for Weights.
 
@@ -41,10 +41,10 @@ class Weights(object):
         """
 
         self.col_names = col_names
-        self.origin = filename
-        paradigms = pd.read_csv(paradigms_file_path, dtype={'freq_id': 'int64'})
-        if filename is None:
-            log.info('No frequencies provided. Building normalized weights for the provided columns...')
+        paradigms = pd.read_csv(md.get_table_path("forms"), dtype={'freq_id': 'int64'})
+
+        if real_frequencies is False:
+            log.info('Building normalized weights for the provided columns...')
             self.weight = paradigms
             self.weight['source'] = 'default'
             self.weight.rename({'phon_form': 'form'}, axis=1, inplace=True)
@@ -53,7 +53,8 @@ class Weights(object):
             paradigms.set_index('form_id', inplace=True)
         else:
             log.info('Reading frequency table...')
-            self.weight = pd.read_csv(filename, index_col='freq_id', usecols=col_names+['value', 'freq_id'])
+            self.weight = pd.read_csv(md.get_table_path("frequencies"), index_col='freq_id',
+                                      usecols=col_names+['value', 'freq_id'])
             freq_col = self.weight.columns
             if set(col_names) < set(freq_col) & set(col_names) != set():
                 raise ValueError(f"These column names don't appear in the frequency table: {set(col_names)-set(freq_col)}")

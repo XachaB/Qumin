@@ -10,9 +10,6 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import logging
-import os
-import argparse
-from .utils import ArgumentDefaultsRawTextHelpFormatter, Metadata
 
 log = logging.getLogger()
 
@@ -23,8 +20,9 @@ def get_features_order(features_file, results, sort_order=False):
     if features_file:
         log.info("Reading features")
         features = pd.read_csv(features_file, index_col=0)
+
         df = results.reset_index()
-        cells = set(df['pred'].to_list() + df['out'].to_list())
+        cells = set(df['predictor'].to_list() + df['predicted'].to_list())
         df_c = pd.DataFrame(index=list(cells))
         for c in cells:
             feat_order = {}
@@ -46,7 +44,7 @@ def get_features_order(features_file, results, sort_order=False):
 
 
 def entropy_heatmap(results, md, cmap_name=False,
-                    feat_order=None, short_name=False, annot=False,
+                    feat_order=None, short_name=False, annotate=False,
                     beta=False):
     """Make a FacetGrid heatmap of all metrics.
 
@@ -59,7 +57,7 @@ def entropy_heatmap(results, md, cmap_name=False,
         cmap_name (str): name of the cmap to use. Defaults to the following cubehelix
             map: `sns.cubehelix_palette(start=2, rot=0.5, dark=0, light=1, as_cmap=True)`.
         short_name (bool): whether to use short cell names or not.
-        annot (bool): whether to add an annotation overlay.
+        annotate (bool): whether to add an annotation overlay.
         beta (List[int]): values of beta to plot
 
     """
@@ -69,28 +67,32 @@ def entropy_heatmap(results, md, cmap_name=False,
     else:
         cmap = plt.get_cmap(cmap_name)
     log.info("Drawing")
-    df = results['metrics'].stack()
-    df = df.reset_index().rename({0: 'values', 'params': 'beta', 'name': 'metric'}, axis=1)
-    df = df[df['metric'] != 'effectifs']
-    if beta:
-        df = df[df['beta'].isin(beta)]
 
-    df.replace(['entropies', 'accuracies'],
-               ['Predictive diversity estimate, $H(X)$', 'Prediction reliability estimate, $P(Y_1)$'],
-               inplace=True)
-    height = round(len(df['pred'].unique())/2)
+    df = results[['measure', 'value', 'parameters']].reset_index()
+    # df = df.reset_index().rename({0: 'values', 'params': 'beta', 'name': 'metric'}, axis=1)
+
+    # if beta:
+    #     df = df[df['parameters'].isin(beta)]
+
+    df['measure'].replace(['cond_entropy', 'accuracy'],
+                          ['Predictive diversity estimate, $H(X)$',
+                           'Prediction reliability estimate, $P(Y_1)$'],
+                          inplace=True)
+
+    # Compute a suitable size for the table
+    height = 4 + round(len(df['predictor'].unique())/5)
 
     def draw_heatmap(*args, **kwargs):
         df = kwargs.pop('data')
-        annot = kwargs.pop('annot')
+        annot = kwargs.pop('annotate')
 
         # For entropies, we want a reversed colormap.
-        if 'Predictive diversity estimate, $H(X)$' not in list(df['metric']):
+        if 'Predictive diversity estimate, $H(X)$' not in list(df['measure']):
             hm_cmap = cmap.reversed()
         else:
             hm_cmap = cmap
         df.index.name = 'predictor'
-        df.columns.name = 'target'
+        df.columns.name = 'predicted'
         df = df.pivot(index=args[0], columns=args[1], values=args[2])
 
         if feat_order:
@@ -128,15 +130,15 @@ def entropy_heatmap(results, md, cmap_name=False,
                     **kwargs)
 
     # Plotting the heatmap
-    if len(df['beta'].unique()) > 1:
-        cg = sns.FacetGrid(df, col='metric', row='beta', height=height, margin_titles=True)
-        cg.set_titles(row_template='{row_name}', col_template='{col_name}')
-    else:
-        cg = sns.FacetGrid(df, col='metric', height=height, margin_titles=True)
-        cg.set_titles(row_template='', col_template='{col_name}')
+    # if len(df['beta'].unique()) > 1:
+        # cg = sns.FacetGrid(df, col='measure', row='parameters', height=height, margin_titles=True)
+        # cg.set_titles(row_template='{row_name}', col_template='{col_name}')
+    # else:
+    cg = sns.FacetGrid(df, col='measure', height=height, margin_titles=True)
+    cg.set_titles(row_template='', col_template='{col_name}')
 
-    cg.map_dataframe(draw_heatmap, 'pred', 'out', 'values', annot=annot, square=True, cbar=False)
-    #  , annot_kws={'size': 5})
+    cg.map_dataframe(draw_heatmap, 'predictor', 'predicted', 'value',
+                     annotate=annotate, square=True, cbar=False)
 
     # Setting labels
     rotate = 0 if short_name else 90
@@ -146,8 +148,9 @@ def entropy_heatmap(results, md, cmap_name=False,
                    labelrotation=rotate)
     cg.tick_params(axis='y',
                    labelrotation=0)
+
     cg.set_ylabels('Predictor')
-    cg.set_xlabels('Target')
+    cg.set_xlabels('Predicted')
 
     # We add a custom global colorbar
     # The last value is the width
@@ -164,98 +167,23 @@ def entropy_heatmap(results, md, cmap_name=False,
     name = md.register_file("entropyHeatmap.png",
                             {"computation": "entropy_heatmap",
                              "content": "figure"})
-    log.info("Saving file to: " + name)
+
+    log.info("Writing heatmap to: " + name)
     cg.tight_layout()
     cg.savefig(name, pad_inches=0.1)
 
 
-def main(args):
+def ent_heatmap_command(cfg, md):
     r"""Draw a heatmap of results similarities using seaborn.
-
-    For a detailed explanation, see the html doc.::
-
-          ____
-         / __ \                    /)
-        | |  | | _   _  _ __ ___   _  _ __
-        | |  | || | | || '_ ` _ \ | || '_ \
-        | |__| || |_| || | | | | || || | | |
-         \___\_\ \__,_||_| |_| |_||_||_| |_|
-          Quantitative modeling of inflection
-
     """
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    log.info(args)
     log.info("Reading files")
-
-    md = Metadata(args, __file__)
-
-    results = pd.read_csv(args.results, sep="\t", index_col=[0, 1, 2], header=[0, 1])
-    feat_order = get_features_order(args.features, results, args.order)
+    results = pd.read_csv(cfg.ent_hm.results, index_col=[0, 1])
+    features_file_name = md.get_table_path("features-values")
+    feat_order = get_features_order(features_file_name, results, cfg.ent_hm.order)
 
     entropy_heatmap(results, md,
-                    cmap_name=args.cmap,
+                    cmap_name=cfg.ent_hm.cmap,
                     feat_order=feat_order,
-                    short_name=args.dense,
-                    beta=args.beta,
-                    annot=args.annot)
-    md.save_metadata()
-
-
-def heatmap_command():
-    parser = argparse.ArgumentParser(description=main.__doc__,
-                                     formatter_class=ArgumentDefaultsRawTextHelpFormatter)
-
-    parser.add_argument("results",
-                        help="results file, full path (csv or tsv)",
-                        type=str)
-
-    parser.add_argument("--features",
-                        help="features file, full path (csv or tsv)",
-                        type=str)
-
-    parser.add_argument("--order",
-                        help="Priority list for sorting features or ordered list of all cells",
-                        nargs='+',
-                        type=str,
-                        default=False)
-
-    parser.add_argument("-c", "--cmap",
-                        help="cmap name",
-                        type=str,
-                        default=False)
-
-    parser.add_argument("-e", "--exhaustive_labels",
-                        help="by default, seaborn shows only some labels on the heatmap for readability."
-                             " This forces seaborn to print all labels.",
-                        action="store_true")
-
-    parser.add_argument("-d", "--dense",
-                        help="Will use initials instead of full labels",
-                        action="store_true", default=False)
-
-    parser.add_argument("-a", "--annot",
-                        help="Display values on the heatmap.",
-                        action="store_true", default=False)
-
-    options = parser.add_argument_group('Options')
-
-    options.add_argument("-v", "--verbose",
-                         help="Activate debug logs.",
-                         action="store_true", default=False)
-
-    options.add_argument("-f", "--folder",
-                         help="Output folder name",
-                         type=str, default=os.getcwd())
-
-    options.add_argument("--beta",
-                         help="Compute only for specific values of beta",
-                         nargs="+",
-                         type=int, default=False)
-
-    args = parser.parse_args()
-
-    main(args)
-
-
-if __name__ == '__main__':
-    heatmap_command()
+                    short_name=cfg.ent_hm.dense,
+                    beta=cfg.ent_hm.beta,
+                    annotate=cfg.ent_hm.annotate)

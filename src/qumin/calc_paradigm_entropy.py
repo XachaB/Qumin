@@ -27,9 +27,8 @@ def H_command(cfg, md):
 
     patterns_file_path = cfg.patterns if md.bipartite else [cfg.patterns]
     sounds_file_name = md.get_table_path("sounds")
-    freq = cfg.entropy.frequencies
-    frequencies_file_path = md.get_table_path("frequencies") if freq is not None else None
-    paradigms_file_path = md.get_table_path("forms")
+    real_frequencies = cfg.entropy.real_frequencies
+    frequencies_file_path = md.get_table_path("frequencies") if real_frequencies is not None else None
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
 
@@ -46,7 +45,7 @@ def H_command(cfg, md):
         raise ValueError("You can't provide only one cell.")
     segments.Inventory.initialize(sounds_file_name)
 
-    if freq is None and token:
+    if real_frequencies is None and token:
         log.warning('Frequency computation required but no frequencies were provided.')
         log.warning('Falling back to type frequencies.')
         token = False
@@ -130,10 +129,10 @@ def H_command(cfg, md):
                                       pat_table,
                                       classes,
                                       "&".join([p.name for p in md.datasets]),
+                                      md,
+                                      real_frequencies,
                                       overabundant=overabundant,
-                                      features=features,
-                                      frequencies_file_path=frequencies_file_path,
-                                      paradigms_file_path=paradigms_file_path)
+                                      features=features)
 
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
