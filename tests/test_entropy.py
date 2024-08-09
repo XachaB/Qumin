@@ -61,17 +61,19 @@ class UtilsTestCase(unittest.TestCase):
         equiprobs.loc[:] = 1/probs.shape[0]
         h2 = entropy.entropy(equiprobs)
         self.assertLess(h1, h2)
+
     @given(st.integers(min_value=1, max_value=100), st.integers(min_value=1, max_value=100))
     def test_entropy_increasing(self, i, j):
         probs = pd.Series(1/i, index=range(i))
-        j = i+j # ensure j is greater than i
+        j = i+j  # ensure j is greater than i
         more_probs = pd.Series(1/j, index=range(j))
         h1 = entropy.entropy(probs)
         h2 = entropy.entropy(more_probs)
         self.assertLess(h1, h2)
+
     @given(event_probs())
     def test_entropy_symmetrical(self, probs):
         h1 = entropy.entropy(probs)
-        shuffled = probs.sample(probs.shape[0]) # Shuffling should use strategy
+        shuffled = probs.sample(probs.shape[0])  # Shuffling should use strategy
         h2 = entropy.entropy(shuffled)
         self.assertAlmostEqual(h1, h2)

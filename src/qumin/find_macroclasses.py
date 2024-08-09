@@ -74,6 +74,3 @@ def macroclasses_command(cfg, md):
     flow.write(node.tree_string())
     flow.write("\n" + experiment_id)
     flow.close()
-
-
-

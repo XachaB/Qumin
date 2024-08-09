@@ -620,7 +620,7 @@ def shorten_feature_names(table):
     short_features_names = []
     for name in table.columns:
         if name in ["sound_id", "Seg.", "UNICODE", "ALIAS",
-                    "value", "label", "tier"] or len(name) <= 3: # Not a feature name
+                    "value", "label", "tier"] or len(name) <= 3:  # Not a feature name
             short_features_names.append(name)
         else:
             if name in _to_short_feature:  # Check standard names

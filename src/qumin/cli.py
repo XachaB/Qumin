@@ -11,14 +11,15 @@ from .utils import Metadata
 
 log = logging.getLogger()
 
+
 @hydra.main(version_base=None, config_path="config", config_name="qumin")
 def qumin_command(cfg):
     log.info(cfg)
     md = Metadata(cfg, __file__)
 
     if cfg.patterns is None or cfg.action == "patterns":
-        overab = cfg.pats.overabundant == False
-        defect = cfg.pats.defective == False
+        overab = cfg.pats.overabundant is False
+        defect = cfg.pats.defective is False
         for_H = cfg.action == "H"
         for_m = cfg.action == "macroclasses"
         assert overab or not (for_H or for_m), "For this calculation, pats.overabundant must be False"

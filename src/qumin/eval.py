@@ -39,7 +39,6 @@ def prepare_arguments(paradigms, iterations, methods, features):
         features is either None or a dataframe of features used to help the prediction (ex:gender, transitivity, ...)
         infos is a dictionnary with more information on the current iteration
     """
-    idx = pd.IndexSlice
 
     def get_set(table, a, b, index_range):
         return table.loc[:, [a, b]].iloc[index_range, :].dropna()

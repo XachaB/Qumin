@@ -342,7 +342,7 @@ class Node(object):
                 style = ",draw=none,fill=none"
 
             if color_attrs and \
-                    any([f.split("=")[0] in color_attrs \
+                    any([f.split("=")[0] in color_attrs
                          for f in node.attributes.get("common", [])]):
                 style = ",fill=gray!20"
 

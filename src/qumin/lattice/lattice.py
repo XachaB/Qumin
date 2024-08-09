@@ -453,7 +453,6 @@ if not mpld3:
     def to_html_disabled(*args, **kwargs):
         log.warning("mpld3 could not be imported. No html export possible.")
 
-
     ICLattice.to_html = to_html_disabled
 else:
     class _HighlightSubTrees(mpld3.plugins.PluginBase):

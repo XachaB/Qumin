@@ -11,8 +11,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
 import logging
-import hydra
-from .utils import Metadata
 
 log = logging.getLogger()
 
