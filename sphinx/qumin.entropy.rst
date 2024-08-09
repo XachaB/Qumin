@@ -4,18 +4,18 @@ qumin.entropy package
 Submodules
 ----------
 
-qumin.entropy.distribution module
----------------------------------
+qumin.entropy.__init__ module
+-----------------------------
 
-.. automodule:: qumin.entropy.distribution
+.. automodule:: qumin.entropy.__init__
    :members:
    :undoc-members:
    :show-inheritance:
 
-qumin.entropy.utils module
---------------------------
+qumin.entropy.distribution module
+---------------------------------
 
-.. automodule:: qumin.entropy.utils
+.. automodule:: qumin.entropy.distribution
    :members:
    :undoc-members:
    :show-inheritance:
