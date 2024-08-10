@@ -7,7 +7,7 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
-from qumin.clustering import Node
+from qumin.clustering.node import Node
 from qumin.lattice.lattice import ICLattice, to_dummies_overabundant
 from . import TestCaseWithPandas
 

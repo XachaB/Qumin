@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import matplotlib
-
-matplotlib.use("agg", force=True)
 from matplotlib import pyplot as plt
 from collections import defaultdict
-from ..clustering import Node
+from ..clustering.node import Node
 from os.path import join, dirname
 import logging
 
+matplotlib.use("agg", force=True)
 log = logging.getLogger()
+
 try:
     import mpld3
 except:
@@ -381,7 +381,7 @@ class ICLattice(object):
         return fig, lines, ordered_nodes
 
     def draw(self, filename, title="Lattice", **kwargs):
-        """Draw the lattice using :class:`qumin.clustering.utils.Node`'s drawing function."""
+        """Draw the lattice using :class:`qumin.clustering.node.Node`'s drawing function."""
         fig, lines, ordered_nodes = self._draw_one(self.nodes, **kwargs)
         if title is not None:
             fig.suptitle(title)
@@ -396,7 +396,7 @@ class ICLattice(object):
         plt.savefig(filename, bbox_inches='tight', pad_inches=0)
 
     def to_html(self, filename, node_formatter=_node_to_label_IC, **kwargs):
-        """Draw an interactive lattice using :class:`qumin.clustering.utils.Node`'s drawing function and mpld3.
+        """Draw an interactive lattice using :class:`qumin.clustering.node.Node`'s drawing function and mpld3.
 
         Arguments:
             filename (str): filename of the exported html page.

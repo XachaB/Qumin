@@ -7,7 +7,7 @@ Author: Sacha Beniamine
 import numpy as np
 from collections import defaultdict, Counter
 from itertools import combinations
-from . import Node
+from .node import Node
 from tqdm import tqdm
 import logging
 
