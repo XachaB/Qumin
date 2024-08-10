@@ -13,8 +13,8 @@ from .clustering import find_microclasses
 from .lattice.lattice import ICLattice
 from .representations import segments, patterns
 
-
 log = logging.getLogger()
+
 
 def lattice_command(cfg, md):
     r"""Infer Inflection classes as a lattice from alternation patterns."""
