@@ -37,8 +37,8 @@ class Metadata():
         filename (str): name of the main script, passing __file__ is fine.
 
     Attributes:
-        now (:class:`time.strftime`)
-        day (:class:`time.strftime`)
+        now (str)
+        day (str)
         version (str) : svn/git version or '' if unknown
         prefix (str) : normalized prefix for the output files
         arguments (dict): all arguments passed to the python script

@@ -51,8 +51,8 @@ def create_paradigms(dataset, fillna=True,
 
     Arguments:
         dataset (str): paralex frictionless Package
-        All characters occuring in the paradigms except the first column
-        should be inventoried in this class.
+            All characters occuring in the paradigms except the first column
+            should be inventoried in this class.
         verbose (bool): verbosity switch.
         merge_duplicates (bool): should identical columns be merged ?
         fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ? Otherwise they are filled with empty strings ("").

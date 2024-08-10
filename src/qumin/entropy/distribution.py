@@ -41,7 +41,6 @@ class PatternDistribution(object):
     """Statistical distribution of patterns.
 
     Attributes:
-
         paradigms (:class:`pandas:pandas.DataFrame`):
             containing forms.
 
@@ -53,7 +52,7 @@ class PatternDistribution(object):
             from one cell to another.
             Index are lemmas.
 
-        entropies (`dict` of `int`::class:`pandas:pandas.DataFrame`):
+        entropies (dict[int, pandas.DataFrame]):
             dict mapping n to a dataframe containing the entropies
             for the distribution :math:`P(c_{1}, ..., c_{n} → c_{n+1})`.
     """

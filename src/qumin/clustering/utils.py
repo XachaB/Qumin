@@ -51,12 +51,13 @@ class Node(object):
         """Node constructor.
 
         Arguments:
-            labels (iterable): labels of all the leaves under this node.
+            labels (Iterable): labels of all the leaves under this node.
             children (list): direct children of this node.
-            kwargs: any other keyword argument will be added as node attributes.
+            **kwargs: any other keyword argument will be added as node attributes.
              Note that certain algorithm expect the Node to have (int) "size",
              (str) "color", (bool) "macroclass", or (float) "DL" attributes.
 
+        Note:
             The attributes "_x" and "_rank" are reserved,
             and will be overwritten by the draw function.
         """
@@ -402,10 +403,10 @@ class Node(object):
             square (bool):
                 Should the tree splines be squared with 90° angles ?
                 (Defauls to False)
-            leavesfunc (fun):
+            leavesfunc (Callable):
                 A function that will be applied to leaves
                 before writing them down. Takes a Node, returns a str.
-            nodefunc (fun):
+            nodefunc (Callable):
                 A function that will be applied to nodes
                 to annotate them. Takes a Node, returns a str.
             keep_above_macroclass (bool):
@@ -414,9 +415,9 @@ class Node(object):
             annotateOnlyMacroclasses : For macroclass history trees:
                 If `True` and nodelabel isn't `None`,
                 only the macroclasses nodes are annotated.
-            point (fun):
+            point (Callable):
                 A function that maps a node to point attributes.
-            edge_attributes (fun):
+            edge_attributes (Callable):
                 A function that maps a pair of nodes to edge attributes.
                     By default, use the parent's color and "-" linestyle for nodes,
                     "--" for leaves.
@@ -549,7 +550,7 @@ def string_to_node(string, legacy_annotation_name=None):
          (<labels>#<size>#<DL>#<color> (... ) (... ) )
 
     Returns:
-        inflexClass.Node: The root of the tree
+        Node: The root of the tree
     """
     legacy = False
     if "=" not in string:

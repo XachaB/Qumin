@@ -17,10 +17,10 @@ def generalize_patterns(pats):
     """Generalize these patterns' context.
 
     Arguments:
-        pats: an iterable of :class:`Patterns.Pattern`
+        pats (Iterable[:class:`Pattern`]): the patterns to generalize
 
     Return:
-        a new :class:`Patterns.Pattern`.
+        :class:`Pattern`: a new pattern
     """
     p0 = pats[0]
     if len(pats) == 1:
@@ -54,10 +54,10 @@ def incremental_generalize_patterns(*args):
     Also attempt to merge together patterns that have not been merged with others.
 
     Arguments:
-        *args : the patterns
+        *args: the patterns
 
     Returns:
-        a list of patterns, at best of length 1, at worst of the same length as the input.
+        List[:class:`Pattern`]: a list of patterns, at best of length 1, at worst of the same length as the input.
     """
 
     if len(args) == 1:
