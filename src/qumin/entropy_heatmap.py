@@ -34,7 +34,7 @@ def get_features_order(features_file, results, sort_order=False):
 
         if not sort_order:
             sort_order = list(df_c.columns)
-        return df_c.sort_values(by=sort_order, axis=0).index.to_list()
+        return df_c.sort_values(by=[x for x in sort_order], axis=0).index.to_list()
     else:
         if sort_order:
             return sort_order

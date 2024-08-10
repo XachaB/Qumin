@@ -28,7 +28,6 @@ def H_command(cfg, md):
     patterns_file_path = cfg.patterns if md.bipartite else [cfg.patterns]
     sounds_file_name = md.get_table_path("sounds")
     real_frequencies = cfg.entropy.real_frequencies
-    frequencies_file_path = md.get_table_path("frequencies") if real_frequencies is not None else None
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
 
