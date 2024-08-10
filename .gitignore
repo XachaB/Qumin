@@ -43,8 +43,7 @@ desktop.ini
 *.csync*
 .idea
 
-
-Results/
+outputs/
 doc/
 *.egg-info/
 build/
