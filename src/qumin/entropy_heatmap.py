@@ -44,22 +44,21 @@ def get_features_order(features_file, results, sort_order=False):
 
 
 def entropy_heatmap(results, md, cmap_name=False,
-                    feat_order=None, short_name=False, annotate=False,
-                    beta=False):
+                    feat_order=None, dense=False, annotate=False,
+                    parameter=False):
     """Make a FacetGrid heatmap of all metrics.
 
     Arguments:
         results (:class:`pandas:pandas.DataFrame`):
             a results DataFrame as produced by calc_paradigm_entropy.
         md: MetaData handler
+        cmap_name (str): name of the cmap to use. Defaults to the following cubehelix
+            map, `sns.cubehelix_palette(start=2, rot=0.5, dark=0, light=1, as_cmap=True)`.
         feat_order (List[str]): an ordered list of each cell name.
             Used to sort the labels.
-        cmap_name (str): name of the cmap to use. Defaults to the following cubehelix
-            map: `sns.cubehelix_palette(start=2, rot=0.5, dark=0, light=1, as_cmap=True)`.
-        short_name (bool): whether to use short cell names or not.
+        dense (bool): whether to use short cell names or not.
         annotate (bool): whether to add an annotation overlay.
-        beta (List[int]): values of beta to plot
-
+        parameter (List[str]): parameters to plot (as rows)
     """
 
     if not cmap_name:
@@ -68,16 +67,18 @@ def entropy_heatmap(results, md, cmap_name=False,
         cmap = plt.get_cmap(cmap_name)
     log.info("Drawing")
 
-    df = results[['measure', 'value', 'parameters']].reset_index()
-    # df = df.reset_index().rename({0: 'values', 'params': 'beta', 'name': 'metric'}, axis=1)
+    df = results[['measure', 'value', 'parameters']].reset_index().copy()
 
-    # if beta:
-    #     df = df[df['parameters'].isin(beta)]
+    # Check if we need to select some parameters
+    with_param = "parameters" in df.columns and df.parameters.any()
+    if with_param and parameter:
+        assert set(parameter) < set(df.parameters.unique()), "The parameters passed were not used for the computation."
+        df = df[df['parameters'].isin(parameter)]
 
-    df['measure'].replace(['cond_entropy', 'accuracy'],
-                          ['Predictive diversity estimate, $H(X)$',
-                           'Prediction reliability estimate, $P(Y_1)$'],
-                          inplace=True)
+    df.measure.replace(['cond_entropy', 'accuracy'],
+                       ['Predictive diversity estimate, $H(X)$',
+                        'Prediction reliability estimate, $P(Y_1)$'],
+                       inplace=True)
 
     # Compute a suitable size for the table
     height = 4 + round(len(df['predictor'].unique())/5)
@@ -103,7 +104,7 @@ def entropy_heatmap(results, md, cmap_name=False,
 
         df = df.replace([np.nan], 0)
 
-        if short_name:
+        if dense:
             def shorten(x):
                 return ".".join([f[0].capitalize() for f in x.split('.')])
 
@@ -130,18 +131,18 @@ def entropy_heatmap(results, md, cmap_name=False,
                     **kwargs)
 
     # Plotting the heatmap
-    # if len(df['beta'].unique()) > 1:
-        # cg = sns.FacetGrid(df, col='measure', row='parameters', height=height, margin_titles=True)
-        # cg.set_titles(row_template='{row_name}', col_template='{col_name}')
-    # else:
-    cg = sns.FacetGrid(df, col='measure', height=height, margin_titles=True)
-    cg.set_titles(row_template='', col_template='{col_name}')
+    if with_param:
+        cg = sns.FacetGrid(df, col='measure', row='parameters', height=height, margin_titles=True)
+        cg.set_titles(row_template='{row_name}', col_template='{col_name}')
+    else:
+        cg = sns.FacetGrid(df, col='measure', height=height, margin_titles=True)
+        cg.set_titles(row_template='', col_template='{col_name}')
 
     cg.map_dataframe(draw_heatmap, 'predictor', 'predicted', 'value',
                      annotate=annotate, square=True, cbar=False)
 
     # Setting labels
-    rotate = 0 if short_name else 90
+    rotate = 0 if dense else 90
 
     cg.tick_params(axis='x', labelbottom=False, labeltop=True,
                    bottom=False, top=True,
@@ -184,6 +185,6 @@ def ent_heatmap_command(cfg, md):
     entropy_heatmap(results, md,
                     cmap_name=cfg.ent_hm.cmap,
                     feat_order=feat_order,
-                    short_name=cfg.ent_hm.dense,
-                    beta=cfg.ent_hm.beta,
+                    dense=cfg.ent_hm.dense,
+                    parameter=cfg.ent_hm.parameter,
                     annotate=cfg.ent_hm.annotate)

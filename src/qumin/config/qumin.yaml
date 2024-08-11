@@ -54,32 +54,33 @@ heatmap:
                            # This forces seaborn to print all labels.
 ent_hm:
   results: null            # A file with entropy computation results.
-  order: False             # Priority list for sorting features or ordered list of all cells
+  order: False             # Priority list for sorting features (ex: number case) or ordered list of all cells
   cmap: null               # colormap name
   exhaustive_labels: False # by default, seaborn shows only some labels on
                            # the heatmap for readability.
                            # This forces seaborn to print all labels.
   dense: False             # Use initials instead of full labels
   annotate: False          # Display values on the heatmap.
-  beta: False              # Compute only for specific values of beta.
+  parameter: False         # Compute only for a given parameter.
 
 
 entropy:
-  n:                  # Compute entropy for prediction from with n predictors.
+  n:                        # Compute entropy for prediction from with n predictors.
     - 1
-  features: null      # Feature column in the Lexeme table.
-                      # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
-  importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
-  merged: False       # Whether identical columns are merged in the input.
-  stacked: False      # whether to stack results in long form
-  overabundant: False
-  token: False
-  real_frequencies: False
-  debug: False
-  function: norm
-  grad_success: False
-  cat_pattern: False
-  beta:
+  features: null            # Feature column in the Lexeme table.
+                            # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
+  importFile: null          # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
+  merged: False             # Whether identical columns are merged in the input.
+  stacked: False            # Whether to stack results in long form
+  overabundant: False       # Whether to take overabundance into account (only for n=1 and features=null)
+  token: False              # Whether to use token frequencies everywhere.
+  real_frequencies: False   # Whether to use frequencies for overabundance ratio
+  debug: False              # Whether to display full debug log.
+  function: norm            # Function to use to compute patterns probabilities: norm, soft, uni
+  grad_success: False       # Whether to consider success as a categorical or as a gradual feature
+  cat_pattern: False        # Whether to consider all overabundant patterns as equally correct,
+                            # Neglecting overabundance ratios
+  beta:                     # Values of beta to use if function=soft. Several values can be passed.
     - 1
 
 eval:
