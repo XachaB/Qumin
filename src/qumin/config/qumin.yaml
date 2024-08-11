@@ -75,7 +75,6 @@ entropy:
   overabundant: False       # Whether to take overabundance into account (only for n=1 and features=null)
   token: False              # Whether to use token frequencies everywhere.
   real_frequencies: False   # Whether to use frequencies for overabundance ratio
-  debug: False              # Whether to display full debug log.
   function: norm            # Function to use to compute patterns probabilities: norm, soft, uni
   grad_success: False       # Whether to consider success as a categorical or as a gradual feature
   cat_pattern: False        # Whether to consider all overabundant patterns as equally correct,

@@ -258,7 +258,7 @@ class PatternDistribution(object):
 
         self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
 
-    def one_pred_entropy_OA(self, cfg, debug=False):
+    def one_pred_entropy_OA(self, cfg, verbose=False):
         r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
@@ -305,7 +305,7 @@ class PatternDistribution(object):
             # If the target is overabundant but unattested, we need to set the weights to 0
             A['w'] = A['w']*A[f'{list(A.columns)[0]}_w'].apply(sum)
 
-            if debug:
+            if verbose:
                 log.debug("# Distribution of {} → {}".format(a, b))
                 self.cond_entropy_OA_log(A, B, cfg, subset=selector)
             else:
@@ -337,7 +337,7 @@ class PatternDistribution(object):
             row['measure'] = ['cond_entropy', 'accuracy']
             if selector[selector].size != 0:
                 results = _pair_entropy(a, b, selector, cfg)
-                if not debug:
+                if not verbose:
                     results.index.set_names(['measure', 'parameters'], inplace=True)
                     results = results.reset_index()
                     for c in results.columns:
@@ -352,7 +352,7 @@ class PatternDistribution(object):
         log.info('Going through each pair of columns')
 
         data = data.apply(calc_condent, axis=1)
-        if not debug:
+        if not verbose:
             data = data.explode(['measure', 'value', 'parameters', 'n_pairs'])
             self.data = pd.concat([self.data, data])
 

@@ -33,7 +33,6 @@ def H_command(cfg, md):
 
     overabundant = cfg.entropy.overabundant
     token = cfg.entropy.token
-    debug = cfg.entropy.debug  # remove debug option later
 
     onePred = preds[0] == 1
     if onePred:
@@ -68,11 +67,11 @@ def H_command(cfg, md):
             "It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
         paradigms = paradigms[(paradigms != "").all(axis=1)]
 
-    if len(cfg.entropy.beta) > 1 and debug:
+    if len(cfg.entropy.beta) > 1 and verbose:
         raise NotImplementedError("Using debug mode is not possible "
                                   "with multiple values of beta.")
 
-    if debug and len(pat_table.columns) > 10:
+    if verbose and len(pat_table.columns) > 10:
         log.warning("Using debug mode is strongly "
                     "discouraged on large (>10 cells) datasets."
                     "You should probably stop this process now.")
@@ -145,7 +144,7 @@ def H_command(cfg, md):
         log.info("Mean H(c1 -> c2) and mean P(success) are \n%s ", mean.to_markdown())
         if verbose:
             if overabundant:
-                distrib.one_pred_entropy_OA(cfg.entropy, debug=True)
+                distrib.one_pred_entropy_OA(cfg.entropy, verbose=True)
             else:
                 distrib.one_pred_distrib_log()
 
