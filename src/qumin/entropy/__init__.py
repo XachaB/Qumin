@@ -83,22 +83,20 @@ def matrix_analysis(matrix, cfg, weights=None, beta=1, full=False):
     each individual pattern and the accuracy for each lexeme.
 
     Arguments:
-        matrix (:class:`numpy.array`): A matrix of 0 and 1.
-        weights: TODO
+        matrix (:class:`numpy.array`): A matrix of 0 and 1, describing the
+            available patterns for each wordform.
         cfg (dict): Configuration file for entropy computations.
-        beta (float): The value of beta when using `softmax`.
+        weights (:class:`numpy.array`): Set of weights
+        beta (float): The value of beta if the function used is `softmax`.
         full (bool): whether to return all mesures or only accuracy and entropy. Defaults to False.
 
     Return:
-        A list of objects: The global accuracy (`float`), the global entropy, H(A|B) (`float`),\
-        the probability of each row to be correctly predicted (matrix), \
+        List[float, float]: The average accuracy (`float`), the average entropy, H(A|B) (`float`).\
+        Optionally, also the probability of each row to be correctly predicted (matrix), \
         the probability of each pattern to be applied (List[float]).
-
-    Todo:
-        Add a grid search option ?
     """
 
-    phi_dic = {
+    functions = {
         "norm": lambda x: x/np.sum(x),
         "soft": lambda x: sp.softmax(x*beta),
         "uni": lambda x: np.matrix([[1/x.shape[1]]*x.shape[1]]),
@@ -125,7 +123,7 @@ def matrix_analysis(matrix, cfg, weights=None, beta=1, full=False):
     if np.sum(pat_freq) == 0:  # We should find a general strategy to handle such cases
         phi_pat = pat_freq
     else:
-        phi_pat = phi_dic[cfg.function](pat_freq)
+        phi_pat = functions[cfg.function](pat_freq)
 
     # Compute entropy based on patterns
     with np.errstate(divide='ignore'):

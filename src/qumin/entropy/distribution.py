@@ -258,17 +258,14 @@ class PatternDistribution(object):
 
         self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
 
-    def one_pred_entropy_OA(self, cfg, debug=False, **kwargs):
-        r"""Creates a :class:`pandas:pandas.DataFrame`
-        with unary entropies, and one with counts of lexemes.
+    def one_pred_entropy_OA(self, cfg, debug=False):
+        r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
 
         Values are computed for all unordered combinations
-        of :math:`(c_{1}, c_{2})`
+        of :math:`(c_{1}, c_{2})` where `c_{1} != c_{2}`
         in the :attr:`PatternDistribution.paradigms`'s columns.
-        Indexes are predictor cells :math:`c{1}`
-        and columns are the predicted cells :math:`c{2}`.
 
         Example:
             For two cells c1, c2, entropy of c1 → c2,
@@ -279,10 +276,8 @@ class PatternDistribution(object):
                 H( patterns_{c1, c2} | classes_{c1, c2} )
 
         Arguments:
-            debug (bool): Whether to enable debug logging. Default False.
             cfg (dict): Configuration dictionary.
-            **kwargs: optional keyword arguments passed to :func:`cond_entropy_OA`
-                or :func:`cond_entropy_OA_log`
+            debug (bool): Whether to enable full logging. Default False.
 
         Note:
             As opposed to :func:`entropy_matrix`, this function allows overabundant forms.
@@ -314,14 +309,14 @@ class PatternDistribution(object):
                 log.debug("# Distribution of {} → {}".format(a, b))
                 self.cond_entropy_OA_log(A, B, cfg, subset=selector)
             else:
-
-                # TODO this should not be lost
-                # The size of the sample corresponds to the number of pairs of forms that have a
-                # weight for both predictor and target.
                 results = self.cond_entropy_OA(A, B, cfg, subset=selector).unstack()
                 results.name = "value"
                 results = results.to_frame()
+
+                # The size of the sample corresponds to the number of pairs of forms that have a
+                # weight for both predictor and target.
                 results.loc[:, 'n_pairs'] = A['w'].sum()
+
                 return results
 
         data = pd.DataFrame(index=rows,
@@ -364,7 +359,7 @@ class PatternDistribution(object):
     def _patterns_to_long(self, weights=None):
         """This function is used to handle overabundant computations.
         It's main aim is to identify to which form (and thus frequency)
-        each pattern corresponds. Indeed, this information is lost in
+        each pattern corresponds. This information is lost in
         the patterns file.
 
         Here, we rebuild the missing information by unpacking
@@ -377,9 +372,10 @@ class PatternDistribution(object):
         patterns_dic = {}
         weights_dic = {}
 
-        # For each cell, we have a DF, where the index is composed
-        # of (lexeme, wordform) pairs, the columns correspond to
-        # the remaining cells, and the values are the applicable rules
+        # For each cell, pattern_dic contains a DF, where the index is a list
+        # of (lexeme, wordform) tuples, and the columns are the other
+        # cells. The values are the applicable rules to produce the other cells,
+        # given a wordform.
 
         for cell in self.paradigms.columns:
             _ = self.paradigms[cell].explode()
@@ -389,19 +385,23 @@ class PatternDistribution(object):
 
         def _dispatch_patterns(row, a, b, reverse=False):
             """ This function reassigns the patterns to their forms.
-            This information was lost during previous steps.
-            This step is mandatory to compute source-cell overabundance
+            This information was lost in the patternsPhonsim file. We
+            also retrieve weights.
 
             Arguments:
-                row (:class:`pandas:pandas.Series`) : a row of the patterns table
-                a (str) : first column name.
-                b (str) : second column name.
-                reverse (bool) : whether to compute for A->B of B->A. The function is not symmetric
+                row (:class:`pandas:pandas.Series`): a row of the patterns table to dispatch
+                a (str): first column name.
+                b (str): second column name.
+                reverse (bool): whether to compute for A->B of B->A. The function is not symmetric
+            Returns:
+                pandas.Series: The same row, containing lists. Each lists contains
+                in the same order the name of the source/target forms,
+                and the list of the patterns for each pair, and the weights associated.
             """
             lex = row.lexeme.iloc[0]
             forms = self.paradigms.at[lex, a], self.paradigms.at[lex, b]
 
-            # This strategy avoids checking if reverse is True.
+            # This strategy avoids checking all the time if reverse is True.
             rev = 1-int(reverse)
             outname = [a, b]
 
@@ -419,12 +419,24 @@ class PatternDistribution(object):
                 else:
                     pairs = [(pred, out) for pred, out in product(*forms)]
                     lpatterns = row[(a, b)][0].split(";")
+
+                # At the same time we also associate a weight to each pattern.
                 pat_weights = [weights.loc[lex, outname[rev], str(p[rev]).strip()]['result']
                                if p[rev] != '' else 0 for p in pairs]
+
             return pd.Series([[p[1-rev] for p in pairs], lpatterns, pat_weights])
 
         def _format_patterns(a, b, reverse=False):
-            """This is used for reformating DFs"""
+            """This is used for reformating DFs to the correct shape.
+            First, the function :func:`_dispatch_patterns` associates
+            the patterns to pairs of forms. It returns parallel lists,
+            that we explode to obtain proper DataFrames.
+
+            Arguments:
+                a (str): first column name.
+                b (str): second column name.
+                reverse (bool): whether to compute for A->B of B->A. The function is not symmetric
+            """
 
             # haspattern = patterns[patterns[(a, b)] != ('None',)][(a, b)]
             z = patterns[(a, b)].reset_index().apply(
@@ -488,7 +500,6 @@ class PatternDistribution(object):
         B = B[subset[B.index.get_level_values(iname)].values]
 
         # Getting weights
-        # breakpoint()
         A['w'] = get_weights(A)
 
         return A, B
