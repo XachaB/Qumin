@@ -11,6 +11,8 @@ Documentation index
    Quick start <self>
    The paradigms file <paradigms>
    The segments file <segments>
+   Overabundance <overabundance>
+   Visualization <heatmap>
    Alternation patterns <patterns>
    Publications <publications>
    Paralex datasets <http://www.paralex-standard.org>

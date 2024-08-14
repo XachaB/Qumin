@@ -708,7 +708,8 @@ class PatternCollection(tuple):
     """Represent a set of patterns."""
 
     def __init__(self, items):
-        self.collection = tuple(sorted(set(items)))
+        # self.collection = tuple(sorted(set(items)))
+        self.collection = tuple(items)
 
     def __str__(self):
         return ";".join(str(p) for p in self.collection)
@@ -831,7 +832,7 @@ def _with_deterministic_alignment(paradigms, method="suffix", disable_tqdm=False
     return patterns, pat_dict
 
 
-def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, disable_tqdm=False, **kwargs):
+def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, disable_tqdm=False, overabundant=False, **kwargs):
     """Find Patterns in a DataFrame with automatic alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -861,8 +862,9 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
     cols = paradigms.columns
     pairs = list(combinations(cols, 2))
+
     patterns_df = pd.DataFrame(index=paradigms.index,
-                               columns=pairs)
+                                   columns=pairs)
 
     pat_dict = {}
 
@@ -934,7 +936,6 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         col = paradigms[[c1, c2]]
         index = col.index
         forms = col.reset_index().values
-
         col.apply(generate_rules, axis=1, args=((c1, c2), collection))
 
         sorted_collection = []
@@ -969,7 +970,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
         # Sort by score and choose best patterns
         sorted_collection = sorted(sorted_collection, key=lambda x: x.score, reverse=True)
-        best = defaultdict(set)
+        best = defaultdict(list)
 
         nullset = {''}
 
@@ -983,14 +984,14 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                     pairs = product(*row)
 
                 for a, b in pairs:
-                    best[l].add(attribute_best_pattern(sorted_collection, l, a, b))
+                    best[l].append(attribute_best_pattern(sorted_collection, l, a, b))
             else:
-                best[l].add(None)
+                best[l].append(None)
 
         if optim_mem:
-            result = [repr(PatternCollection(list(best[l]))) for l in index]
+            result = [repr(PatternCollection(best[l])) for l in index]
         else:
-            result = [PatternCollection(list(best[l])) for l in index]
+            result = [PatternCollection(best[l]) for l in index]
             pat_dict[(c1, c2)] = list(set.union(*[set(coll.collection) for coll in result]))
 
         return result
@@ -999,6 +1000,69 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
     patterns_df = patterns_df.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict,))
 
     return patterns_df, pat_dict
+
+
+def find_applicable_OA(paradigms, pat_dict, disable_tqdm=False, **kwargs):
+    """Find all applicable rules for each form.
+
+    We name sets of applicable rules *classes*. *Classes* are oriented:
+    For each cell, we produce a DataFrame containing, for each
+    (lexeme, form) pair, at each column, the set of applicable rules.
+
+    Arguments:
+        paradigms (:class:`pandas:pandas.DataFrame`):
+            paradigms (columns are cells, index are lemmas).
+        pat_dict  (dict): a dict mapping a column name to a list of patterns.
+        disable_tqdm (bool): if true, do not show progressbar
+
+    Returns:
+        (:class:`pandas:pandas.DataFrame`):
+            associating a lemma (index)
+            and an ordered pair of paradigm cells (columns)
+            to a tuple representing a class of applicable patterns.
+
+    Note:
+        This function is called only if the overabundant parameter
+        was passed.
+    """
+    col_names = set(paradigms.columns)
+    classes = {}
+
+    # For each cell, we have a DF, where the index is composed
+    # of (lexeme, wordform) pairs, the columns correspond to
+    # the remaining cells, and the values are the applicable rules
+
+    for cell in tqdm(paradigms.columns):
+        _ = paradigms[cell].explode()
+        classes[cell] = pd.DataFrame(columns=list(col_names-{cell}),
+                                     index=[_.index, _])
+
+    def _iter_applicable_patterns(form, local_patterns, cell):
+        known_regexes = set()
+        if type(form) is tuple: # if overabundant
+            form = form[0] # from tuple to Form
+        for pattern in local_patterns:
+            regex = pattern._regex[cell]
+            if regex in known_regexes:
+                yield pattern
+
+            elif pattern.applicable(form, cell):
+                known_regexes.add(regex)
+                yield pattern
+
+    def applicable(*args):
+        return tuple(_iter_applicable_patterns(*args))
+
+    for a, b in tqdm(pat_dict, leave=False, disable=disable_tqdm):
+        local_patterns = pat_dict[(a, b)]
+
+        # Iterate on paradigms' rows of corresponding columns to fill with the
+        # result
+        classes[a][b] = classes[a].index.to_frame()[a].apply(applicable,
+                                                             args=(local_patterns, a))
+        classes[b][a] = classes[b].index.to_frame()[b].apply(applicable,
+                                                             args=(local_patterns, b))
+    return classes
 
 
 def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):

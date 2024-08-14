@@ -2,6 +2,7 @@
 # !/usr/bin/python3
 
 import numpy as np
+from scipy import special as sp
 
 
 def P(x, subset=None):
@@ -63,3 +64,81 @@ def entropy(A):
     Return:
         H(A)"""
     return -(A * np.log2(A)).sum()
+
+
+def cross_entropy(A, B):
+    """Calculate the entropy for a series of probabilities.
+
+    Arguments:
+        A (:class:`pandas.core.series.Series`): A series of data.
+        B (:class:`pandas.core.series.Series`): A series of data.
+
+    Return:
+        H(A,B)"""
+    return -(P(B) * np.log2(P(A))).sum()
+
+
+def matrix_analysis(matrix, cfg, weights=None, beta=1, full=False):
+    """Given an overabundance matrix and a function, computes the probability of
+    each individual pattern and the accuracy for each lexeme.
+
+    Arguments:
+        matrix (:class:`numpy.array`): A matrix of 0 and 1, describing the
+            available patterns for each wordform.
+        cfg (dict): Configuration file for entropy computations.
+        weights (:class:`numpy.array`): Set of weights
+        beta (float): The value of beta if the function used is `softmax`.
+        full (bool): whether to return all mesures or only accuracy and entropy. Defaults to False.
+
+    Return:
+        List[float, float]: The average accuracy (`float`), the average entropy, H(A|B) (`float`).\
+        Optionally, also the probability of each row to be correctly predicted (matrix), \
+        the probability of each pattern to be applied (List[float]).
+    """
+
+    functions = {
+        "norm": lambda x: x/np.sum(x),
+        "soft": lambda x: sp.softmax(x*beta),
+        "uni": lambda x: np.matrix([[1/x.shape[1]]*x.shape[1]]),
+    }
+
+    # If weights sum to zero, all forms are defective and can be skipped.
+    # If weights is None, then it won't be used by np.average, so nothing to do.
+    if np.nansum(weights) == 0:
+        if full:
+            return 0, 0, None, None, 0
+        else:
+            return 0, 0
+    if cfg.cat_pattern or not cfg.grad_success:
+        bool_matrix = np.array(matrix, dtype=bool)
+
+    # Compute the frequency of each pattern (using frequency data if available)
+    if cfg.cat_pattern:
+        pat_freq = np.average(bool_matrix, axis=0, weights=weights)
+        pat_freq = pat_freq/np.sum(pat_freq)
+    else:
+        pat_freq = np.nansum(matrix*weights.reshape(-1, 1), axis=0)/np.nansum(weights)
+
+    # Apply transformation to pattern probabilities
+    if np.sum(pat_freq) == 0:  # We should find a general strategy to handle such cases
+        phi_pat = pat_freq
+    else:
+        phi_pat = functions[cfg.function](pat_freq)
+
+    # Compute entropy based on patterns
+    with np.errstate(divide='ignore'):
+        entropy = -np.sum(np.log2(phi_pat, where=phi_pat != 0)*phi_pat) + 0
+
+    # Compute probability of success on each row
+    if cfg.grad_success:
+        row_accuracy = matrix@phi_pat
+    else:
+        row_accuracy = bool_matrix@phi_pat
+
+    # Compute average probability of success on this subclass
+    # There can be some weighting, if available.
+    accuracy = np.nansum(row_accuracy*weights)/np.nansum(weights)
+    if full:
+        return accuracy, entropy, row_accuracy, phi_pat, pat_freq
+    else:
+        return accuracy, entropy
