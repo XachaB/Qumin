@@ -141,7 +141,9 @@ def entropy_heatmap(results, md, cmap_name=False,
     cg.set_titles(row_template='{row_name}', col_template='{col_name}')
 
     cg.map_dataframe(_draw_heatmap, 'predictor', 'predicted', 'value',
-                     annotate=annotate, square=True, cbar=False)
+                     annotate=annotate, square=True, cbar=True,
+                     cbar_kws=dict(location='bottom',
+                                   shrink=0.6))
 
     # Setting labels
     rotate = 0 if dense else 90
@@ -152,29 +154,28 @@ def entropy_heatmap(results, md, cmap_name=False,
     cg.tick_params(axis='y',
                    labelrotation=0)
 
+    # Override general tick settings.
+    for row in cg.axes:
+        for hm in row:
+            cb = hm.collections[-1].colorbar
+            cb.outline.set_visible(True)
+            cb.outline.set_linewidth(0.5)
+            cb.ax.tick_params(labelbottom=True, labeltop=False,
+                              bottom=True, top=False,
+                              labelrotation=0)
+
     cg.set_ylabels('Predictor')
     cg.set_xlabels('Predicted')
-
     cg.fig.suptitle(f"Measured on the {md.datasets[0].name} dataset, version {md.datasets[0].version}")
 
-    # We add a custom global colorbar
-    # The last value is the width
-    cbar_ax = cg.fig.add_axes([0.09, -0.04, 0.84, 0.04])
-    cbar = cg.fig.colorbar(cm.ScalarMappable(norm=None, cmap=cmap),
-                           cax=cbar_ax,
-                           drawedges=False,
-                           orientation='horizontal'
-                           )
-    cbar.set_ticks([0, 0.5, 1])
-    cbar.set_ticklabels(['Low', 'Balanced', 'High'])
-    cbar.outline.set_visible(False)
+    cg.tight_layout()
 
     name = md.register_file("entropyHeatmap.png",
                             {"computation": "entropy_heatmap",
                              "content": "figure"})
 
     log.info("Writing heatmap to: " + name)
-    cg.tight_layout()
+
     cg.savefig(name, pad_inches=0.1)
 
 
