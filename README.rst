@@ -165,7 +165,9 @@ The config file contains the following keys, which can be set through the comman
                                # This forces seaborn to print all labels.
       dense: False             # Use initials instead of full labels (only for entropy heatmap)
       annotate: False          # Display values on the heatmap. (only for entropy heatmap)
-      order: False             # Priority list for sorting features (for entropy heatmap, ex: [number, case]) or an ordered list of the cells to display.
+      order: False             # Priority list for sorting features (for entropy heatmap)
+                               # ex: [number, case]). If no features-values file available,
+                               # it should contain an ordered list of the cells to display.
     entropy:
       heatmap: True        # Whether to draw a heatmap.
 

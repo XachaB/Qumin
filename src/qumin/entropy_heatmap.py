@@ -6,6 +6,7 @@ Author: Jules Bouton.
 """
 from matplotlib import pyplot as plt
 from matplotlib import cm as cm
+from frictionless.exception import FrictionlessException
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -39,13 +40,15 @@ def get_features_order(features_file, results, sort_order=False):
         if sort_order:
             return sort_order
         else:
-            raise ValueError("""If no features are passed,
-    the --order argument should contain an ordered list of cells.""")
+            log.warning("""No cells order provided. Falling back to alphabetical order.""")
+            df = results.reset_index()
+            return sorted(list(df.predictor.unique()))
 
 
 def entropy_heatmap(results, md, cmap_name=False,
                     feat_order=None, dense=False, annotate=False,
                     parameter=False):
+
     """Make a FacetGrid heatmap of all metrics.
 
     Arguments:
@@ -180,7 +183,12 @@ def ent_heatmap_command(cfg, md):
     """
     log.info("Drawing a heatmap of the results...")
     results = pd.read_csv(cfg.entropy.importFile, index_col=[0, 1])
-    features_file_name = md.get_table_path("features-values")
+    try:
+        features_file_name = md.get_table_path("features-val")
+    except FrictionlessException:
+        features_file_name = None
+        log.warning("Your package doesn't contain any features-values file. You should provide an ordered list of cells in command line.")
+
     feat_order = get_features_order(features_file_name, results, cfg.heatmap.order)
 
     entropy_heatmap(results, md,
