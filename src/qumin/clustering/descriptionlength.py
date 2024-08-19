@@ -7,7 +7,7 @@ Author: Sacha Beniamine
 import numpy as np
 from collections import defaultdict, Counter
 from itertools import combinations
-from . import Node
+from .node import Node
 from tqdm import tqdm
 import logging
 
@@ -21,7 +21,7 @@ class Cluster(object):
     Cluster can be merged or separated by adding or substracting them.
 
     Attributes:
-        patterns (:class:`defaultdict`): For each pair of cell in the paradigms under consideration,
+        patterns (:class:`collections.defaultdict`): For each pair of cell in the paradigms under consideration,
          it holds a counter of the number of microclass using each pattern in this cluster and pair of cells.::
 
                 { str: Counter({Pattern: int }) }
@@ -134,8 +134,9 @@ class BUDLClustersBuilder(object):
 
     This class inherits attributes.
 
-    Attributes:microclasses (dict of str:list): Inherited. mapping of microclasses exemplars to microclasses inventories.
-        nodes (dict of frozenset :Node): Inherited. Maps frozensets of microclass exemplars to Nodes representing clusters.
+    Attributes:
+        microclasses (dict[str, list]): Inherited. mapping of microclasses exemplars to microclasses inventories.
+        nodes (dict[frozenset, Node]): Inherited. Maps frozensets of microclass exemplars to Nodes representing clusters.
         preferences (dict): Inherited. Configuration parameters.
         attr (str): (class attribute) always have the value "DL", as the nodes of the Inflection class tree have a "DL" attribute.
         DL (float): A description length DL, with DL(system) = DL(M) + DL(C) + DL(P) + DL(R)
@@ -143,15 +144,15 @@ class BUDLClustersBuilder(object):
         C (float): DL(C), the cost in bits to express the mapping between microclasses and clusters.
         P (float):  DL(P), the cost in bits to express the relation between clusters and patterns.
         R (float):  DL(R), the cost in bits to disambiguiate which pattern to use in each cluster for each microclasses.
-        clusters (dict of frozenset: :class:`Cluster`): Clusters, indexed by a frozenset of microclass examplars.
-        patterns (dict of str : Counter): A dict of pairs of cells to a count of patterns
-         to the number of clusters presenting this pattern for this cell.::
+        clusters (dict[frozenset, Cluster]): Clusters, indexed by a frozenset of microclass examplars.
+        patterns (dict[str, collections.Counter]): A dict of pairs of cells to a count of patterns
+            to the number of clusters presenting this pattern for this cell.::
 
                 { str: Counter({Pattern: int }) }
                 pairs of cells -> pattern -> number of clusters with this pattern for this cell
 
-         Note that the Counter's length is written on a .length attribute, to avoid calling len() repeatedly.
-         Remark that the count is not the same as in the class Cluster.
+            Note that the Counter's length is written on a .length attribute, to avoid calling len() repeatedly.
+            Remark that the count is not the same as in the class Cluster.
         size (int): The size of the whole system in microclasses.
     """
 
@@ -161,7 +162,7 @@ class BUDLClustersBuilder(object):
         """Constructor.
 
         Arguments:
-            microclasses (dict of str:list): mapping of microclasses exemplars to microclasses inventories.
+            microclasses (dict[str, list]): mapping of microclasses exemplars to microclasses inventories.
             paradigms (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
             kwargs : keyword arguments to be used as configuration.
         """

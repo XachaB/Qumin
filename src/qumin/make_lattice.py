@@ -13,8 +13,8 @@ from .clustering import find_microclasses
 from .lattice.lattice import ICLattice
 from .representations import segments, patterns
 
-
 log = logging.getLogger()
+
 
 def lattice_command(cfg, md):
     r"""Infer Inflection classes as a lattice from alternation patterns."""
@@ -57,30 +57,30 @@ def lattice_command(cfg, md):
                         keep_names=(not cfg.lattice.shorten))
 
     if cfg.lattice.stat:
-        statname = md.register_file('stats.txt', {"computation": cfg.scriptname,
+        statname = md.register_file('stats.txt', {"computation": cfg.action,
                                                   "content": "stats"})
         with open(statname, "w", encoding="utf-8") as flow:
             flow.write(lattice.stats().to_frame().T.to_latex())
             log.info(lattice.stats().to_frame().T.to_latex())
 
     if cfg.lattice.png:
-        lattpng = md.register_file('lattice.png', {'computation': cfg.scriptname,
+        lattpng = md.register_file('lattice.png', {'computation': cfg.action,
                                                    'content': 'figure'})
         lattice.draw(lattpng, figsize=(20, 10), title=None, point=True)
 
     if cfg.lattice.pdf:
-        lattpdf = md.register_file('lattice.pdf', {'computation': cfg.scriptname,
+        lattpdf = md.register_file('lattice.pdf', {'computation': cfg.action,
                                                    'content': 'figure'})
         lattice.draw(lattpdf, figsize=(20, 10), title=None, point=True)
 
     if cfg.lattice.html:
-        latthtml = md.register_file('lattice.html', {'computation': cfg.scriptname,
+        latthtml = md.register_file('lattice.html', {'computation': cfg.action,
                                                      'content': 'figure'})
         log.info("Exporting to html: " + latthtml)
         lattice.to_html(latthtml)
 
     if cfg.lattice.ctxt:
-        lattcxt = md.register_file('lattice.cxt', {'computation': cfg.scriptname,
+        lattcxt = md.register_file('lattice.cxt', {'computation': cfg.action,
                                                    'content': 'figure'})
         log.info(" ".join(["Exporting context to file:", lattcxt]))
         lattice.context.tofile(lattcxt, frmat='cxt')

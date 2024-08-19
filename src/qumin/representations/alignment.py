@@ -83,8 +83,8 @@ def align_auto(s1, s2, insert_cost, sub_cost, distance_only=False, fillvalue="",
     Arguments:
         s1 (str): first word to align
         s2 (str): second word to align
-        insert_cost (func): A function which takes one value and returns an insertion cost
-        sub_cost (func): A function which takes two values and returns a substitution cost
+        insert_cost (Callable): A function which takes one value and returns an insertion cost
+        sub_cost (Callable): A function which takes two values and returns a substitution cost
         distance_only (bool): defaults to False. If True, returns only the best distance. If False, returns an alignment.
         fillvalue: (optional) the value with which to pad when iterable have varying lengths. Default:  "".
 

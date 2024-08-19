@@ -51,7 +51,7 @@ def hierarchical_clustering(patterns, Clusters, **kwargs):
     Arguments:
         patterns (:class:`pandas:pandas.DataFrame`): a dataframe of strings representing alternation patterns.
         Clusters : a cluster class to use in clustering.
-        clustering_algorithm (func): a clustering algorithm.
+        clustering_algorithm (Callable): a clustering algorithm.
         kwargs: any keywords arguments to pass to Clusters. Some keywords are mandatory :
           "md" should be the Metadata register, "patterns" should be a function for pattern finding
     """

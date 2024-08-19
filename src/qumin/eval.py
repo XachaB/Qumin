@@ -28,18 +28,17 @@ def prepare_arguments(paradigms, iterations, methods, features):
     Arguments:
         paradigms (:class:`pandas.DataFrame`): a dataframe of forms
         iterations (bool): number of train/test splits to evaluate
-        methods (list of str): alignment methods to use
-        features (DataFrame): features to help prediction
+        methods (List[str]): alignment methods to use
+        features (:class:`pandas.DataFrame`): features to help prediction
 
     Yields:
         a tuple of (test_items, train_items, method, features, infos)
-        test_items is a DataFrame containing test forms for two paradigm cells
-        train_items is a DataFrame containing train forms for the same two paradigm cells
-        method is the name of a method for finding patterns
-        features is either None or a dataframe of features used to help the prediction (ex:gender, transitivity, ...)
-        infos is a dictionnary with more information on the current iteration
+            test_items is a DataFrame containing test forms for two paradigm cells
+            train_items is a DataFrame containing train forms for the same two paradigm cells
+            method is the name of a method for finding patterns
+            features is either None or a dataframe of features used to help the prediction (ex:gender, transitivity, ...)
+            infos is a dictionnary with more information on the current iteration
     """
-    idx = pd.IndexSlice
 
     def get_set(table, a, b, index_range):
         return table.loc[:, [a, b]].iloc[index_range, :].dropna()
@@ -65,15 +64,16 @@ def evaluate(task):
     """Learn and predict for a given split and pair of cells, then calculate evaluation metrics.
 
     Arguments:
-        task: a tuple of (test_items, train_items, method, features, infos)
-        test_items is a DataFrame containing test forms for two paradigm cells
-        train_items is a DataFrame containing train forms for the same two paradigm cells
-        method is the name of a method for finding patterns
-        features is either None or a dataframe of features used to help the prediction (ex:gender, transitivity, ...)
-        row is a dictionnary with more information on the current iteration
+        task (tuple): a tuple of (test_items, train_items, method, features, infos)
+            test_items is a DataFrame containing test forms for two paradigm cells
+            train_items is a DataFrame containing train forms for the same two paradigm cells
+            method is the name of a method for finding patterns
+            features is either None or a dataframe of features used to help the prediction (ex:gender, transitivity, ...)
+            row is a dictionnary with more information on the current iteration
 
     Returns:
-        row: The dictionnary passed in argument, with stats for this evaluation.
+        tuple: The dictionnary passed in argument,
+            with stats for this evaluation for both directions.
     """
     test_items, train_items, method, features, row = task  # because multiprocessing does not have "istarmap"
     ab_predictions = None
@@ -113,7 +113,7 @@ def predict_two_directions(test_items, train_items, method, features=None):
         method : the method used to find patterns
 
     Returns:
-        a tuple of three elementss: predicted_correct1, predicted_correct2, count
+        tuple: a tuple of three elements: predicted_correct1, predicted_correct2, count
         predicted_correct1 (Series) indicates test lexemes which were predicted correctly in one direction,
         predicted_correct1 (Series) indicates test lexemes which were predicted correctly in the opposite direction,
         count (int): Is the number of patterns found for this set of train items.

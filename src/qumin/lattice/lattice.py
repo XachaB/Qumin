@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import matplotlib
-
-matplotlib.use("agg", force=True)
 from matplotlib import pyplot as plt
 from collections import defaultdict
-from ..clustering import Node
+from ..clustering.node import Node
 from os.path import join, dirname
 import logging
 
+matplotlib.use("agg", force=True)
 log = logging.getLogger()
+
 try:
     import mpld3
 except:
@@ -67,7 +67,7 @@ def to_dummies_overabundant(table, **kwargs):
     """Make a context table from a dataframe, where cells can be overabundant.
 
     Overabundant entries are given as either ";" separated strings or as
-     :class:`representations.patterns.PatternCollection` objects
+     :class:`qumin.representations.patterns.PatternCollection` objects
 
     Arguments:
         table (:class:`pandas:pandas.DataFrame`): A dataframe of patterns or strings
@@ -105,13 +105,13 @@ def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
 
     Args:
         dataframe (:class:`pandas:pandas.DataFrame`): A dataframe
-        dummy_formatter (func): Function to make dummies from the table. (default to panda's)
+        dummy_formatter (Callable): Function to make dummies from the table. (default to panda's)
         keep_names (bool): whether to keep original column names when dropping duplicate dummy columns.
-        col_formatter (func): Function to format columns in the context table.
+        col_formatter (Callable): Function to format columns in the context table.
         na_value : A value tu use as "Na". Defaults to `None`
         overabundant (bool): Whether the table has overabundant cells (these should be
             given as either ";" separated strings or
-            :class:`representations.patterns.PatternCollection` objects).
+            :class:`qumin.representations.patterns.PatternCollection` objects).
 
     Returns:
         concepts.Context: the created Context
@@ -381,7 +381,7 @@ class ICLattice(object):
         return fig, lines, ordered_nodes
 
     def draw(self, filename, title="Lattice", **kwargs):
-        """Draw the lattice using :class:`clustering.Node`'s drawing function."""
+        """Draw the lattice using :class:`qumin.clustering.node.Node`'s drawing function."""
         fig, lines, ordered_nodes = self._draw_one(self.nodes, **kwargs)
         if title is not None:
             fig.suptitle(title)
@@ -396,11 +396,11 @@ class ICLattice(object):
         plt.savefig(filename, bbox_inches='tight', pad_inches=0)
 
     def to_html(self, filename, node_formatter=_node_to_label_IC, **kwargs):
-        """Draw an interactive lattice using :class:`clustering.Node`'s drawing function and mpld3.
+        """Draw an interactive lattice using :class:`qumin.clustering.node.Node`'s drawing function and mpld3.
 
         Arguments:
             filename (str): filename of the exported html page.
-            node_formatter (func): custom function to format nodes
+            node_formatter (Callable): custom function to format nodes
         """
         css = _load_external_text("table.css")
         fig, lines, ordered_nodes = self._draw_one(self.nodes,
@@ -452,7 +452,6 @@ class ICLattice(object):
 if not mpld3:
     def to_html_disabled(*args, **kwargs):
         log.warning("mpld3 could not be imported. No html export possible.")
-
 
     ICLattice.to_html = to_html_disabled
 else:

@@ -75,13 +75,13 @@ class Inventory(object):
     Sound classes can be seen as under-determined phonemes, and both phonemes and sound
     classes are handled in the same way. For this reason, we call both "sound".
 
-    Static Attributes:
+    Attributes:
         _lattice: the FCA lattice underlying the feature space
         _score_matrix (dict): a dictionnary of sound tuples to alignment score
         _gap_score (float): a score for insertions
         _normalization (dict): a dictionnary of sounds to their normalized counterparts
-        _segmenter (re.pattern): a compiled regex to segment words into phonemes
-        _legal_str (re.pattern): a compiled regex to recognize words made of known phonemes
+        _segmenter (re.Pattern): a compiled regex to segment words into phonemes
+        _legal_str (re.Pattern): a compiled regex to recognize words made of known phonemes
         _max (frozenset): the identifier of the supremum in the lattice
         _regexes_end (dict): a dictionnary of sound IDs to regex strings (to use at the end of words) -- currently unused
         _regexes (dict): a dictionnary of sound IDs to regex strings
@@ -489,7 +489,7 @@ class Inventory(object):
             a,b (str): Segment identifiers.
 
         Returns:
-            (tuple of frozensets): two sets of sounds.
+            tuple of frozenset: two sets of sounds.
         """
 
         def select_if_reciprocal(cls, segs, left, right):
@@ -587,8 +587,8 @@ def normalize(ipa, features):
         features (list): Feature columns' names.
 
     Returns:
-        norm_map (dict):
-            translation table from the segment's nameto its normalized name.
+        dict: translation table from
+            the segment's name to its normalized name.
     """
 
     def find_identical_rows(segment, table):
@@ -610,6 +610,7 @@ def normalize(ipa, features):
 
     norm_map = {seg: norm for seg, norm in zip(ipa.index, ipa["Normalized"]) if
                 seg != norm}
+
     return norm_map
 
 
@@ -620,7 +621,7 @@ def shorten_feature_names(table):
     short_features_names = []
     for name in table.columns:
         if name in ["sound_id", "Seg.", "UNICODE", "ALIAS",
-                    "value", "label", "tier"] or len(name) <= 3: # Not a feature name
+                    "value", "label", "tier"] or len(name) <= 3:  # Not a feature name
             short_features_names.append(name)
         else:
             if name in _to_short_feature:  # Check standard names

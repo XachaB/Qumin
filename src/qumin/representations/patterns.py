@@ -93,7 +93,7 @@ def are_all_identical(iterable):
 
 
 class NotApplicable(Exception):
-    """Raised when a :class:`patterns.Pattern` can't be applied to a form."""
+    """Raised when a :class:`Pattern` can't be applied to a form."""
     pass
 
 
@@ -101,18 +101,19 @@ class Pattern(object):
     r"""Represent an alternation pattern and its context.
 
     The pattern can be defined over an arbitrary number of forms.
-    If there are only two forms, a :class:`patterns.BinaryPattern` will be created.
+    If there are only two forms, a :class:`BinaryPattern` will be created.
 
     cells (tuple): Cell labels.
 
-    alternation (dict of str: list of tuple):
-        Maps the cell's names to a list of tuples of alternating material.
+    Attributes:
+        alternation (dict[str, list[tuple]]):
+            Maps the cell's names to a list of tuples of alternating material.
 
-    context (tuple of str):
-        Sequence of (str, Quantifier) pairs or "{}" (stands for alternating material.)
+        context (tuple of str):
+            Sequence of (str, Quantifier) pairs or "{}" (stands for alternating material.)
 
-    score (float):
-        A score used to choose among patterns.
+        score (float):
+            A score used to choose among patterns.
 
     Example:
         >>> cells = ("prs.1.sg", "prs.1.pl","prs.2.pl")
@@ -132,8 +133,8 @@ class Pattern(object):
         """Constructor for Pattern.
 
         Arguments:
-            cells (iterable): Cells labels (str), in the same order.
-            forms (iterable): Forms (str) to be segmented.
+            cells (Iterable): Cells labels (str), in the same order.
+            forms (Iterable): Forms (str) to be segmented.
             aligned (bool): whether forms are already aligned. Otherwise, left alignment will be performed.
         """
         self.score = 0
@@ -1015,7 +1016,7 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
         disable_tqdm (bool): if true, do not show progressbar
 
     Returns:
-        (:class:`pandas:pandas.DataFrame`):
+        :class:`pandas:pandas.DataFrame`:
             associating a lemma (index)
             and an ordered pair of paradigm cells (columns)
             to a tuple representing a class of applicable patterns.

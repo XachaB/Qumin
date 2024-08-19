@@ -51,8 +51,8 @@ def create_paradigms(dataset, fillna=True,
 
     Arguments:
         dataset (str): paralex frictionless Package
-        All characters occuring in the paradigms except the first column
-        should be inventoried in this class.
+            All characters occuring in the paradigms except the first column
+            should be inventoried in this class.
         verbose (bool): verbosity switch.
         merge_duplicates (bool): should identical columns be merged ?
         fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ? Otherwise they are filled with empty strings ("").
@@ -91,7 +91,7 @@ def create_paradigms(dataset, fillna=True,
         lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
         selected = set(lexemes_df.sort_values("frequency",
                                               ascending=False
-                                              ).iloc[:most_freq,:].loc[:,"lexeme_id"].to_list())
+                                              ).iloc[:most_freq, :].loc[:, "lexeme_id"].to_list())
         paradigms = paradigms.loc[paradigms.lexeme.isin(selected), :]
     if sample:
         paradigms = paradigms.sample(sample)
@@ -122,8 +122,6 @@ def create_paradigms(dataset, fillna=True,
                                       aggfunc=aggregator)
 
     paradigms.reset_index(inplace=True, drop=False)
-
-
     log.debug(paradigms)
 
     # Lexemes must be unique identifiers

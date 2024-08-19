@@ -4,6 +4,14 @@ qumin.representations package
 Submodules
 ----------
 
+qumin.representations.__init__ module
+-------------------------------------
+
+.. automodule:: qumin.representations.__init__
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 qumin.representations.alignment module
 --------------------------------------
 
@@ -48,14 +56,6 @@ qumin.representations.segments module
 -------------------------------------
 
 .. automodule:: qumin.representations.segments
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-qumin.representations.utils module
-----------------------------------
-
-.. automodule:: qumin.representations.utils
    :members:
    :undoc-members:
    :show-inheritance:
