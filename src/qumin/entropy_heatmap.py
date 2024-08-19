@@ -72,6 +72,8 @@ def entropy_heatmap(results, md, cmap_name=False,
                  ].set_index('measure', append=True
                              ).stack().reset_index()
     df.rename(columns={"level_3": "type", 0: "value"}, inplace=True)
+    df.loc[:, 'type'] = df.type.replace({'value': 'Result', 'n_pairs': 'Number of pairs'})
+    df.loc[:, 'measure'] = df.measure.replace({'cond_entropy': 'Conditional entropy'})
 
     # Compute a suitable size for the heatmaps
     height = 4 + round(len(df['predictor'].unique())/5)
@@ -84,7 +86,7 @@ def entropy_heatmap(results, md, cmap_name=False,
         annot = kwargs.pop('annotate')
 
         # For n_pairs, we want a specific set of parameters.
-        if 'n_pairs' in list(df['type']):
+        if 'Number of pairs' in list(df['type']):
             hm_cmap = cmap
             annot = True
             fmt = ".0f"
@@ -149,6 +151,8 @@ def entropy_heatmap(results, md, cmap_name=False,
 
     cg.set_ylabels('Predictor')
     cg.set_xlabels('Predicted')
+
+    cg.fig.suptitle(f"Measured on the {md.datasets[0].name} dataset, version {md.datasets[0].version}")
 
     # We add a custom global colorbar
     # The last value is the width
