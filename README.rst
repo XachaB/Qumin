@@ -148,25 +148,27 @@ For bipartite systems, it is possible to pass two values to both patterns and da
 Visualizing results
 ^^^^^^^^^^^^^^^^^^^
 
-Since Qumin 2.0, results are shipped as long tables. This allows to store several metrics in the same file, with results for several runs. As a drawback, it becomes harder to get an idea of the results. For entropy computations, a script automatically reads these files and displays the results as heatmaps. This behaviour can be disable with `ent_hm.enable`. It takes advantage of the Paralex `features-values` table to sort the cells in a canonical order on the heatmap. The `ent_hm.order` setting is used to specify which feature should have higher priority in the sorting: ::
+Since Qumin 2.0, results are shipped as long tables. This allows to store several metrics in the same file, with results for several runs. As a drawback, it becomes harder to get an idea of the results. For entropy computations, a script automatically reads these files and displays the results as heatmaps. This behaviour can be disabled by passing `entropy.heatmap=False`. It takes advantage of the Paralex `features-values` table to sort the cells in a canonical order on the heatmap. The `heatmap.order` setting is used to specify which feature should have higher priority in the sorting: ::
 
-    /$ qumin action=H data=<dataset.package.json> ent_hm.order="[number, case]"
+    /$ qumin action=H data=<dataset.package.json> heatmap.order="[number, case]"
 
 It is also possible to draw an entropy heatmap without running entropy computations: ::
 
-    /$ qumin action=ent_heatmap ent_hm.results=<entropies.csv>
+    /$ qumin action=ent_heatmap entropy.importFile=<entropies.csv>
 
 The config file contains the following keys, which can be set through the command line: ::
 
-    ent_hm:
-      results: null            # A file with entropy computation results.
-      order: False             # Priority list for sorting features (ex: [number, case]) or an ordered list of the cells to display.
+    heatmap:
       cmap: null               # colormap name
-      exhaustive_labels: False # by default, seaborn shows only some label
+      exhaustive_labels: False # by default, seaborn shows only some labels on
                                # the heatmap for readability.
                                # This forces seaborn to print all labels.
-      dense: False             # Use initials instead of full labels
-      annotate: False          # Display values on the heatmap.
+      dense: False             # Use initials instead of full labels (only for entropy heatmap)
+      annotate: False          # Display values on the heatmap. (only for entropy heatmap)
+      order: False             # Priority list for sorting features (for entropy heatmap, ex: [number, case]) or an ordered list of the cells to display.
+    entropy:
+      heatmap: True        # Whether to draw a heatmap.
+
 
 Macroclass inference
 ^^^^^^^^^^^^^^^^^^^^^

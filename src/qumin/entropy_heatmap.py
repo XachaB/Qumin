@@ -49,6 +49,7 @@ def entropy_heatmap(results, md, cmap_name=False,
     """Make a FacetGrid heatmap of all metrics.
 
     Arguments:
+        parameter: ## What is this ? ##
         results (:class:`pandas:pandas.DataFrame`):
             a results DataFrame as produced by calc_paradigm_entropy.
         md (qumin.utils.Metadata): MetaData handler to get access to file location.
@@ -174,12 +175,12 @@ def ent_heatmap_command(cfg, md):
     r"""Draw a heatmap of results similarities using seaborn.
     """
     log.info("Drawing a heatmap of the results...")
-    results = pd.read_csv(cfg.ent_hm.results, index_col=[0, 1])
+    results = pd.read_csv(cfg.entropy.importFile, index_col=[0, 1])
     features_file_name = md.get_table_path("features-values")
-    feat_order = get_features_order(features_file_name, results, cfg.ent_hm.order)
+    feat_order = get_features_order(features_file_name, results, cfg.heatmap.order)
 
     entropy_heatmap(results, md,
-                    cmap_name=cfg.ent_hm.cmap,
+                    cmap_name=cfg.heatmap.cmap,
                     feat_order=feat_order,
-                    dense=cfg.ent_hm.dense,
-                    annotate=cfg.ent_hm.annotate)
+                    dense=cfg.heatmap.dense,
+                    annotate=cfg.heatmap.annotate)
