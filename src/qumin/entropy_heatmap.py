@@ -185,7 +185,7 @@ def ent_heatmap_command(cfg, md):
     log.info("Drawing a heatmap of the results...")
     results = pd.read_csv(cfg.entropy.importFile, index_col=[0, 1])
     try:
-        features_file_name = md.get_table_path("features-val")
+        features_file_name = md.get_table_path("features-values")
     except FrictionlessException:
         features_file_name = None
         log.warning("Your package doesn't contain any features-values file. You should provide an ordered list of cells in command line.")
