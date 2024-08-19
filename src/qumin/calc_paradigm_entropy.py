@@ -130,3 +130,5 @@ def H_command(cfg, md):
                                  'content': 'results'})
     log.info("Writing to: {}".format(ent_file))
     distrib.export_file(ent_file)
+
+    return ent_file
