@@ -5,7 +5,6 @@
 Author: Jules Bouton.
 """
 from matplotlib import pyplot as plt
-from matplotlib import cm as cm
 from frictionless.exception import FrictionlessException
 import pandas as pd
 import numpy as np
@@ -23,7 +22,11 @@ def get_features_order(features_file, results, sort_order=False):
         features = pd.read_csv(features_file, index_col=0)
 
         df = results.reset_index()
-        cells = set(df.predictor.to_list() + df.predicted.to_list())
+        cells = sorted(set(df.predictor.to_list() + df.predicted.to_list()))
+
+        # Handle multiple predictor format ('cellA&cellB')
+        cells = sorted(set(sum([x.split('&') for x in cells], [])))
+
         df_c = pd.DataFrame(index=list(cells))
         for c in cells:
             feat_order = {}
@@ -71,12 +74,15 @@ def entropy_heatmap(results, md, cmap_name=False,
 
     log.info("Drawing...")
 
-    df = results[['measure', 'value', 'n_pairs']
-                 ].set_index('measure', append=True
+    df = results[['measure', 'value', 'n_pairs', 'n_preds']
+                 ].set_index(['measure', 'n_preds'], append=True
                              ).stack().reset_index()
-    df.rename(columns={"level_3": "type", 0: "value"}, inplace=True)
+
+    df.rename(columns={"level_4": "type", 0: "value"}, inplace=True)
     df.loc[:, 'type'] = df.type.replace({'value': 'Result', 'n_pairs': 'Number of pairs'})
     df.loc[:, 'measure'] = df.measure.replace({'cond_entropy': 'Conditional entropy'})
+    if len(df.n_preds.unique()) > 1:
+        df.measure += df.n_preds.apply(lambda x: f" (n={x})")
 
     # Compute a suitable size for the heatmaps
     height = 4 + round(len(df['predictor'].unique())/5)
@@ -100,10 +106,17 @@ def entropy_heatmap(results, md, cmap_name=False,
         df.index.name = 'predictor'
         df.columns.name = 'predicted'
         df = df.pivot(index=args[0], columns=args[1], values=args[2])
-
         if feat_order:
+
+            # Sorting for multiple predictors.
+            def sorting(x):
+                return x.apply(lambda cell: feat_order.index(cell))
+
+            sort = df.index.to_frame().predictor.str.split('&', expand=True)
+            sort = sort.sort_values(by=list(sort.columns), key=sorting, axis=0)
+            df = df.reindex(sort.index)
             df = df[feat_order]
-            df = df.reindex(feat_order)
+
         else:
             df = df.reindex(list(df.columns))
 
@@ -125,7 +138,8 @@ def entropy_heatmap(results, md, cmap_name=False,
         # Mask (diagonal)
         df_m = pd.DataFrame(columns=df.columns, index=df.index)
         for col in df.columns:
-            df_m.loc[df_m.index == col, [col]] = True
+            tmp = df_m.index.to_frame().predictor.str.split('&').apply(lambda x: col in x)
+            df_m.loc[tmp, [col]] = True
 
         # Drawing each individual heatmap
         sns.heatmap(df,
@@ -137,13 +151,15 @@ def entropy_heatmap(results, md, cmap_name=False,
                     **kwargs)
 
     # Plotting the heatmap
-    cg = sns.FacetGrid(df, row='measure', col='type', height=height, margin_titles=True)
+    cg = sns.FacetGrid(df, row='measure', col='type', height=height, margin_titles=True,
+                       sharex=False, sharey=False)
     cg.set_titles(row_template='{row_name}', col_template='{col_name}')
 
     cg.map_dataframe(_draw_heatmap, 'predictor', 'predicted', 'value',
                      annotate=annotate, square=True, cbar=True,
                      cbar_kws=dict(location='bottom',
-                                   shrink=0.6))
+                                   shrink=0.6,
+                                   pad=0.075))  # Spacing between colorbar and hm
 
     # Setting labels
     rotate = 0 if dense else 90
@@ -164,8 +180,7 @@ def entropy_heatmap(results, md, cmap_name=False,
                               bottom=True, top=False,
                               labelrotation=0)
 
-    cg.set_ylabels('Predictor')
-    cg.set_xlabels('Predicted')
+    cg.set_axis_labels(x_var="Predicted", y_var="Predictor")
     cg.fig.suptitle(f"Measured on the {md.datasets[0].name} dataset, version {md.datasets[0].version}")
 
     cg.tight_layout()
