@@ -1,0 +1,20 @@
+
+Qumin bibliography
+================================
+
+Here are publications which made use of Qumin. If you use Qumin in a publication, send me an email at with the reference at s.<last name>@surrey.ac.uk in order to be cited here !
+
+- Herce, Borja & Bogdan Pricop. 2024. VeLeRo: An inflected verbal lexicon of Standard Romanian and a quantitative analysis of morphological predictability. Language Resources and Evaluation.
+- Herce, Borja. 2024. VeLePa: Central Pame verbal inflection in a quantitative perspective.
+- Pellegrini, Matteo (2023). Paradigm Structure and Predictability in Latin Inflection: An Entropy-based Approach, vol. 6. in Studies in Morphology, vol. 6. Springer, 2023. doi: `10.1007/978-3-031-24844-3 <https://doi.org/10.1007/978-3-031-24844-3>`_
+- Pellegrini, Matteo (2023). “Flexemes in theory and in practice: Modelling overabundance in Latin verb paradigms,” Morphology, vol. 33, no. 3, pp. 361–395, 2023, doi: `10.1007/s11525-023-09414-7 <https://doi.org/10.1007/s11525-023-09414-7>`_.
+- Beniamine, Sacha. (2021) "`One lexeme, many classes: inflection class systems as lattices <https://langsci-press.org/catalog/book/262>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
+- Beniamine, Sacha, Olivier Bonami, Ana R. Luís (2021). The fine implicative structure of European Portuguese conjugation. In: Isogloss. Open Journal of Romance Linguistics. DOI:  `10.5565/rev/isogloss.109 <https://doi.org/10.5565/rev/isogloss.109>`_
+-  Olivier Bonami, Sacha Beniamine (2021). Leaving the stem by itself. In: Marcia Haag, Sedigheh Moradi, Andrija Petrovic, Janie Rees-Miller (eds.), All Things Morphology: Its independence and its interfaces
+-  Pellegrini, Matteo, Cignarella, A. T. and others (2020). “(Stem and Word) Predictability in Italian verb paradigms: An Entropy-Based Study Exploiting the New Resource LeFFI,” in Proceedings of the Seventh Italian Conference on Computational Linguistics. Bologna, Italy, March 1-3, 2021, J. Monti, F. Dell’Orletta, and F. Tamburini, Eds., CEUR-WS, 2020. [Online]. doi: `10.4000/books.aaccademia.8830 <https://doi.org/10.4000/books.aaccademia.8830>`_
+- Pellegrini, Matteo (2020). Patterns of interpredictability and principal parts in Latin verb paradigms: an entropy-based approach. Journal of Latin Linguistics, 19(2), 195-229. doi: `10.1515/joll-2020-2014 <https://doi.org/10.1515/joll-2020-2014>`_
+- Pellegrini, Matteo (2020). “Using LatInfLexi for an Entropy-Based Assessment of Predictability in Latin Inflection,” in Proceedings of LT4HALA 2020 - 1st Workshop on Language Technologies for Historical and Ancient Languages, R. Sprugnoli and M. Passarotti, Eds., Marseille, France: European Language Resources Association (ELRA), May 2020, pp. 37–46. [Online]. Available: https://aclanthology.org/2020.lt4hala-1.6
+- Sacha Beniamine (2018) `Classifications flexionnelles. Étude quantitative des structures de paradigmes <https://tel.archives-ouvertes.fr/tel-01840448>`_. PhD dissertation, Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7).
+- Beniamine, Sacha, Olivier Bonami, and Benoît Sagot. "`Inferring Inflection Classes with Description Length. <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_" Journal of Language Modelling (2018).
+- Beniamine, Sacha. `Un algorithme universel pour l'abstraction automatique d'alternances morphophonologiques 24e Conférence sur le Traitement Automatique des Langues Naturelles <https://halshs.archives-ouvertes.fr/hal-01615899>`_ (TALN), Jun 2017, Orléans, France. 2 (2017), 24e Conférence sur le Traitement Automatique des Langues Naturelles.
+- Bonami, Olivier, and Sacha Beniamine. "`Joint protectiveness in inflectional paradigms <http://www.llf.cnrs.fr/fr/node/4789>`_." Word Structure 9, no. 2 (2016): 156-182.

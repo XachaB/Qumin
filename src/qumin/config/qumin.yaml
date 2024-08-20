@@ -1,0 +1,86 @@
+defaults:
+  - help
+  - _self_
+
+hydra:
+  job_logging:
+    formatters:
+      simple:
+        format: '[%(asctime)s][%(name)s][%(levelname)s] - %(message)s'
+      raw:
+        format: '%(message)s'
+    disable_existing_loggers: false
+    handlers:
+      file:
+        class: logging.FileHandler
+        mode: w
+        formatter: raw
+        delay: true
+      console:
+        class: logging.StreamHandler
+        formatter: simple
+        stream: ext://sys.stdout
+    root:
+      level: INFO
+      handlers: [console, file]
+
+disable_existing_loggers: false
+
+action: patterns      # Action, one of: patterns, H, lattice, eval, macroclasses, heatmap, ent_heatmap
+data: null            # path to paralex.package.json paradigms, segments
+cells: null           # List of cells to use (subset)
+patterns: null        # path to pre-computed patterns. If null, will compute patterns.
+most_freq: null       # restrict to N most frequent items (use the lexeme "frequency" column)
+sample: null        # (int) A number of lexemes to sample, for debug purposes
+
+
+lattice:
+  shorten: False      # Drop redundant columns altogether.
+                      #  Useful for big contexts, but loses information.
+                      # The lattice shape and stats will be the same.
+                      # Avoid using with --html
+  aoc: False          # Only attribute and object concepts
+  html: False         # Export to html
+  ctxt: False         # Export as a context
+  stat: False         # Output stats about the lattice
+  pdf: True           # Export as pdf
+  png: False          # Export as png
+
+heatmap:
+  label: null              # lexeme column to use as label (for microclass heatmap, eg. inflection_class)
+  cmap: null               # colormap name
+  exhaustive_labels: False # by default, seaborn shows only some labels on
+                           # the heatmap for readability.
+                           # This forces seaborn to print all labels.
+  dense: False             # Use initials instead of full labels (only for entropy heatmap)
+  annotate: False          # Display values on the heatmap. (only for entropy heatmap)
+  order: False             # Priority list for sorting features (for entropy heatmap)
+                           # ex: [number, case]). If no features-values file available,
+                           # it should contain an ordered list of the cells to display.
+
+entropy:
+  heatmap: True        # Whether to draw a heatmap.
+
+  n:                  # Compute entropy for prediction from with n predictors.
+    - 1
+  features: null      # Feature column in the Lexeme table.
+                      # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
+  importFile: null    # Import entropy file
+                      # with any file, use to compute entropy heatmap
+                      # with n-1 predictors, allows for acceleration on nPreds entropy computation.
+  merged: False       # Whether identical columns are merged in the input.
+  stacked: False      # whether to stack results in long form
+
+eval:
+  iter: 10            # How many 90/10 train/test folds to do.
+  workers: 1          # Number of threads for multithreading
+
+pats:
+  kind: patternsPhonsim   # Options are (see docs): endings, endingsPairs, globalAlt, localAlt, endingsDisc,
+                          # patternsLevenshtein, patternsPhonsim, patternsSuffix, patternsPrefix, patternsBaseline
+  defective: False         # Whether to keep defective entries
+  overabundant: False     # Whether to keep overabundant entries
+  gap_proportion: .4      # Proportion of the median score used to set the gap score
+  optim_mem: False        # Attempt to use a little bit less memory
+  merged: False           # Whether to merge identical columns in the data
+  ortho: False            # Whether these are orthographic paradigms (only compatible with endings and alt)

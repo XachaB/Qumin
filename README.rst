@@ -1,15 +1,29 @@
-********************************************
-Qumin: Quantitative modelling of inflection
-********************************************
 
-Qumin (QUantitative Modelling of INflection) is a collection of scripts for the computational modelling of the inflectional morphology of languages. It was developed by me (`Sacha Beniamine <xachab.github.io>`_) for my PhD, which was supervised by `Olivier Bonami <http://www.llf.cnrs.fr/fr/Gens/Bonami>`_ . 
+|tests| |DocStatus|_
 
-**The documentation has moved to ReadTheDocs** at: https://qumin.readthedocs.io/
+.. |tests| image:: https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg
 
-For more detail, you can refer to my dissertation (in French):
+.. |DocStatus| image:: https://readthedocs.org/projects/qumin/badge/?version=dev
+.. _DocStatus: https://qumin.readthedocs.io/dev/?badge=latest
 
-`Sacha Beniamine. Classifications flexionnelles. Étude quantitative des structures de paradigmes. Linguistique. Université Sorbonne Paris Cité - Université Paris Diderot (Paris 7), 2018. Français. <https://tel.archives-ouvertes.fr/tel-01840448>`_
+Qumin (QUantitative Modelling of INflection) is a package for the computational modelling of the inflectional morphology of languages. It was initially developed for `Sacha Beniamine's PhD dissertation <https://tel.archives-ouvertes.fr/tel-01840448>`_.
 
+**Contributors**: Sacha Beniamine, Jules Bouton.
+
+**Documentation**: https://qumin.readthedocs.io/
+
+**Github**: https://github.com/XachaB/Qumin
+
+
+This is **version 2**, which was significantly updated since the publications cited below. These updates do not affect results, and focused on bugfixes, command line interface, paralex compatibility, workflow improvement and overall tidyness.
+
+For more detail, you can refer to Sacha's dissertation (in French, `Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_).
+
+
+Citing
+============
+
+If you use Qumin in your research, please cite Sacha's dissertation (`Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_), as well as the relevant paper for the specific actions used (see below). To appear in the publications list, send Sacha an email with the reference of your publication at s.<last name>@surrey.ac.uk
 
 Quick Start
 ============
@@ -17,101 +31,190 @@ Quick Start
 Install
 --------
 
-First, open the terminal and navigate to the folder where you want the Qumin code. Clone the repository from github: ::
+Install the Qumin package using pip: ::
 
-    git clone https://github.com/XachaB/Qumin.git
-
-Make sure to have all the python dependencies installed. The dependencies are listed in `environment.yml`. A simple solution is to use conda and create a new environment from the `environment.yml` file: ::
-
-    conda env create -f environment.yml
-
-There is now a new conda environment named Qumin. It needs to be activated before using any Qumin script: ::
-
-    conda activate Qumin
-
+    pip install qumin
 
 Data
 -----
 
-The scripts expect full paradigm data in phonemic transcription, as well as a feature key for the transcription.
+Qumin works from full paradigm data in phonemic transcription.
 
-To provide a data sample in the correct format, Qumin includes a subset of the French `flexique lexicon <http://www.llf.cnrs.fr/fr/flexique-fr.php>`_, distributed under a `Creative Commons Attribution-NonCommercial-ShareAlike license <http://creativecommons.org/licenses/by-nc-sa/3.0/>`_.
-
-For Russian nouns, see the `Inflected lexicon of Russian Nouns in IPA notation <https://zenodo.org/record/3428591>`_.
+The package expects `Paralex datasets <http://www.paralex-standard.org>`_, containing at least a `forms` and a `sounds` table. Note that the sounds files may sometimes require edition, as Qumin imposes more constraints on sound definitions than paralex does.
 
 
 Scripts
 --------
 
+.. note::
+    We now rely on `hydra <https://hydra.cc/>`_ to manage CLI interface and configurations. Hydra will create a folder ``outputs/<yyyy-mm-dd>/<hh-mm-ss>/`` containing all results. A subfolder ``outputs/<yyyy-mm-dd>/<hh-mm-ss>/.hydra/`` contains details of the configuration as it was when the script was run. Hydra permits a lot more configuration. For example, any of the following scripts can accept a verbose argument of the form ``hydra.verbose=True``, and the output directory can be customized with ``hydra.run.dir="./path/to/output/dir"``.
+
+**More details on configuration:**::
+
+    /$ qumin --help
 
 Patterns
 ^^^^^^^^^
 
-Alternation patterns serve as a basis for all the other scripts. The algorithm to find the patterns was presented in: Sacha Beniamine. `Un algorithme universel pour l'abstraction automatique d'alternances morphophonologiques
-24e Conférence sur le Traitement Automatique des Langues Naturelles <https://halshs.archives-ouvertes.fr/hal-01615899>`_ (TALN), Jun 2017, Orléans, France. 2 (2017), 24e Conférence sur le Traitement Automatique des Langues Naturelles.
+Alternation patterns serve as a basis for all the other scripts. An early version of the patterns algorithm is described in `Beniamine (2017) <https://halshs.archives-ouvertes.fr/hal-01615899>`_. An updated description figures in `Beniamine, Bonami and  Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_.
 
-**Computing automatically aligned patterns** for paradigm entropy or macroclass::
+The default action for Qumin is to compute patterns only, so these two commands are identical: ::
 
-    bin/$ python3 find_patterns.py <paradigm.csv> <segments.csv>
+    /$ qumin data=<dataset.package.json>
+    /$ qumin action=patterns data=<dataset.package.json>
 
-**Computing automatically aligned patterns** for lattices::
+By default, Qumin will ignore defective lexemes and overabundant forms.
 
-    bin/$ python3 find_patterns.py -d -o <paradigm.csv> <segments.csv>
+For paradigm entropy, it is possible to explicitly keep defective lexemes: ::
 
+    /$ qumin pats.defective=True data=<dataset.package.json>
+
+For inflection class lattices, both can be kept: ::
+
+    /$ qumin pats.defective=True pats.overabundant=True data=<dataset.package.json>
 
 Microclasses
 ^^^^^^^^^^^^^
 
-To visualize the microclasses and their similarities, you can use the new script `microclass_heatmap.py`:
+To visualize the microclasses and their similarities, one can compute a **microclass heatmap**::
 
-**Computing a microclass heatmap**::
+    /$ qumin action=heatmap data=<dataset.package.json>
 
-    bin/$ python3 microclass_heatmap.py <paradigm.csv> <output_path>
+This will compute patterns, then the heatmap. To pass pre-computed patterns, pass the file path: ::
 
-**Computing a microclass heatmap, comparing with class labels**::
+    /$ qumin action=heatmap patterns=<path/to/patterns.csv> data=<dataset.package.json>
 
-    bin/$ python3 microclass_heatmap.py -l  <labels.csv> -- <paradigm.csv> <output_path>
+It is also possible to pass class labels to facilitate comparisons with another classification: ::
 
-The labels file is a csv file. The first column give lexemes names, the second column provides inflection class labels. This allows to visually compare a manual classification with pattern-based similarity. This script relies heavily on `seaborn's clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ function.
+    /$ qumin.heatmap label=inflection_class patterns=<path/to/patterns.csv> data=<dataset.package.json>
+
+The label key is the name of the column in the Paralex `lexemes` table to use as labels.
+
+A few more parameters can be changed: ::
+
+    heatmap:
+        cmap: null               # colormap name
+        exhaustive_labels: False # by default, seaborn shows only some labels on
+                                # the heatmap for readability.
+                                # This forces seaborn to print all labels.
 
 
 Paradigm entropy
 ^^^^^^^^^^^^^^^^^^
 
+An early version of this software was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_, and a more recent one in `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
 
-This script was used in:
-
-- Bonami, Olivier, and S. Beniamine. "`Joint predictiveness in inflectional paradigms <http://www.llf.cnrs.fr/fr/node/4789>`_." Word Structure 9, no. 2 (2016): 156-182. Some improvements have been implemented since then.
-
+By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
 
 **Computing entropies from one cell** ::
 
-    bin/$ python3 calc_paradigm_entropy.py -n 1 -- <patterns.csv> <paradigm.csv> <segments.csv>
+    /$ qumin action=H data=<dataset.package.json>
 
-**Computing entropies from two cells** (you can specify any number of predictors, e.g. `-n 1 2 3` works too) ::
+**Computing entropies for other number of predictors**::
 
-    bin/$ python3 calc_paradigm_entropy.py -n 2 -- <patterns.csv> <paradigm.csv> <segments.csv>
+    /$ qumin action=H  n=2 data=<dataset.package.json>
+    /$ qumin action=H  n="[2,3]" data=<dataset.package.json>
 
-**Add a file with features to help prediction** (for example gender -- features will be added to the known information when predicting) ::
+.. warning::
+    With `n` and N>2 the computation can get quite long on large datasets, and it might be better to run Qumin on a server.
 
-    bin/$ python3 calc_paradigm_entropy.py -n 2 --features <features.csv> -- <patterns.csv> <paradigm.csv> <segments.csv>
+Predicting with known lexeme-wise features (such as gender or inflection class) is also possible. This feature was used in `Pellegrini (2023) <https://doi.org/10.1007/978-3-031-24844-3>`_. To use features, pass the name of any column(s) from the ``lexemes`` table: ::
+
+    /$ qumin.H  feature=inflection_class patterns=<patterns.csv> data=<dataset.package.json>
+    /$ qumin.H  feature="[inflection_class,gender]" patterns=<patterns.csv> data=<dataset.package.json>
+
+
+The config file contains the following keys, which can be set through the command line: ::
+
+    patterns: null        # pre-computed patterns
+    entropy:
+      n:                  # Compute entropy for prediction from with n predictors.
+        - 1
+      features: null      # Feature column in the Lexeme table.
+                          # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
+      importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
+      merged: False       # Whether identical columns are merged in the input.
+      stacked: False      # whether to stack results in long form
+
+For bipartite systems, it is possible to pass two values to both patterns and data, eg: ::
+
+    /$ qumin.H  patterns="[<patterns1.csv>,<patterns2.csv>]" data="[<dataset1.package.json>,<dataset2.package.json>]"
+
+
+Visualizing results
+^^^^^^^^^^^^^^^^^^^
+
+Since Qumin 2.0, results are shipped as long tables. This allows to store several metrics in the same file, with results for several runs. Results file now look like this: ::
+
+    predictor,predicted,measure,value,n_pairs,n_preds,dataset
+    <cell1>,<cell2>,cond_entropy,0.39,500,1,<dataset_name>
+    <cell1>,<cell2>,cond_entropy,0.35,500,1,<dataset_name>
+    <cell1>,<cell2>,cond_entropy,0.2,500,1,<dataset_name>
+    <cell1>,<cell2>,cond_entropy,0.43,500,1,<dataset_name>
+    <cell1>,<cell2>,cond_entropy,0.6,500,1,<dataset_name>
+    <cell1>,<cell2>,cond_entropy,0.1,500,1,<dataset_name>
+
+All results are in the same file, including different number of predictors (indicated in the `n_preds` column), and different measures (indicated in the `measure` column).
+
+To facilitate a quick general glance at the results, we output an entropy heatmap in the wide matrix format. This behaviour can be disabled by passing `entropy.heatmap=False`. It takes advantage of the Paralex `features-values` table to sort the cells in a canonical order on the heatmap. The `heatmap.order` setting is used to specify which feature should have higher priority in the sorting: ::
+
+    /$ qumin action=H data=<dataset.package.json> heatmap.order="[number, case]"
+
+It is also possible to draw an entropy heatmap without running entropy computations: ::
+
+    /$ qumin action=ent_heatmap entropy.importFile=<entropies.csv>
+
+The config file contains the following keys, which can be set through the command line: ::
+
+    heatmap:
+      cmap: null               # colormap name
+      exhaustive_labels: False # by default, seaborn shows only some labels on
+                               # the heatmap for readability.
+                               # This forces seaborn to print all labels.
+      dense: False             # Use initials instead of full labels (only for entropy heatmap)
+      annotate: False          # Display values on the heatmap. (only for entropy heatmap)
+      order: False             # Priority list for sorting features (for entropy heatmap)
+                               # ex: [number, case]). If no features-values file available,
+                               # it should contain an ordered list of the cells to display.
+    entropy:
+      heatmap: True        # Whether to draw a heatmap.
+
 
 Macroclass inference
 ^^^^^^^^^^^^^^^^^^^^^
 
-Our work on automatical inference of macroclasses was published in Beniamine, Sacha, Olivier Bonami, and Benoît Sagot. "`Inferring Inflection Classes with Description Length. <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_" Journal of Language Modelling (2018).
+Our work on automatical inference of macroclasses was published in `Beniamine, Bonami and Sagot (2018) <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_".
+
+By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
 
 **Inferring macroclasses** ::
 
-    bin/$ python3 find_macroclasses.py  <patterns.csv> <segments.csv>
+    /$ qumin action=macroclasses data=<dataset.package.json>
+
 
 Lattices
 ^^^^^^^^^
 
-This script was used in:
+By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
 
-- Beniamine, Sacha. (in press) "`One lexeme, many classes: inflection class systems as lattices <https://xachab.github.io/papers/Beniamine2019.pdf>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.
+This software was used in `Beniamine (2021) <https://langsci-press.org/catalog/book/262>`_".
 
-**Inferring a lattice of inflection classes, with html output** ::
+**Inferring a lattice of inflection classes, with (default) html output** ::
 
-    bin/$ python3 make_lattice.py --html <patterns.csv> <segments.csv>
+    /$ qumin action=lattice pats.defective=True pats.overabundant=True data=<dataset.package.json>
+
+
+**Further config options**: ::
+
+    lattice:
+      shorten: False      # Drop redundant columns altogether.
+                          #  Useful for big contexts, but loses information.
+                          # The lattice shape and stats will be the same.
+                          # Avoid using with --html
+      aoc: False          # Only attribute and object concepts
+      stat: False         # Output stats about the lattice
+      html: False         # Export to html
+      ctxt: False         # Export as a context
+      pdf: True           # Export as pdf
+      png: False          # Export as png
+
