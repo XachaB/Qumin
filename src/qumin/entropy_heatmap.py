@@ -80,7 +80,8 @@ def entropy_heatmap(results, md, cmap_name=False,
 
     df.rename(columns={"level_4": "type", 0: "value"}, inplace=True)
     df.loc[:, 'type'] = df.type.replace({'value': 'Result', 'n_pairs': 'Number of pairs'})
-    df.loc[:, 'measure'] = df.measure.replace({'cond_entropy': 'Conditional entropy'})
+    df.loc[:, 'measure'] = df.measure.replace({'cond_entropy': 'Conditional entropy',
+                                               'accuracy': 'P(success)'})
     if len(df.n_preds.unique()) > 1:
         df.measure += df.n_preds.apply(lambda x: f" (n={x})")
 
@@ -97,6 +98,7 @@ def entropy_heatmap(results, md, cmap_name=False,
         types = df["type"].unique()
         df.index.name = 'predictor'
         df.columns.name = 'predicted'
+        measures = df.measure.unique()
         df = df.pivot(index=args[0], columns=args[1], values=args[2])
 
         # For n_pairs, we want a specific set of parameters.
@@ -104,6 +106,9 @@ def entropy_heatmap(results, md, cmap_name=False,
             hm_cmap = "gray_r"
             annot = df.shape[0] < 10
             fmt = ".0f"
+        elif 'P(success)' in measures:
+            hm_cmap = cmap.reversed()
+            fmt = ".2f"
         else:
             hm_cmap = cmap
             fmt = ".2f"
