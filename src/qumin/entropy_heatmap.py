@@ -85,7 +85,7 @@ def entropy_heatmap(results, md, cmap_name=False,
         df.measure += df.n_preds.apply(lambda x: f" (n={x})")
 
     # Compute a suitable size for the heatmaps
-    height = 4 + round(len(df['predictor'].unique())/5)
+    height = 4 + round(len(df['predictor'].unique())/4)
 
     def _draw_heatmap(*args, **kwargs):
         """ Draws a heatmap in a FacetGrid with custom parameters
@@ -94,18 +94,20 @@ def entropy_heatmap(results, md, cmap_name=False,
         df = kwargs.pop('data')
         annot = kwargs.pop('annotate')
 
+        types = df["type"].unique()
+        df.index.name = 'predictor'
+        df.columns.name = 'predicted'
+        df = df.pivot(index=args[0], columns=args[1], values=args[2])
+
         # For n_pairs, we want a specific set of parameters.
-        if 'Number of pairs' in list(df['type']):
-            hm_cmap = cmap
-            annot = True
+        if 'Number of pairs' in types:
+            hm_cmap = "gray_r"
+            annot = df.shape[0] < 10
             fmt = ".0f"
         else:
             hm_cmap = cmap
             fmt = ".2f"
 
-        df.index.name = 'predictor'
-        df.columns.name = 'predicted'
-        df = df.pivot(index=args[0], columns=args[1], values=args[2])
         if feat_order:
 
             # Sorting for multiple predictors.
