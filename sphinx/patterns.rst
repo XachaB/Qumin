@@ -45,4 +45,4 @@ Qumin can compute various kinds of patterns. Only the ones prefixed by "patterns
     * ``patternsPrefix``: Fixed right alignment, only interesting for prefixal languages.
     * ``patternsBaseline``: Baseline alignment, follows Albright & Hayes 2002. A single change, with a priority order: Suffixation > Prefixation > Stem-internal alternation (ablaut/infixation)
 
-Most of these were implemented for comparison purposes. I recommend to use the default `patternsPhonsim` in most cases. To avoid relying on your phonological features files for alignment scores, use `patternsLevenshtein`. Only these two are full patterns with generalization both in the context and alternation.
+Most of these were implemented for comparison purposes during Sacha Beniamine's PhD. It is recommended to use the default `patternsPhonsim` in most cases. To avoid relying on your phonological features files for alignment scores, use `patternsLevenshtein`. Only these two are full patterns with generalization both in the context and alternation.
