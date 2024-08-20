@@ -1,7 +1,7 @@
 The phonological segments file
 ================================
 
-Qumin works from the assumption that your paradigms are written in phonemic notation. The phonological segments file provides a list of phonemes and their decomposition into distinctive features. This file is first used to segment the paradigms into sequences of phonemes (rather than sequences of characters). Then, the distinctive features are used to recognize phonological similarity and natural classes when creating and handling alternation patterns.
+Qumin works from the assumption that your paradigms are written in phonemic notation. The phonological segments file provides a list of phonemes and their decomposition into distinctive features. This file is used to recognize phonological similarity and natural classes when creating and handling alternation patterns.
 
 To create a new segments file, the best is usually to refer to an authoritative description, and adapt it to the needs of the specific dataset. In the absence of such a description, I suggest to make use of `Bruce Hayes’ spreadsheet <https://linguistics.ucla.edu/people/hayes/120a/index.htm#features>`__ as a starting point (he writes ``+``, ``-`` and ``0`` for our ``1``,\ ``0`` and ``-1``).
 
@@ -13,10 +13,7 @@ Each row of the segments file describes a single phoneme. The first column gives
 
 
 .. warning::
-    The index header used to be `Seg.` (for segment). This is deprecated, and Qumin now expects `sound_id`, per the Paralex standard.
-
-.. warning::
-    The columns `ALIAS`, `UNICODE` and `value` are all also deprecated
+    The index header used to be `Seg.` (for segment), and Qumin expected two more columns `ALIAS` and `UNICODE`. This is not supported anymore, and Qumin now expects `sound_id`, per the Paralex standard.
 
  ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
   sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
@@ -45,12 +42,12 @@ Some conventions:
   b          0        0            1               0         0       0            0                   1                     1       0
  ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
 
-The file is encoded in utf-8 and can be either a csv table (preferred) or a tabulation separated table (tsv).
+The file is encoded in utf-8 and can must be a csv table (comma separated):
 
 .. code:: sh
 
    %%sh
-   head -n 6 "../Data/Vlexique/frenchipa.csv"
+   head -n 6 "../Data/Vlexique/vlexique_sounds.csv"
 
 ::
 
@@ -60,16 +57,16 @@ The file is encoded in utf-8 and can be either a csv table (preferred) or a tabu
    t,0,0,1,0,0,0,,0,,1,1,0,0
    d,0,0,1,0,0,0,,0,,1,1,1,0
 
-Segmentation and aliases
+Segmentation
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Inflected forms are now expected to be segmented in the input (using spaces to separate phonemes in words).
-The ALIAS column is not needed anymore.
+Per the Paralex standard, inflected forms are now expected to be segmented in the input (using spaces to separate phonemes in words).
 
 Shorthands
 ~~~~~~~~~~~
 
-Qumin used to support a second header row to provide distinctive feature shorthands. These are not supported anymore.
+.. warning::
+    Qumin used to support a second header row to provide distinctive feature shorthands. These are not supported anymore.
 
 One can provide some extra rows in the table to define shorthand names for some natural classes. These names have to start and end by “#”. Here an example for the French segments file, giving shorthands for C (consonants), V (vowels) and G (glides):
 
@@ -202,7 +199,7 @@ Internally, Qumin will replace all of these identical characters by a single uni
 Creating scales 
 >>>>>>>>>>>>>>>>>
 
-Rather than using many-valued features, it is often preferrable to use a few monovalent or bivalent features to create a scale. As an example, here is a possible (bad) implementation for tones, which uses a single feature "Tone". 
+Rather than using many-valued features, it is often preferable to use a few monovalent or bivalent features to create a scale. As an example, here is a possible (bad) implementation for tones, which uses a single feature "Tone".
 
 
 .. csv-table::
