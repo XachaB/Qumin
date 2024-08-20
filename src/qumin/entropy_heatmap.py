@@ -50,7 +50,7 @@ def get_features_order(features_file, results, sort_order=False):
 
 def entropy_heatmap(results, md, cmap_name=False,
                     feat_order=None, dense=False, annotate=False,
-                    parameter=False):
+                    parameter=False, n_pairs=False):
 
     """Make a FacetGrid heatmap of all metrics.
 
@@ -65,6 +65,7 @@ def entropy_heatmap(results, md, cmap_name=False,
             Used to sort the labels.
         dense (bool): whether to use short cell names or not.
         annotate (bool): whether to add an annotation overlay.
+        n_pairs (bool): whether do draw heatmaps for n_pairs.
     """
 
     if not cmap_name:
@@ -79,6 +80,8 @@ def entropy_heatmap(results, md, cmap_name=False,
                              ).stack().reset_index()
 
     df.rename(columns={"level_4": "type", 0: "value"}, inplace=True)
+    if not n_pairs:
+        df = df[df.type == 'value']
     df.loc[:, 'type'] = df.type.replace({'value': 'Result', 'n_pairs': 'Number of pairs'})
     df.loc[:, 'measure'] = df.measure.replace({'cond_entropy': 'Conditional entropy',
                                                'accuracy': 'P(success)'})
@@ -158,9 +161,16 @@ def entropy_heatmap(results, md, cmap_name=False,
                     **kwargs)
 
     # Plotting the heatmap
-    cg = sns.FacetGrid(df, row='measure', col='type', height=height, margin_titles=True,
-                       sharex=False, sharey=False)
-    cg.set_titles(row_template='{row_name}', col_template='{col_name}')
+
+    if n_pairs:
+        cg = sns.FacetGrid(df, row='measure', col='type', height=height, margin_titles=True,
+                           sharex=False, sharey=False)
+        cg.set_titles(row_template='{row_name}', col_template='{col_name}')
+
+    else:
+        cg = sns.FacetGrid(df, col='measure', height=height, margin_titles=True,
+                           sharex=False, sharey=False)
+        cg.set_titles(col_template='{col_name}')
 
     cg.map_dataframe(_draw_heatmap, 'predictor', 'predicted', 'value',
                      annotate=annotate, square=True, cbar=True,
@@ -218,4 +228,5 @@ def ent_heatmap_command(cfg, md):
                     cmap_name=cfg.heatmap.cmap,
                     feat_order=feat_order,
                     dense=cfg.heatmap.dense,
-                    annotate=cfg.heatmap.annotate)
+                    annotate=cfg.heatmap.annotate,
+                    n_pairs=cfg.heatmap.n_pairs)
