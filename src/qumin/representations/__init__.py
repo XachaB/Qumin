@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from .segments import Inventory, Form
+from . import frequencies
 from ..utils import merge_duplicate_columns
 
 log = logging.getLogger()
