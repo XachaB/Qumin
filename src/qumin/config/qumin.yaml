@@ -58,7 +58,7 @@ heatmap:
                            # ex: [number, case]). If no features-values file available,
                            # it should contain an ordered list of the cells to display.
   n_pairs: True            # Display a heatmap of the number pairs involved (for entropy heatmap)
-
+  simple_cbar: False       # Remove values from colorbar, one shared colorbar (for entropy heatmap, if n_pairs=False)
 
 entropy:
   heatmap: True             # Whether to draw a heatmap.

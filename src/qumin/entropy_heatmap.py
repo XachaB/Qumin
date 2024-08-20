@@ -5,6 +5,7 @@
 Author: Jules Bouton.
 """
 from matplotlib import pyplot as plt
+from matplotlib import cm as cm
 from frictionless.exception import FrictionlessException
 import pandas as pd
 import numpy as np
@@ -50,7 +51,8 @@ def get_features_order(features_file, results, sort_order=False):
 
 def entropy_heatmap(results, md, cmap_name=False,
                     feat_order=None, dense=False, annotate=False,
-                    parameter=False, n_pairs=False):
+                    parameter=False, n_pairs=False,
+                    simple=False):
 
     """Make a FacetGrid heatmap of all metrics.
 
@@ -66,6 +68,7 @@ def entropy_heatmap(results, md, cmap_name=False,
         dense (bool): whether to use short cell names or not.
         annotate (bool): whether to add an annotation overlay.
         n_pairs (bool): whether do draw heatmaps for n_pairs.
+        simple (bool): whether do draw a single simple colorbar.
     """
 
     if not cmap_name:
@@ -173,7 +176,7 @@ def entropy_heatmap(results, md, cmap_name=False,
         cg.set_titles(col_template='{col_name}')
 
     cg.map_dataframe(_draw_heatmap, 'predictor', 'predicted', 'value',
-                     annotate=annotate, square=True, cbar=True,
+                     annotate=annotate, square=True, cbar=not simple,
                      cbar_kws=dict(location='bottom',
                                    shrink=0.6,
                                    pad=0.075))  # Spacing between colorbar and hm
@@ -188,14 +191,28 @@ def entropy_heatmap(results, md, cmap_name=False,
                    labelrotation=0)
 
     # Override general tick settings.
-    for row in cg.axes:
-        for hm in row:
-            cb = hm.collections[-1].colorbar
-            cb.outline.set_visible(True)
-            cb.outline.set_linewidth(0.5)
-            cb.ax.tick_params(labelbottom=True, labeltop=False,
-                              bottom=True, top=False,
-                              labelrotation=0)
+    if not simple:
+        for row in cg.axes:
+            for hm in row:
+                cb = hm.collections[-1].colorbar
+                cb.outline.set_visible(True)
+                cb.outline.set_linewidth(0.5)
+                cb.ax.tick_params(labelbottom=True, labeltop=False,
+                                  bottom=True, top=False,
+                                  labelrotation=0)
+
+    if simple:
+        # We add a custom global colorbar
+        # The last value is the width
+        cbar_ax = cg.fig.add_axes([0.09, -0.04, 0.84, 0.04])
+        cbar = cg.fig.colorbar(cm.ScalarMappable(norm=None, cmap=cmap),
+                               cax=cbar_ax,
+                               drawedges=False,
+                               orientation='horizontal'
+                               )
+        cbar.set_ticks([0, 0.5, 1])
+        cbar.set_ticklabels(['Easy', 'Balanced', 'Hard'])
+        cbar.outline.set_visible(False)
 
     cg.set_axis_labels(x_var="Predicted", y_var="Predictor")
     cg.fig.suptitle(f"Measured on the {md.datasets[0].name} dataset, version {md.datasets[0].version}")
@@ -222,6 +239,8 @@ def ent_heatmap_command(cfg, md):
         features_file_name = None
         log.warning("Your package doesn't contain any features-values file. You should provide an ordered list of cells in command line.")
 
+    assert not (cfg.heatmap.n_pairs and cfg.heatmap.simple_cbar), "The simple_cbar option is only available if n_pairs is set to False."
+
     feat_order = get_features_order(features_file_name, results, cfg.heatmap.order)
 
     entropy_heatmap(results, md,
@@ -229,4 +248,5 @@ def ent_heatmap_command(cfg, md):
                     feat_order=feat_order,
                     dense=cfg.heatmap.dense,
                     annotate=cfg.heatmap.annotate,
-                    n_pairs=cfg.heatmap.n_pairs)
+                    n_pairs=cfg.heatmap.n_pairs,
+                    simple=cfg.heatmap.simple_cbar)
