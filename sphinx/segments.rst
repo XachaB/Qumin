@@ -11,11 +11,6 @@ Format
 
 Each row of the segments file describes a single phoneme. The first column gives phonemes as they are written in the paradigms file. Each column represents a distinctive feature. Here is an example with just 10 rows of the segments table for French verbs:
 
-
-.. warning::
-    The index header used to be `Seg.` (for segment), and Qumin expected two more columns `ALIAS` and `UNICODE`. This is not supported anymore, and Qumin now expects `sound_id`, per the Paralex standard.
-
-
 ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
 sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
 ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
@@ -36,13 +31,6 @@ Some conventions:
 -  The first column must be called ``sound_id``.
 -  The phonological symbols, in the ``sound_id`` column cannot be one of he reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
 
- ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
-  sound_id   sonant   syllabique   consonantique   continu   nasal   haut   bas   arrière   arrondi   antérieur   CORONAL   voisé   rel.ret.
- ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
-  p          0        0            1               0         0       0            0                   1                     0       0
-  b          0        0            1               0         0       0            0                   1                     1       0
- ========== ======== ============ =============== ========= ======= ====== ===== ========= ========= =========== ========= ======= ==========
-
 The file is encoded in utf-8 and can must be a csv table (comma separated):
 
 .. code:: sh
@@ -57,6 +45,10 @@ The file is encoded in utf-8 and can must be a csv table (comma separated):
    b,0,0,1,0,0,0,,0,,1,,1,0
    t,0,0,1,0,0,0,,0,,1,1,0,0
    d,0,0,1,0,0,0,,0,,1,1,1,0
+
+.. warning::
+    The index header used to be `Seg.` (for segment), and Qumin expected two more columns `ALIAS` and `UNICODE`. This is not supported anymore, and Qumin now expects `sound_id`, per the Paralex standard.
+
 
 Segmentation
 ~~~~~~~~~~~~~~~~~~~~~~~~
