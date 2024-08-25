@@ -37,16 +37,20 @@ class Form(str):
 
     Sounds might be more than one character long.
     Forms are strings, they are segmented at the object creation.
-    They have a tokens attribute, which is a tuple of phonemes.
+
+    Attributes:
+        tokens (Tuple): Tuple of phonemes contained in this form
+        id (str): form_id of the corresponding form according to the Paralex package
     """
 
-    def __new__(cls, string):
+    def __new__(cls, string, fid):
         tokens = Inventory._segmenter.findall(string)
         tokens = tuple(Inventory._normalization.get(c, c) for c in tokens)
         if Inventory._legal_str.fullmatch("".join(tokens)) is None:
             raise ValueError("Unknown sound in: " + repr(string))
         self = str.__new__(cls, " ".join(tokens) + " ")
         self.tokens = tokens
+        self.id = fid
         return self
 
     @classmethod
@@ -57,7 +61,7 @@ class Form(str):
         return self
 
     def __repr__(self):
-        return "Form(" + self + ")"
+        return f"Form({self}, id:{self.id})"
 
 
 class Inventory(object):

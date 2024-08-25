@@ -69,7 +69,8 @@ def create_paradigms(dataset, fillna=True,
 
     def get_unknown_segments(forms, unknowns, name):
         known_sounds = set(Inventory._classes) | set(Inventory._normalization) | {";", ""}
-        for form in forms.split(";"):
+        for form_id in forms:
+            form = form_dic[form_id]
             if " " in form:
                 tokens = form.split(" ")
             else:
@@ -102,9 +103,8 @@ def create_paradigms(dataset, fillna=True,
         paradigms = paradigms.sample(sample)
 
     def aggregator(s):
-        if s.isnull().all():
-            return None
-        return ";".join(s.values)
+        tpl = tuple(s[s.apply(lambda x: form_dic[x] != '')])
+        return tpl if len(tpl) > 0 else ""
 
     def check_cells(cells, par_cols):
         unknown_cells = set(cells) - set(par_cols)
@@ -122,9 +122,13 @@ def create_paradigms(dataset, fillna=True,
             log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
             paradigms = paradigms[(paradigms[cell_col].isin(cells))]
 
-    paradigms = paradigms.pivot_table(values=form_col, index=lexemes,
+    paradigms.fillna(value="", inplace=True)
+    form_dic = paradigms.set_index('form_id')[form_col].to_dict()
+
+    paradigms = paradigms.pivot_table(values='form_id', index=lexemes,
                                       columns=cell_col,
                                       aggfunc=aggregator)
+    paradigms.fillna(value="", inplace=True)
 
     paradigms.reset_index(inplace=True, drop=False)
     log.debug(paradigms)
@@ -133,13 +137,14 @@ def create_paradigms(dataset, fillna=True,
     unique_lexemes(paradigms[lexemes], 'paradigms')
     paradigms.set_index(lexemes, inplace=True)
 
-    paradigms.fillna(value="", inplace=True)
     if merge_duplicates:
         agenda = list(paradigms.columns)
         while agenda:
             a = agenda.pop(0)
             for i, b in enumerate(agenda):
-                if (paradigms[a] == paradigms[b]).all():
+                apar = paradigms[a].apply(lambda x: [form_dic[i] for i in x])
+                bpar = paradigms[b].apply(lambda x: [form_dic[i] for i in x])
+                if (apar == bpar).all():
                     log.debug("Identical columns %s and %s ", a, b)
                     new = a + " & " + b
                     agenda.pop(i)
@@ -161,7 +166,7 @@ def create_paradigms(dataset, fillna=True,
     def parse_cell(cell):
         if not cell:
             return cell
-        forms = [Form(f) for f in cell.split(";")]
+        forms = [Form(form_dic[f], f) for f in cell]
         if overabundant:
             forms = tuple(sorted(forms))
         else:
