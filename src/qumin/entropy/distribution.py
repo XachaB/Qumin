@@ -87,9 +87,12 @@ class PatternDistribution(object):
             self.paradigms = paradigms
 
         self.classes = classes
-
+        try:
+            frequencies_path = md.get_table_path('frequencies')
+        except:
+            frequencies_path = False
         self.weights = representations.frequencies.Weights(md.get_table_path('forms'),
-                                                           frequencies_path=md.get_table_path('frequencies'),
+                                                           frequencies_path=frequencies_path,
                                                            real_frequencies=real_frequencies)
 
         self.patterns = patterns.map(lambda x: (str(x),))

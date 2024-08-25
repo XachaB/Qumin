@@ -48,7 +48,7 @@ class Weights(object):
         """
 
         self.col_names = col_names
-        paradigms = pd.read_csv(paradigm_path, dtype={'freq_id': 'int64'})
+        paradigms = pd.read_csv(paradigm_path)
 
         if real_frequencies is False:
             log.info('Building normalized weights for the provided columns...')
@@ -59,8 +59,15 @@ class Weights(object):
             self.default_source = 'default'
             paradigms.set_index('form_id', inplace=True)
 
+        elif "frequency" in paradigms.columns:
+            log.info('Frequencies already contained in the paradigms table. Reading them...')
+            self.weight = paradigms
+            self.weight['source'] = 'paradigms_table'
+            self.weight.rename({'phon_form': 'form', "frequency": "value"}, axis=1, inplace=True)
+            self.default_source = 'paradigms_table'
+            paradigms.set_index('form_id', inplace=True)
         else:
-            log.info('Reading frequency table...')
+            log.info('No frequencies in the paradigms file, looking for a frequencies table')
             self.weight = pd.read_csv(frequencies_path, index_col='freq_id',
                                       usecols=col_names+['value', 'freq_id'])
             freq_col = self.weight.columns
