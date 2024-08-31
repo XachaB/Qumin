@@ -103,8 +103,8 @@ def create_paradigms(dataset, fillna=True,
         paradigms = paradigms.sample(sample)
 
     def aggregator(s):
-        tpl = tuple(s[s.apply(lambda x: form_dic[x] != '')])
-        return tpl if len(tpl) > 0 else ""
+        form_ids = tuple(form_id for form_id in s if form_dic[form_id] != '')
+        return form_ids if len(form_ids) > 0 else ""
 
     def check_cells(cells, par_cols):
         unknown_cells = set(cells) - set(par_cols)

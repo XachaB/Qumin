@@ -40,17 +40,18 @@ class Form(str):
 
     Attributes:
         tokens (Tuple): Tuple of phonemes contained in this form
-        id (str): form_id of the corresponding form according to the Paralex package
+        id (str): form_id of the corresponding form according to the Paralex package.
+            If unknown, `None` will be assigned.
     """
 
-    def __new__(cls, string, fid):
+    def __new__(cls, string, form_id=None):
         tokens = Inventory._segmenter.findall(string)
         tokens = tuple(Inventory._normalization.get(c, c) for c in tokens)
         if Inventory._legal_str.fullmatch("".join(tokens)) is None:
             raise ValueError("Unknown sound in: " + repr(string))
         self = str.__new__(cls, " ".join(tokens) + " ")
         self.tokens = tokens
-        self.id = fid
+        self.id = form_id
         return self
 
     @classmethod
@@ -58,6 +59,7 @@ class Form(str):
         stripped = segmented.strip(" ")
         self = str.__new__(cls, stripped + " ")
         self.tokens = stripped.split()
+        self.id = None
         return self
 
     def __repr__(self):
