@@ -7,6 +7,7 @@ Utility functions for representations.
 import logging
 from collections import defaultdict
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -84,11 +85,15 @@ def create_paradigms(dataset, fillna=True,
                             usecols=["form_id", lexemes, cell_col, form_col])
 
     if not defective:
-        paradigms.dropna(axis=0, inplace=True)
+        defective_lexemes = set(paradigms.loc[paradigms[form_col].isna(), lexemes].unique())
+        paradigms = paradigms[~paradigms.loc[:, lexemes].isin(defective_lexemes)]
 
     if most_freq:
+        inflected = paradigms.loc[:,lexemes].unique()
         lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
         lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
+        # Restrict to lexemes we have kept, if we dropped defectives
+        lexemes_df = lexemes_df[lexemes_df.lexeme_id.isin(inflected)]
         selected = set(lexemes_df.sort_values("frequency",
                                               ascending=False
                                               ).iloc[:most_freq, :].loc[:, "lexeme_id"].to_list())
