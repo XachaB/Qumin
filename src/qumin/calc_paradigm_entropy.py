@@ -43,7 +43,8 @@ def H_command(cfg, md):
                                  merge_cols=cfg.entropy.merged,
                                  segcheck=True, cells=cells,
                                  sample=cfg.sample,
-                                 most_freq=cfg.most_freq)
+                                 most_freq=cfg.most_freq,
+                                 resegment=cfg.resegment)
     pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], defective=True,
                                            overabundant=False)
 
@@ -67,7 +68,8 @@ def H_command(cfg, md):
         paradigms2 = create_paradigms(md.datasets[0], defective=True,
                                       overabundant=False,
                                       merge_cols=cfg.entropy.merged, segcheck=True,
-                                      cells=cells)
+                                      cells=cells,
+                                      resegment=cfg.resegment)
         paradigms2 = paradigms2.loc[paradigms.index, :]
         pat_table2, pat_dic2 = patterns.from_csv(patterns_file_path[1], defective=True,
                                                  overabundant=False)

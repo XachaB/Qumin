@@ -185,7 +185,8 @@ def prepare_data(cfg, md):
                                  overabundant=cfg.pats.overabundant,
                                  defective=cfg.pats.defective,
                                  sample=cfg.sample,
-                                 most_freq=cfg.most_freq
+                                 most_freq=cfg.most_freq,
+                                 resegment=cfg.resegment
                                  )
     indexes = paradigms.index
     features = None
