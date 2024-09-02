@@ -63,7 +63,7 @@ class Form(str):
         return self
 
     def __repr__(self):
-        return f"Form({self}, id:{self.id})"
+        return f"Form({self}, id:{self.id})" if self.id else f"Form({self})"
 
 
 class Inventory(object):
