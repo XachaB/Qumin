@@ -59,7 +59,6 @@ class Form(str):
         stripped = segmented.strip(" ")
         self = str.__new__(cls, stripped + " ")
         self.tokens = stripped.split()
-        self.id = None
         return self
 
     def __repr__(self):
