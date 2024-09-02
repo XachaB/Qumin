@@ -404,6 +404,9 @@ class Inventory(object):
         Returns:
             list of phonemes
         """
+        wordform = wordform.strip(" ")
+        if wordform == "": return []
+        if len(wordform) == 1: return [wordform]
         if resegment:
             excluded = {"", " "}
             joined = wordform.replace(" ", "")
@@ -411,7 +414,7 @@ class Inventory(object):
         if " " not in wordform:
             raise ValueError(f"Forms are not space separated, eg. {wordform}, "
                              f"please pass resegment=True or provide Paralex-compliant segmented forms.")
-        return wordform.strip(" ").split(" ")
+        return wordform.split(" ")
 
     @classmethod
     def init_dissimilarity_matrix(cls, gap_prop=0.5, **kwargs):
