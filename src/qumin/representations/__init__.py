@@ -62,7 +62,7 @@ def create_paradigms(dataset, fillna=True,
         overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
         merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
         cells (List[str]): List of cell names to consider. Defaults to all.
-        resegment (bool): Whether to ignores spaces in phon forms and re-computes phonemic segmentation
+        resegment (bool): Whether to ignore spaces in phon forms and re-compute phonemic segmentation
 
     Returns:
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).

@@ -44,7 +44,7 @@ class Form(str):
         tokens (Tuple): Tuple of phonemes contained in this form
         id (str): form_id of the corresponding form according to the Paralex package.
             If unknown, `None` will be assigned.
-        resegment (bool): Whether to ignores spaces in phon forms and re-computes phonemic segmentation
+        resegment (bool): Whether to ignore spaces in phon forms and re-compute phonemic segmentation
     """
 
     def __new__(cls, string, form_id=None, resegment=False):
@@ -399,7 +399,7 @@ class Inventory(object):
 
         Args:
             wordform (str): phonemic form
-            resegment (bool): Whether to ignores spaces in phon forms and re-compute phonemic segmentation
+            resegment (bool): Whether to ignore spaces in phon forms and re-compute phonemic segmentation
 
         Returns:
             list of phonemes
