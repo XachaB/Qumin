@@ -166,7 +166,7 @@ def create_paradigms(dataset, fillna=True,
     def parse_cell(cell):
         if not cell:
             return cell
-        forms = [Form(form_dic[f], f) for f in cell]
+        forms = [Form(form_dic[f], form_id=f) for f in cell]
         if overabundant:
             forms = tuple(sorted(forms))
         else:
