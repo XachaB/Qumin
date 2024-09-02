@@ -68,13 +68,10 @@ def create_paradigms(dataset, fillna=True,
     """
 
     def get_unknown_segments(forms, unknowns, name):
-        known_sounds = set(Inventory._classes) | set(Inventory._normalization) | {";", ""}
+        known_sounds = set(Inventory._classes) | set(Inventory._normalization) | {"", " "}
         for form_id in forms:
             form = form_dic[form_id]
-            if " " in form:
-                tokens = form.split(" ")
-            else:
-                tokens = Inventory._segmenter.split(form)
+            tokens = Inventory._segmenter.split(form)
             for char in tokens:
                 if char not in known_sounds:
                     unknowns[char].append(form + " " + name)
