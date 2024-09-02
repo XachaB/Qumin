@@ -51,7 +51,8 @@ def pat_command(cfg, md):
                                  overabundant=overabundant, merge_cols=merge_cols,
                                  segcheck=segcheck, cells=cells,
                                  sample=cfg.sample,
-                                 most_freq=cfg.most_freq
+                                 most_freq=cfg.most_freq,
+                                 resegment=cfg.resegment
                                  )
 
     log.info("Looking for patterns...")

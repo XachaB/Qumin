@@ -611,7 +611,7 @@ class BinaryPattern(Pattern):
                                     "".format(self._regex[from_cell].pattern, self, from_cell, to_cell, form))
             else:
                 return None
-        return Form.from_segmented_str(string)
+        return Form(string)
 
     def _generalize_alt(self, *others):
         """Use the generalized alternation, using features when possible rather than segments."""

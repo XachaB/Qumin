@@ -31,8 +31,8 @@ data: null            # path to paralex.package.json paradigms, segments
 cells: null           # List of cells to use (subset)
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
 most_freq: null       # restrict to N most frequent items (use the lexeme "frequency" column)
-sample: null        # (int) A number of lexemes to sample, for debug purposes
-
+sample: null          # (int) A number of lexemes to sample, for debug purposes
+resegment: False      # Whether to ignores spaces in phon forms and re-compute phonemic segmentation
 
 lattice:
   shorten: False      # Drop redundant columns altogether.

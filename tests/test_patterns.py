@@ -16,7 +16,7 @@ class PatternsTestCase(unittest.TestCase):
     def test_identity(self):
         c = ("a", "b")
         p = patterns.Pattern.new_identity(c)
-        f = segments.Form.from_segmented_str("a b a b ")
+        f = segments.Form("a b a b ")
         self.assertTrue(p.applicable(f, "a"))
         self.assertTrue(p.applicable(f, "b"))
         self.assertEqual(p.apply(f, c), f)
@@ -24,8 +24,8 @@ class PatternsTestCase(unittest.TestCase):
         self.assertTrue(p.is_identity())
 
     def test_find_generalized_alt(self):
-        forms = (segments.Form.from_segmented_str("b a "),
-                 segments.Form.from_segmented_str("b ˈa "))
+        forms = (segments.Form("b a "),
+                 segments.Form("b ˈa "))
         aligned = zip(forms[0].tokens, forms[1].tokens)
         c = ("a", "b")
         p = patterns.Pattern(c, aligned, aligned=True)

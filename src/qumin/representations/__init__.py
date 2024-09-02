@@ -47,7 +47,7 @@ def create_features(md, feature_cols):
 def create_paradigms(dataset, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
-                     cells=None, sample=None, most_freq=None):
+                     cells=None, sample=None, most_freq=None, resegment=False):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
     Arguments:
@@ -62,16 +62,17 @@ def create_paradigms(dataset, fillna=True,
         overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
         merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
         cells (List[str]): List of cell names to consider. Defaults to all.
+        resegment (bool): Whether to ignores spaces in phon forms and re-computes phonemic segmentation
 
     Returns:
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
     """
 
     def get_unknown_segments(forms, unknowns, name):
-        known_sounds = set(Inventory._classes) | set(Inventory._normalization) | {"", " "}
+        known_sounds = set(Inventory._classes) | set(Inventory._normalization) | {""}
         for form_id in forms:
             form = form_dic[form_id]
-            tokens = Inventory._segmenter.split(form)
+            tokens = Inventory.segment_form(form, resegment=resegment)
             for char in tokens:
                 if char not in known_sounds:
                     unknowns[char].append(form + " " + name)
@@ -163,7 +164,7 @@ def create_paradigms(dataset, fillna=True,
     def parse_cell(cell):
         if not cell:
             return cell
-        forms = [Form(form_dic[f], form_id=f) for f in cell]
+        forms = [Form(form_dic[f], form_id=f, resegment=resegment) for f in cell]
         if overabundant:
             forms = tuple(sorted(forms))
         else:

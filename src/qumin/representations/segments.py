@@ -37,28 +37,24 @@ class Form(str):
 
     Sounds might be more than one character long.
     Forms are strings, they are segmented at the object creation.
+    By default, we segment by cutting on spaces.
+    If resegment=True, we remove spaces, and segment using the sound inventory's list of valid phonemes.
 
     Attributes:
         tokens (Tuple): Tuple of phonemes contained in this form
         id (str): form_id of the corresponding form according to the Paralex package.
             If unknown, `None` will be assigned.
+        resegment (bool): Whether to ignores spaces in phon forms and re-computes phonemic segmentation
     """
 
-    def __new__(cls, string, form_id=None):
-        tokens = Inventory._segmenter.findall(string)
+    def __new__(cls, string, form_id=None, resegment=False):
+        tokens = Inventory.segment_form(string, resegment=resegment)
         tokens = tuple(Inventory._normalization.get(c, c) for c in tokens)
         if Inventory._legal_str.fullmatch("".join(tokens)) is None:
             raise ValueError("Unknown sound in: " + repr(string))
         self = str.__new__(cls, " ".join(tokens) + " ")
         self.tokens = tokens
         self.id = form_id
-        return self
-
-    @classmethod
-    def from_segmented_str(cls, segmented):
-        stripped = segmented.strip(" ")
-        self = str.__new__(cls, stripped + " ")
-        self.tokens = stripped.split()
         return self
 
     def __repr__(self):
@@ -396,6 +392,26 @@ class Inventory(object):
                             key=len, reverse=True)
         cls._segmenter = re.compile("(" + "|".join(all_sounds) + ")")
         cls._legal_str = re.compile("(" + "|".join(all_sounds) + ")+")
+
+    @classmethod
+    def segment_form(cls, wordform, resegment=False):
+        """ Segment a form into phonemes (either following spaces, or using sound inventory)
+
+        Args:
+            wordform (str): phonemic form
+            resegment (bool): Whether to ignores spaces in phon forms and re-compute phonemic segmentation
+
+        Returns:
+            list of phonemes
+        """
+        if resegment:
+            excluded = {"", " "}
+            joined = wordform.replace(" ", "")
+            return [s for s in cls._segmenter.split(joined) if s not in excluded]
+        if " " not in wordform:
+            raise ValueError(f"Forms are not space separated, eg. {wordform}, "
+                             f"please pass resegment=True or provide Paralex-compliant segmented forms.")
+        return wordform.strip(" ").split(" ")
 
     @classmethod
     def init_dissimilarity_matrix(cls, gap_prop=0.5, **kwargs):
