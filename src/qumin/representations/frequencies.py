@@ -29,7 +29,7 @@ class Frequencies(object):
 
     Examples:
 
-        >>> p = fl.Package('../Lexiques/Test/test.package.json')
+        >>> p = fl.Package('tests/data/TestPackage/test.package.json')
         >>> f = Frequencies(p, real=False)
 
     Attributes:
@@ -179,7 +179,7 @@ class Frequencies(object):
 
         Examples:
 
-            >>> p = fl.Package('../Lexiques/Test/test.package.json')
+            >>> p = fl.Package('tests/data/TestPackage/test.package.json')
             >>> f = Frequencies(p, real=True)
             >>> f.get_absolute_freq(filters={'lexeme':'q'}, skipna=True)
             38.0
@@ -229,7 +229,7 @@ class Frequencies(object):
 
         Examples:
 
-            >>> p = fl.Package('../Lexiques/Test/test.package.json')
+            >>> p = fl.Package('tests/data/TestPackage/test.package.json')
             >>> f = Frequencies(p, real=True)
             >>> f.get_relative_freq(filters={'lexeme': 'p', 'cell':'first'}, group_on=["lexeme"])['result'].values
             array([0.05882353, 0.94117647])
