@@ -30,7 +30,7 @@ class Frequencies(object):
     Examples:
 
         >>> p = fl.Package('tests/data/TestPackage/test.package.json')
-        >>> f = Frequencies(p, real=False)
+        >>> Frequencies.initialize(p, real=False)
 
     Attributes:
         p (frictionless.Package): package to analyze
@@ -46,7 +46,15 @@ class Frequencies(object):
             Table of frequency values associated to a cell_id.
         """
 
-    def __init__(self, package, real=True, default_source=False):
+    p = None
+    real = False
+    col_names = ["lexeme", "cell", "form"]
+    default_source = {"cells": None,
+                      "lexemes": None,
+                      "forms": None}
+
+    @classmethod
+    def initialize(cls, package, real=True, default_source=False):
         """Constructor for Frequencies. We gather and store frequencies
         for forms, lexemes and cells. Behaviour is the following:
             - If `real` is `False`, we use the paradigms table to generate a Uniform distribution.
@@ -60,42 +68,40 @@ class Frequencies(object):
             default_source (Dict[str, str]): name of the source to use when several are available.
         """
 
-        self.p = package
-        self.real = real
-        self.col_names = ["lexeme", "cell", "form"]
-        self.default_source = {"cells": None,
-                               "lexemes": None,
-                               "forms": None}
+        cls.p = package
+        cls.real = real
+
         if default_source:
-            self.default_source.update(default_source)
+            cls.default_source.update(default_source)
 
-        self._read_form_frequencies()
-        self._read_other_frequencies("lexemes")
-        self._read_other_frequencies("cells")
+        cls._read_form_frequencies()
+        cls._read_other_frequencies("lexemes")
+        cls._read_other_frequencies("cells")
 
-    def _read_form_frequencies(self, default_source=False):
+    @classmethod
+    def _read_form_frequencies(cls, default_source=False):
         """Recover the available information about form frequencies.
         """
-        paradigms = px.read_table("forms", self.p)
+        paradigms = px.read_table("forms", cls.p)
 
-        if self.real is False:
+        if cls.real is False:
             log.info('Building normalized frequencies for the paradigm columns...')
-            self.forms = paradigms
-            self.forms['source'] = 'empty'
-            self.forms.rename({'phon_form': 'form'}, axis=1, inplace=True)
-            self.forms['value'] = pd.NA
-            self.default_source['forms'] = 'empty'
+            cls.forms = paradigms
+            cls.forms['source'] = 'empty'
+            cls.forms.rename({'phon_form': 'form'}, axis=1, inplace=True)
+            cls.forms['value'] = pd.NA
+            cls.default_source['forms'] = 'empty'
 
         elif "frequency" in paradigms.columns:
             log.info('Frequencies in in the forms table. Reading them...')
-            self.forms = paradigms
-            self.forms['source'] = 'forms_table'
-            self.forms.rename({'phon_form': 'form', "frequency": "value"}, axis=1, inplace=True)
-            self.default_source['forms'] = 'forms_table'
+            cls.forms = paradigms
+            cls.forms['source'] = 'forms_table'
+            cls.forms.rename({'phon_form': 'form', "frequency": "value"}, axis=1, inplace=True)
+            cls.default_source['forms'] = 'forms_table'
 
-        elif self.p.has_resource("frequencies"):
+        elif cls.p.has_resource("frequencies"):
             log.info('No frequencies in the paradigms table, looking for a frequencies table...')
-            freq = px.read_table('frequency', self.p, index_col='freq_id',
+            freq = px.read_table('frequency', cls.p, index_col='freq_id',
                                  usecols=['form', 'value', 'freq_id'])
             freq_col = freq.columns
             if "form" not in freq_col:
@@ -103,10 +109,10 @@ class Frequencies(object):
 
             if "source" not in freq_col:
                 freq['source'] = 'frequencies_table'
-                self.default_source['forms'] = 'frequencies_table'
-            elif self.default_source['forms'] is None:
-                self.default_source['forms'] = list(self.freq['source'].unique())[0]
-                log.info(f"No default source provided for frequencies. Using {self.default_source['forms']}")
+                cls.default_source['forms'] = 'frequencies_table'
+            elif cls.default_source['forms'] is None:
+                cls.default_source['forms'] = list(cls.freq['source'].unique())[0]
+                log.info(f"No default source provided for frequencies. Using {cls.default_source['forms']}")
 
             # We use the form_id column to match both dataframes
             paradigms.set_index('form_id', inplace=True)
@@ -117,60 +123,62 @@ class Frequencies(object):
                 log.warning(f"""The frequencies table does not contain a row for every form_id row. Missing:
                             {paradigms.loc[missing_idx].head()}""")
 
-            paradigms.loc[self.freq.index, 'value'] = freq.value
-            self.forms = paradigms.rename({'phon_form': 'form'})
+            paradigms.loc[cls.freq.index, 'value'] = freq.value
+            cls.forms = paradigms.rename({'phon_form': 'form'})
         else:
             raise ValueError("""If no form frequencies are available in the Paralex dataset,
                              real should be set to False""")
 
-        self.forms = self.forms[['form_id', 'cell', 'lexeme', 'form', 'value', 'source']]
+        cls.forms = cls.forms[['form_id', 'cell', 'lexeme', 'form', 'value', 'source']]
 
         # Check for duplicate overabundant phon_forms and sum the frequencies.
         # This handles cases where the orth_form is different and has two records.
-        dup = self.forms.duplicated(subset=self.col_names, keep=False)
+        dup = cls.forms.duplicated(subset=cls.col_names, keep=False)
         if dup.any():
-            self.forms.loc[dup, 'value'] = \
-                self.forms.loc[dup].groupby(self.col_names).value.transform(sum)
-            self.forms.drop_duplicates(subset=self.col_names, inplace=True)
+            cls.forms.loc[dup, 'value'] = \
+                cls.forms.loc[dup].groupby(cls.col_names).value.transform(sum)
+            cls.forms.drop_duplicates(subset=cls.col_names, inplace=True)
 
-        self.forms.sort_index(inplace=True)
+        cls.forms.sort_index(inplace=True)
 
-    def _read_other_frequencies(self, name):
+    @classmethod
+    def _read_other_frequencies(cls, name):
         """
         Recover frequency information for cells and lexemes.
 
         Arguments:
             name(str): Frequency table to build. Either cells or lexemes.
         """
-        table = px.read_table(name, self.p, index_col=name[:-1] + "_id")
+        table = px.read_table(name, cls.p, index_col=name[:-1] + "_id")
 
         # There are up to 3 different situations:
         # 1. Building a fake uniform frequency distribution.
-        if self.real is False:
+        if cls.real is False:
             log.info(f'{name}: Building normalized frequencies...')
             table['source'] = 'empty'
             table['value'] = pd.NA
-            self.default_source[name] = 'empty'
+            cls.default_source[name] = 'empty'
 
         # 2. Reading frequencies from the given table.
         elif "frequency" in table.columns:
             log.info(f'{name}: Frequencies in the table. Reading them...')
             table['source'] = 'cells_table'
             table.rename({"frequency": "value"}, axis=1, inplace=True)
-            self.default_source[name] = name + '_table'
+            cls.default_source[name] = name + '_table'
 
         # 3. Building frequencies from the forms table.
         else:
             log.info(f'{name}: No frequencies in the paradigms table, building from the forms...')
-            freq = self.forms.groupby(name[:-1]).value.sum()
+            freq = cls.forms.groupby(name[:-1]).value.sum()
             table.loc[freq.index, "value"] = freq.values
             table['source'] = 'forms_table'
-            self.default_source[name] = 'forms_table'
+            cls.default_source[name] = 'forms_table'
 
         # We save the resulting table
-        setattr(self, name, table[['value', 'source']])
+        setattr(cls, name, table[['value', 'source']])
 
-    def get_absolute_freq(self, mean=False, group_on=None, skipna=False, **kwargs):
+    @classmethod
+    def get_absolute_freq(cls, mean=False, group_on=None, skipna=False, **kwargs):
         """
         Return the frequency of an item for a given source
 
@@ -180,14 +188,14 @@ class Frequencies(object):
         Examples:
 
             >>> p = fl.Package('tests/data/TestPackage/test.package.json')
-            >>> f = Frequencies(p, real=True)
-            >>> f.get_absolute_freq(filters={'lexeme':'q'}, skipna=True)
+            >>> Frequencies.initialize(p, real=True)
+            >>> Frequencies.get_absolute_freq(filters={'lexeme':'q'}, skipna=True)
             38.0
-            >>> f.get_absolute_freq(filters={'lexeme':'q'}, skipna=False)
+            >>> Frequencies.get_absolute_freq(filters={'lexeme':'q'}, skipna=False)
             nan
-            >>> f.get_absolute_freq(filters={'cell':'third'}, mean=True, skipna=True)
+            >>> Frequencies.get_absolute_freq(filters={'cell':'third'}, mean=True, skipna=True)
             20.0
-            >>> f.get_absolute_freq(group_on=['lexeme'])
+            >>> Frequencies.get_absolute_freq(group_on=['lexeme'])
             lexeme
             k    193.0
             p      NaN
@@ -201,7 +209,7 @@ class Frequencies(object):
         """
 
         # Filter using keys from mapping dict
-        sublist = self._filter_frequencies(**kwargs)
+        sublist = cls._filter_frequencies(**kwargs)
 
         if group_on is None:
             if mean:
@@ -214,7 +222,8 @@ class Frequencies(object):
             else:
                 return sublist.groupby(by=group_on, group_keys=False).value.apply(lambda x: x.sum(skipna=skipna))
 
-    def get_relative_freq(self, group_on=None, **kwargs):
+    @classmethod
+    def get_relative_freq(cls, group_on=None, **kwargs):
         """
         Returns the relative frequencies of a set of rows according to a set of grouping columns.
         If any of the values is empty, we generate a Uniform distribution for this group.
@@ -230,14 +239,14 @@ class Frequencies(object):
         Examples:
 
             >>> p = fl.Package('tests/data/TestPackage/test.package.json')
-            >>> f = Frequencies(p, real=True)
-            >>> f.get_relative_freq(filters={'lexeme': 'p', 'cell':'first'}, group_on=["lexeme"])['result'].values
+            >>> Frequencies.initialize(p, real=True)
+            >>> Frequencies.get_relative_freq(filters={'lexeme': 'p', 'cell':'first'}, group_on=["lexeme"])['result'].values
             array([0.05882353, 0.94117647])
-            >>> f.get_relative_freq(filters={'lexeme': 's', 'cell':'second'}, group_on=["lexeme"])['result'].values
+            >>> Frequencies.get_relative_freq(filters={'lexeme': 's', 'cell':'second'}, group_on=["lexeme"])['result'].values
             array([0., 1.])
-            >>> f.get_relative_freq(filters={'cell':"third"}, group_on=["cell"])['result'].values
+            >>> Frequencies.get_relative_freq(filters={'cell':"third"}, group_on=["cell"])['result'].values
             array([0.25, 0.25, 0.25, 0.25])
-            >>> f.get_relative_freq(filters={'lexeme':'p'}, group_on=["lexeme", "cell"])['result'].values
+            >>> Frequencies.get_relative_freq(filters={'lexeme':'p'}, group_on=["lexeme", "cell"])['result'].values
             array([0.05882353, 0.94117647, 1.        , 1.        ])
 
         Arguments:
@@ -245,7 +254,7 @@ class Frequencies(object):
         """
 
         # Filter using keys from mapping dict
-        sublist = self._filter_frequencies(**kwargs)
+        sublist = cls._filter_frequencies(**kwargs)
 
         # 1. We first get the nb of items in each group
         sublist['result'] = sublist\
@@ -266,10 +275,11 @@ class Frequencies(object):
             .groupby(group_on, sort=False).value.transform('sum')
 
         sublist.reset_index(inplace=True)
-        sublist.set_index(self.col_names, inplace=True)
+        sublist.set_index(cls.col_names, inplace=True)
         return sublist
 
-    def _filter_frequencies(self, source=None, filters={}, data="forms", inplace=False):
+    @classmethod
+    def _filter_frequencies(cls, source=None, filters={}, data="forms", inplace=False):
         """Filters the dataframe based on a set of filters
         provided as a dictionary.
 
@@ -282,7 +292,7 @@ class Frequencies(object):
             inplace (bool): whether the filter should operate in place or not. Defaults to False.
         """
 
-        missing = set(filters.keys())-set(self.col_names)
+        missing = set(filters.keys())-set(cls.col_names)
         if missing:
             log.warning("You passed some column names that don't exist. They will be ignored: %s",
                         ", ".join(missing))
@@ -303,11 +313,11 @@ class Frequencies(object):
         mapping = {k: _listify(v) for k, v in filters.items() if v is not None and k not in missing}
 
         if source is None:
-            source = self.default_source[data]
+            source = cls.default_source[data]
         if source is not False:
             mapping["source"] = [source]
 
-        freq = getattr(self, data)
+        freq = getattr(cls, data)
 
         def _selector(mapping):
             """Avoid repetition of this complex line"""
@@ -316,7 +326,7 @@ class Frequencies(object):
             return freq
 
         if inplace:
-            setattr(self, data, _selector(mapping))
+            setattr(cls, data, _selector(mapping))
         else:
             return _selector(mapping)
 
