@@ -98,10 +98,11 @@ class PatternDistribution(object):
                                           "dataset"
                                           ])
 
-    def get_results(self, measure="cond_entropy", n=1):
+    def get_mean(self, measure="cond_entropy", n=1):
         is_cond_ent = self.data.loc[:, "measure"] == measure
         is_one_pred = self.data.loc[:, "n_preds"] == n
-        return self.data.loc[is_cond_ent & is_one_pred, :]
+
+        return self.data.loc[is_cond_ent & is_one_pred, "value"].mean()
 
     def export_file(self, filename):
         """ Export the data DataFrame to file

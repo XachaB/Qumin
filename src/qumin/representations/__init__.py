@@ -87,7 +87,7 @@ def create_paradigms(dataset, fillna=True,
         paradigms = paradigms[~paradigms.loc[:, lexemes].isin(defective_lexemes)]
 
     if most_freq:
-        inflected = paradigms.loc[:,lexemes].unique()
+        inflected = paradigms.loc[:, lexemes].unique()
         lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
         lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
         # Restrict to lexemes we have kept, if we dropped defectives

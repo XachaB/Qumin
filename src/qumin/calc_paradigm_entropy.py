@@ -11,6 +11,8 @@ from hydra.core.hydra_config import HydraConfig
 
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
 from .representations import segments, patterns, create_paradigms, create_features
+from .representations.frequencies import Frequencies
+from itertools import permutations
 
 log = logging.getLogger()
 
@@ -23,6 +25,8 @@ def H_command(cfg, md):
         assert len(cfg.data) == len(
             cfg.patterns) == 2, "You must pass either a single dataset and patterns file, or a list of two of each (coindexed)."
         md.bipartite = True
+
+    Frequencies.initialize(md.datasets[0], real=True)
 
     patterns_file_path = cfg.patterns if md.bipartite else [cfg.patterns]
     sounds_file_name = md.get_table_path("sounds")
@@ -86,10 +90,10 @@ def H_command(cfg, md):
                                            features=features)
 
         distrib.mutual_information()
-        mean1 = distrib.distribs[0].get_results().loc[:, "value"].mean()
-        mean2 = distrib.distribs[1].get_results().loc[:, "value"].mean()
-        mean3 = distrib.get_results(measure="mutual_information").loc[:, "value"].mean()
-        mean4 = distrib.get_results(measure="normalized_mutual_information").loc[:, "value"].mean()
+        mean1 = distrib.distribs[0].get_mean()
+        mean2 = distrib.distribs[1].get_mean()
+        mean3 = distrib.get_mean(measure="mutual_information")
+        mean4 = distrib.get_mean(measure="normalized_mutual_information")
         log.debug("Mean remaining H(c1 -> c2) for %s = %s", names[0], mean1)
         log.debug("Mean remaining H(c1 -> c2) for %s = %s", names[1], mean2)
         log.debug("Mean I(%s,%s) = %s", *names, mean3)
@@ -109,7 +113,7 @@ def H_command(cfg, md):
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
             distrib.one_pred_entropy()
-        mean = distrib.get_results().loc[:, "value"].mean()
+        mean = distrib.get_mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
             distrib.one_pred_distrib_log()
@@ -119,7 +123,7 @@ def H_command(cfg, md):
 
         for n in preds:
             distrib.n_preds_entropy_matrix(n)
-            mean = distrib.get_results(n=n).loc[:, "value"].mean()
+            mean = distrib.get_mean(n=n)
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
             if verbose:
