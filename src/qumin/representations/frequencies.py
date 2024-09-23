@@ -31,6 +31,13 @@ class Frequencies(object):
 
         >>> p = fl.Package('tests/data/TestPackage/test.package.json')
         >>> Frequencies.initialize(p)
+        >>> print(Frequencies.info().to_markdown())
+        | Table   | Source      |   Records |   Sum(f) |   Mean(f) |
+        |:--------|:------------|----------:|---------:|----------:|
+        | forms   | forms_table |        18 |      459 |   28.6875 |
+        | lexemes | forms_table |         4 |      459 |  114.75   |
+        | cells   | forms_table |         3 |      459 |  153      |
+
 
     Attributes:
         p (frictionless.Package): package to analyze
@@ -89,7 +96,7 @@ class Frequencies(object):
             log.info('forms: Frequencies in the table. Reading them.')
             cls.forms = paradigms
             cls.forms['source'] = 'forms_table'
-            cls.forms.rename({'phon_form': 'form', "frequency": "value"}, axis=1, inplace=True)
+            cls.forms.rename({"frequency": "value"}, axis=1, inplace=True)
             cls.default_source['forms'] = 'forms_table'
 
         elif real and cls.p.has_resource("frequencies"):
@@ -117,7 +124,7 @@ class Frequencies(object):
                             {paradigms.loc[missing_idx].head()}""")
 
             paradigms.loc[cls.freq.index, 'value'] = freq.value
-            cls.forms = paradigms.rename({'phon_form': 'form'})
+            cls.forms = paradigms.copy()
 
         else:
             if real:
@@ -125,22 +132,23 @@ class Frequencies(object):
             log.info('forms: Building empty frequencies.')
             cls.forms = paradigms
             cls.forms['source'] = 'empty'
-            cls.forms.rename({'phon_form': 'form'}, axis=1, inplace=True)
             cls.forms['value'] = pd.NA
             cls.default_source['forms'] = 'empty'
 
-        cls.forms = cls.forms[['form_id', 'cell', 'lexeme',
-                               'form', 'value', 'source']].set_index('form_id')
-
         # Check for duplicate overabundant phon_forms and sum the frequencies.
         # This handles cases where the orth_form is different and has two records.
+        # Paradigms should be read only once, and this code shouldn't be redundant with
+        # the main script. This should be fixed elsewhere.
+        cls.forms['form'] = cls.forms.phon_form
         dup = cls.forms.duplicated(subset=cls.col_names, keep=False)
         if dup.any():
             cls.forms.loc[dup, 'value'] = \
                 cls.forms.loc[dup].groupby(cls.col_names).value.transform(sum)
             cls.forms.drop_duplicates(subset=cls.col_names, inplace=True)
 
-        cls.forms.sort_index(inplace=True)
+        cls.forms = cls.forms[['form_id', 'cell', 'lexeme', 'value', 'source']]\
+            .set_index('form_id').sort_index()
+        cls.forms.index.name = "form"
 
     @classmethod
     def _read_other_frequencies(cls, name, real=True):
@@ -178,6 +186,8 @@ class Frequencies(object):
             cls.default_source[name] = 'empty'
 
         # We save the resulting table
+        table.sort_index(inplace=True)
+        table.index.name = name[:-1]
         setattr(cls, name, table[['value', 'source']])
 
     @classmethod
@@ -193,7 +203,7 @@ class Frequencies(object):
             >>> p = fl.Package('tests/data/TestPackage/test.package.json')
             >>> Frequencies.initialize(p, real=True)
             >>> Frequencies.get_absolute_freq(filters={'lexeme':'q'}, group_on="index", skipna=True)
-            form_id
+            form
             11    12.0
             12     6.0
             14    20.0
@@ -213,7 +223,6 @@ class Frequencies(object):
 
         Arguments:
             group_on (List[str]): columns on for which absolute frequencies should be computed.
-                If `"index"` is provided, simply returns the frequency stored.
                 If `False, aggregates across all records.
             mean (bool): Defaults to False. If True, returns a mean instead of a sum.
             skipna(bool): Defaults to False. Skip nan values for sums or means.
@@ -352,18 +361,36 @@ class Frequencies(object):
         if source is not False:
             mapping["source"] = [source]
 
-        freq = getattr(cls, data)
+        freq = getattr(cls, data).copy()
+        idx_name = freq.index.name
+        freq.reset_index(inplace=True)
 
         def _selector(mapping):
             """Avoid repetition of this complex line"""
             if mapping:
-                return freq.loc[freq[list(mapping)].isin(mapping).all(axis=1)].copy()
-            return freq
+                return freq.loc[freq[list(mapping)].isin(mapping).all(axis=1)]\
+                    .copy().set_index(idx_name)
+            return freq.set_index(idx_name)
 
         if inplace:
             setattr(cls, data, _selector(mapping))
         else:
             return _selector(mapping)
+
+    @classmethod
+    def info(cls):
+        """Returns a convenient DataFrame with summary statistics.
+
+        Returns:
+            `pandas.DataFrame`: A summary of statistics about this Frequencies handler.
+        """
+        metrics = []
+        for i in ['forms', 'lexemes', 'cells']:
+            data = getattr(cls, i)
+            metrics.append([i, cls.default_source[i], len(data),
+                            data.value.sum(), data.value.mean()])
+        return pd.DataFrame(metrics, columns=['Table', 'Source', 'Records', 'Sum(f)', 'Mean(f)'])\
+            .set_index('Table')
 
 
 if __name__ == "__main__":
