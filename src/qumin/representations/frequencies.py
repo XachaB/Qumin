@@ -42,7 +42,7 @@ class Frequencies(object):
     Attributes:
         p (frictionless.Package): package to analyze
         real (bool): Whether the frequencies are real or fake.
-        default_source (Dict[str, str]): source used by default for each table.
+        source (Dict[str, str]): source used by default for each table.
             Contains either a value for the source field of a Paralex frequency table,
             or the name of the table used to extract the frequency.
         forms (:class:`pandas:pandas.DataFrame`):
@@ -55,12 +55,12 @@ class Frequencies(object):
 
     p = None
     col_names = ["lexeme", "cell", "form"]
-    default_source = {"cells": None,
+    source = {"cells": None,
                       "lexemes": None,
                       "forms": None}
 
     @classmethod
-    def initialize(cls, package, default_source=False, **kwargs):
+    def initialize(cls, package, source=False, **kwargs):
         """Constructor for Frequencies. We gather and store frequencies
         for forms, lexemes and cells. Behaviour is the following:
             - If `real` is `False`, we use the paradigms table to generate a Uniform distribution.
@@ -69,14 +69,14 @@ class Frequencies(object):
 
         Arguments:
             p (frictionless.Package): package to analyze
-            default_source (Dict[str, str]): name of the source to use when several are available.
+            source (Dict[str, str]): name of the source to use when several are available.
             **kwargs: keyword arguments for frequency reading methods.
         """
 
         cls.p = package
 
-        if default_source:
-            cls.default_source.update(default_source)
+        if source:
+            cls.source.update(source)
 
         cls._read_form_frequencies(**kwargs)
         cls._read_other_frequencies("lexemes", **kwargs)
@@ -97,7 +97,7 @@ class Frequencies(object):
             cls.forms = paradigms
             cls.forms['source'] = 'forms_table'
             cls.forms.rename({"frequency": "value"}, axis=1, inplace=True)
-            cls.default_source['forms'] = 'forms_table'
+            cls.source['forms'] = 'forms_table'
 
         elif real and cls.p.has_resource("frequencies"):
             log.info('No frequencies in the paradigms table, looking for a frequency table.')
@@ -109,10 +109,10 @@ class Frequencies(object):
 
             if "source" not in freq_col:
                 freq['source'] = 'frequencies_table'
-                cls.default_source['forms'] = 'frequencies_table'
-            elif cls.default_source['forms'] is None:
-                cls.default_source['forms'] = list(cls.freq['source'].unique())[0]
-                log.info(f"No default source provided for frequencies. Using {cls.default_source['forms']}")
+                cls.source['forms'] = 'frequencies_table'
+            elif cls.source['forms'] is None:
+                cls.source['forms'] = list(cls.freq['source'].unique())[0]
+                log.info(f"No default source provided for frequencies. Using {cls.source['forms']}")
 
             # We use the form_id column to match both dataframes
             paradigms.set_index('form_id', inplace=True)
@@ -133,7 +133,7 @@ class Frequencies(object):
             cls.forms = paradigms
             cls.forms['source'] = 'empty'
             cls.forms['value'] = pd.NA
-            cls.default_source['forms'] = 'empty'
+            cls.source['forms'] = 'empty'
 
         # Check for duplicate overabundant phon_forms and sum the frequencies.
         # This handles cases where the orth_form is different and has two records.
@@ -168,22 +168,22 @@ class Frequencies(object):
             log.info(f'{name}: Frequencies in the table. Reading them.')
             table['source'] = 'cells_table'
             table.rename({"frequency": "value"}, axis=1, inplace=True)
-            cls.default_source[name] = name + '_table'
+            cls.source[name] = name + '_table'
 
         # 2. Building frequencies from the forms table.
-        elif real and (cls.default_source['forms'] != "empty"):
+        elif real and (cls.source['forms'] != "empty"):
             log.info(f'{name}: No frequencies in the {name} table, building from the forms.')
             freq = cls.forms.groupby(name[:-1]).value.sum()
             table.loc[freq.index, "value"] = freq.values
             table['source'] = 'forms_table'
-            cls.default_source[name] = 'forms_table'
+            cls.source[name] = 'forms_table'
 
         # 3. Building a fake uniform frequency distribution.
         else:
             log.info(f'{name}: Building empty frequencies.')
             table['source'] = 'empty'
             table['value'] = pd.NA
-            cls.default_source[name] = 'empty'
+            cls.source[name] = 'empty'
 
         # We save the resulting table
         table.sort_index(inplace=True)
@@ -357,7 +357,7 @@ class Frequencies(object):
         mapping = {k: _listify(v) for k, v in filters.items() if v is not None and k not in missing}
 
         if source is None:
-            source = cls.default_source[data]
+            source = cls.source[data]
         if source is not False:
             mapping["source"] = [source]
 
@@ -387,7 +387,7 @@ class Frequencies(object):
         metrics = []
         for i in ['forms', 'lexemes', 'cells']:
             data = getattr(cls, i)
-            metrics.append([i, cls.default_source[i], len(data),
+            metrics.append([i, cls.source[i], len(data),
                             data.value.sum(), data.value.mean()])
         return pd.DataFrame(metrics, columns=['Table', 'Source', 'Records', 'Sum(f)', 'Mean(f)'])\
             .set_index('Table')
