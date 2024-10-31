@@ -13,7 +13,7 @@ from itertools import combinations, chain
 import pandas as pd
 from tqdm import tqdm
 
-from . import cond_entropy
+from . import cond_entropy, entropy
 
 log = logging.getLogger(__name__)
 
@@ -320,6 +320,8 @@ class PatternDistribution(object):
                           + str(len(cond_events))
                           + " classes")
 
+                summary = []
+
                 for i, (classe, members) in enumerate(sorted(cond_events,
                                                              key=lambda x: len(x[1]),
                                                              reverse=True)):
@@ -352,9 +354,15 @@ class PatternDistribution(object):
                         else:
                             row = (str(my_pattern), "-", 0, 0)
                         table.append(row)
+                    table = pd.DataFrame(table, columns=headers)
+                    summary.append([table.iloc[:, -2].sum(), 0+entropy(table.iloc[:, -1])])
+                    log.debug("\n" + table.to_markdown())
 
-                    log.debug("\n" + pd.DataFrame(table,
-                                                  columns=headers).to_markdown())
+                log.debug('\n## Class summary')
+                summary = pd.DataFrame(summary, columns=['Size', 'H(pattern|class)'])
+                sum_entropy = (summary.iloc[:, -2] * summary.iloc[:, -1] / summary.iloc[:, -2].sum()).sum()
+                log.debug(f'\nAv. conditional entropy: H(pattern|class)={sum_entropy}')
+                log.debug("\n" + summary.to_markdown())
 
     def n_preds_distrib_log(self, n):
         r"""Print a log of the probability distribution for n predictors.
