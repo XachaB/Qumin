@@ -148,7 +148,7 @@ class Inventory(object):
         """
         if end:
             return cls._regexes_end[sound]
-        return cls._regexes[sound]
+        return "(?:" + cls._regexes[sound] + ")"
 
     @classmethod
     def pretty_str(cls, sound, **kwargs):
