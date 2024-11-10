@@ -329,7 +329,6 @@ class PatternDistribution(object):
                                "Size", "P(Pattern|class)")
                     table = []
 
-                    log.debug("\n## Class n°%s (%s members).", i, len(members))
                     counter = Counter()
                     examples = defaultdict()
                     members.reset_index().apply(count_with_examples,
@@ -354,8 +353,12 @@ class PatternDistribution(object):
                         else:
                             row = (str(my_pattern), "-", 0, 0)
                         table.append(row)
+
                     table = pd.DataFrame(table, columns=headers)
-                    summary.append([table.iloc[:, -2].sum(), 0+entropy(table.iloc[:, -1])])
+                    ent = 0+entropy(table.iloc[:, -1])
+                    # Output
+                    log.debug(f"\n## Class n°{i} ({len(members)} members, H={ent:.2f}).")
+                    summary.append([table.iloc[:, -2].sum(), ent])
                     log.debug("\n" + table.to_markdown())
 
                 log.debug('\n## Class summary')
