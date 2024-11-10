@@ -269,17 +269,27 @@ class Inventory(object):
         table = pd.read_table(filename, header=0, dtype=str,
                               index_col=False, sep=',',
                               encoding="utf-8")
-        shorten_feature_names(table)
+
         sound_id = "sound_id"
         if sound_id not in table.columns:
-            raise ValueError("Paralex sound tables must have a sound_id.")
+            raise ValueError("Paralex sound tables must have a sound_id column.")
+
+        drop = {"value", "UNICODE", "ALIAS", "Seg.",  # Legacy columns
+                "label", "tier", "CLTS_id",  # Unused Paralex columns
+                }
+        deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS", "Seg."})
+        if not deprecated_cols.empty:
+            log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
+
+        for col in drop:
+            if col in table.columns:
+                table.drop(col, axis=1, inplace=True)
+
+        shorten_feature_names(table)
 
         table[sound_id] = table[sound_id].astype(str)
         na_vals = {c: "-1" for c in table.columns}
         na_vals[sound_id] = ""
-        na_vals["UNICODE"] = ""
-        na_vals["ALIAS"] = ""
-        na_vals["value"] = ""
         table = table.fillna(na_vals)
 
         # Checking segments names legality
@@ -289,16 +299,6 @@ class Inventory(object):
             if seg.strip("#") == "":
                 raise ValueError("The symbol \"#\" is reserved and can only "
                                  "be used in a shorthand name (#V# for a vowel, etc)")
-
-        drop = {"value", "UNICODE", "ALIAS",  # Legacy columns
-                "label", "tier"  # Unused Paralex columns
-                }
-        deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS"})
-        if not deprecated_cols.empty:
-            log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
-        for col in drop:
-            if col in table.columns:
-                table.drop(col, axis=1, inplace=True)
 
         # Separate shorthand table
         shorthand_selection = table[sound_id].str.match("^#.+#$")
@@ -625,8 +625,7 @@ def shorten_feature_names(table):
         raise ValueError("Using a second row of headers is not supported anymore.")
     short_features_names = []
     for name in table.columns:
-        if name in ["sound_id", "Seg.", "UNICODE", "ALIAS",
-                    "value", "label", "tier"] or len(name) <= 3:  # Not a feature name
+        if name == "sound_id" or len(name) <= 3:  # Not a feature name
             short_features_names.append(name)
         else:
             if name in _to_short_feature:  # Check standard names
