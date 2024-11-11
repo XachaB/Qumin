@@ -70,19 +70,18 @@ class Measures(object):
         is_one_pred = self.data.loc[:, "n_preds"] == n
         return self.data.loc[is_cond_ent & is_one_pred, :]
 
-    def get_mean(self, measure="cond_entropy", n=1, weighting=False):
+    def get_mean(self, weighting=False, **kwargs):
         """ Returns the average measures from the current run.
 
         Arguments:
-            measure (str): Kind of measure to return. Defaults to cond_entropy.
-            n (int): Number of predictors to include in the mean.
             weighting (boolean): Whether the cell frequencies should be used for weighting.
                 Defaults to False.
+            **kwargs: Keyword arguments are passed to `get_results()`
 
         Returns: mean (float)
         """
 
-        results = self.get_results()
+        results = self.get_results(**kwargs)
 
         # Try to weight
         if weighting:
@@ -104,13 +103,26 @@ class Measures(object):
             return None
 
         def compute_weight(row):
-            pred = row['predictor']
+            preds = row['predictor']
+            if isinstance(preds, str):
+                preds = (preds,)
+            orders = permutations(preds)
+            p_pred = 0
+
+            # Compute the probability of each permutation and sum them
+            for order in orders:
+                used = []
+                p_order = 1
+                # Probability of an ordered set of predictors
+                for pred in order:
+                    remain = ~cell_freq.index.isin(used)
+                    p_order *= cell_freq.loc[pred, 'result'] / cell_freq.loc[remain, "result"].sum()
+                    used.append(pred)
+                p_pred += p_order
+
+            # Probability of predicting the target cell among the cells other than the predictors
             out = row['predicted']
-            nopred = cell_freq[cell_freq.index != pred]
-            # Probability of predicting from the predictor cell
-            p_pred = cell_freq.loc[pred, 'result']
-            # Probability of predicting the target cell among the cells other than the predictor
-            p_out = (nopred.loc[nopred.index == out, 'result']/nopred.result.sum()).iloc[0]
+            p_out = cell_freq.loc[out, 'result'] / cell_freq.loc[~cell_freq.index.isin(preds), "result"].sum()
             return p_out*p_pred
 
         cell_freq = Frequencies.get_relative_freq(data="cells")
