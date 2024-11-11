@@ -89,10 +89,10 @@ def H_command(cfg, md):
                                            features=features)
 
         distrib.mutual_information()
-        mean1 = distrib.distribs[0].get_mean()
-        mean2 = distrib.distribs[1].get_mean()
-        mean3 = distrib.get_mean(measure="mutual_information")
-        mean4 = distrib.get_mean(measure="normalized_mutual_information")
+        mean1 = distrib.distribs[0].measures.get_mean()
+        mean2 = distrib.distribs[1].measures.get_mean()
+        mean3 = distrib.measures.get_mean(measure="mutual_information")
+        mean4 = distrib.measures.get_mean(measure="normalized_mutual_information")
         log.debug("Mean remaining H(c1 -> c2) for %s = %s", names[0], mean1)
         log.debug("Mean remaining H(c1 -> c2) for %s = %s", names[1], mean2)
         log.debug("Mean I(%s,%s) = %s", *names, mean3)
@@ -112,17 +112,18 @@ def H_command(cfg, md):
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
             distrib.one_pred_entropy()
-        mean = distrib.get_mean(weighting=cfg.entropy.weighting)
+        mean = distrib.measures.get_mean(weighting=cfg.entropy.weighting)
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
             distrib.one_pred_distrib_log()
+
     if preds:
         if cfg.entropy.importFile:
-            distrib.import_file(cfg.entropy.importFile)
+            distrib.measures.import_file(cfg.entropy.importFile)
 
         for n in preds:
             distrib.n_preds_entropy_matrix(n)
-            mean = distrib.get_mean(n=n, weighting=cfg.entropy.weighting)
+            mean = distrib.measures.get_mean(n=n, weighting=cfg.entropy.weighting)
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
             if verbose:
@@ -132,6 +133,6 @@ def H_command(cfg, md):
                                 {'computation': 'entropies',
                                  'content': 'results'})
     log.info("Writing to: {}".format(ent_file))
-    distrib.export_file(ent_file)
+    distrib.measures.export_file(ent_file)
 
     return ent_file

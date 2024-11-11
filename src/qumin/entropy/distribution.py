@@ -39,57 +39,14 @@ def dfsum(df, **kwargs):
     return S
 
 
-class PatternDistribution(object):
-    """Statistical distribution of patterns.
+class Measures(object):
+    """ Measures from a PatternDistribution object.
 
     Attributes:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            containing forms.
+        data (:class:`pandas:pandas.DataFrame`):
+            containing measures.    """
 
-        patterns (:class:`pandas:pandas.DataFrame`):
-            containing pairwise patterns of alternation.
-
-        classes (:class:`pandas:pandas.DataFrame`):
-            containing a representation of applicable patterns
-            from one cell to another.
-            Index are lemmas.
-
-        entropies (dict[int, pandas.DataFrame]):
-            dict mapping n to a dataframe containing the entropies
-            for the distribution :math:`P(c_{1}, ..., c_{n} → c_{n+1})`.
-    """
-
-    def __init__(self, paradigms, patterns, classes, name, features=None):
-        """Constructor for PatternDistribution.
-
-        Arguments:
-            paradigms (:class:`pandas:pandas.DataFrame`):
-                containing forms.
-            patterns (:class:`pandas:pandas.DataFrame`):
-                patterns (columns are pairs of cells, index are lemmas).
-            classes (:class:`pandas:pandas.DataFrame`):
-                classes of applicable patterns from one cell to another.
-            features:
-                optional table of features
-        """
-        self.name = name
-        self.paradigms = paradigms.map(lambda x: x[0] if x else x)
-        self.classes = classes
-        self.patterns = patterns.map(lambda x: (str(x),) if type(x) is not tuple else x)
-
-        if features is not None:
-            # Add feature names
-            features = features.apply(lambda x: x.name + "=" + x.apply(str), axis=0)
-            # To tuples
-            features = features.map(lambda x: (str(x),))
-            self.features_len = features.shape[1]
-            self.features = pd.DataFrame.sum(features, axis=1)
-        else:
-            self.features_len = 0
-            self.features = None
-            self.add_features = lambda x: x
-
-        self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
+    def __init__(self):
         self.data = pd.DataFrame(None,
                                  columns=["predictor",
                                           "predicted",
@@ -100,10 +57,32 @@ class PatternDistribution(object):
                                           "dataset"
                                           ])
 
-    def get_mean(self, measure="cond_entropy", n=1, weighting=False):
+    def get_results(self, measure="cond_entropy", n=1):
+        """ Returns the measures from the current run.
+
+        Arguments:
+            measure (str): Kind of measure to return. Defaults to cond_entropy.
+            n (int): Number of predictors to include in the mean.
+
+        Returns: measures (:class:`pandas:pandas.DataFrame`)
+        """
         is_cond_ent = self.data.loc[:, "measure"] == measure
         is_one_pred = self.data.loc[:, "n_preds"] == n
-        results = self.data.loc[is_cond_ent & is_one_pred, :].set_index(['predictor', 'predicted'])
+        return self.data.loc[is_cond_ent & is_one_pred, :]
+
+    def get_mean(self, measure="cond_entropy", n=1, weighting=False):
+        """ Returns the average measures from the current run.
+
+        Arguments:
+            measure (str): Kind of measure to return. Defaults to cond_entropy.
+            n (int): Number of predictors to include in the mean.
+            weighting (boolean): Whether the cell frequencies should be used for wheighting.
+                Defaults to False.
+
+        Returns: mean (float)
+        """
+
+        results = self.get_results().set_index(['predictor', 'predicted'])
 
         if weighting and Frequencies.source['cells'] != "empty":
             cell_freq = Frequencies.get_relative_freq(data="cells")
@@ -159,7 +138,71 @@ class PatternDistribution(object):
 
         data = pd.read_csv(filename)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(split_if_multiple)
-        self.data = pd.concat(self.data, data)
+        self.concat_data(data)
+
+    def concat_data(self, *args, **kwargs):
+        """ Adds data to the existing measures.
+
+        Arguments:
+            *args (:class:`pandas:pandas.DataFrame`): DataFrames to add.
+            **kwargs: optional keyword arguments to pass to `pandas.concat()`.
+        """
+
+        self.data = pd.concat([self.data, *args], **kwargs)
+
+
+class PatternDistribution(object):
+    """Statistical distribution of patterns.
+
+    Attributes:
+        paradigms (:class:`pandas:pandas.DataFrame`):
+            containing forms.
+
+        patterns (:class:`pandas:pandas.DataFrame`):
+            containing pairwise patterns of alternation.
+
+        classes (:class:`pandas:pandas.DataFrame`):
+            containing a representation of applicable patterns
+            from one cell to another.
+            Index are lemmas.
+
+        measures (:class:`Measures`):
+            Measures object containing a DataFrame with entropies
+            and other measures for the distribution.
+    """
+
+    def __init__(self, paradigms, patterns, classes, name, features=None):
+        """Constructor for PatternDistribution.
+
+        Arguments:
+            paradigms (:class:`pandas:pandas.DataFrame`):
+                containing forms.
+            patterns (:class:`pandas:pandas.DataFrame`):
+                patterns (columns are pairs of cells, index are lemmas).
+            classes (:class:`pandas:pandas.DataFrame`):
+                classes of applicable patterns from one cell to another.
+            features:
+                optional table of features
+        """
+        self.name = name
+        self.paradigms = paradigms.map(lambda x: x[0] if x else x)
+        self.classes = classes
+        self.patterns = patterns.map(lambda x: (str(x),) if type(x) is not tuple else x)
+
+        if features is not None:
+            # Add feature names
+            features = features.apply(lambda x: x.name + "=" + x.apply(str), axis=0)
+            # To tuples
+            features = features.map(lambda x: (str(x),))
+            self.features_len = features.shape[1]
+            self.features = pd.DataFrame.sum(features, axis=1)
+        else:
+            self.features_len = 0
+            self.features = None
+            self.add_features = lambda x: x
+
+        self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
+        self.measures = Measures()
 
     def add_features(self, series):
         return series + self.features[series.index]
@@ -192,8 +235,8 @@ class PatternDistribution(object):
 
         def check_zeros(n):
             log.info("Saving time by listing already known 0 entropies...")
-            if n - 1 in self.data.loc[:, "n_preds"]:
-                df = self.get_results(measure="cond_entropy", n=n - 1).groupby("predicted")
+            if n - 1 in self.measures.data.loc[:, "n_preds"]:
+                df = self.measures.get_results(measure="cond_entropy", n=n - 1).groupby("predicted")
                 if n - 1 == 1:
                     df = df.agg({"predictor": lambda ps: set(frozenset({pred}) for pred in ps)})
                 else:
@@ -257,7 +300,7 @@ class PatternDistribution(object):
 
         rows = chain(*[calc_condent(preds) for preds in combinations(columns, n)])
 
-        self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
+        self.measures.concat_data(pd.DataFrame(rows, columns=self.measures.data.columns))
 
     def one_pred_entropy(self):
         r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
@@ -304,7 +347,7 @@ class PatternDistribution(object):
             return row
 
         data = data.apply(calc_condent, axis=1)
-        self.data = pd.concat([self.data, data])
+        self.measures.concat_data(data)
 
     def one_pred_distrib_log(self):
         """Print a log of the probability distribution for one predictor.
@@ -552,14 +595,14 @@ class SplitPatternDistribution(PatternDistribution):
         self.one_pred_entropy()
 
         index = ["predictor", "predicted"]
-        left_ent = self.distribs[0].get_results()
-        right_ent = self.distribs[1].get_results()
+        left_ent = self.distribs[0].measures.get_results()
+        right_ent = self.distribs[1].measures.get_results()
 
         # For operations, we need all of these as simple series of values,
         # indexed by predictors & predicted
         H = left_ent.set_index(index).value
         Hprime = right_ent.set_index(index).value
-        Hjointe = self.get_results().set_index(index).value
+        Hjointe = self.measures.get_results().set_index(index).value
 
         I = H + Hprime - Hjointe
         NMI = (2 * I) / (H + Hprime)
@@ -575,4 +618,4 @@ class SplitPatternDistribution(PatternDistribution):
         NMI["dataset"] = self.name
         NMI["n_pairs"] = ""
 
-        self.data = pd.concat([self.data, left_ent, right_ent, I, NMI])
+        self.measures.concat_data(left_ent, right_ent, I, NMI)
