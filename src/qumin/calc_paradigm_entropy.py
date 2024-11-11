@@ -12,7 +12,6 @@ from hydra.core.hydra_config import HydraConfig
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
 from .representations import segments, patterns, create_paradigms, create_features
 from .representations.frequencies import Frequencies
-from itertools import permutations
 
 log = logging.getLogger()
 
@@ -113,7 +112,7 @@ def H_command(cfg, md):
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
             distrib.one_pred_entropy()
-        mean = distrib.get_mean()
+        mean = distrib.get_mean(weighting=cfg.entropy.weighting)
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
             distrib.one_pred_distrib_log()
@@ -123,7 +122,7 @@ def H_command(cfg, md):
 
         for n in preds:
             distrib.n_preds_entropy_matrix(n)
-            mean = distrib.get_mean(n=n)
+            mean = distrib.get_mean(n=n, weighting=cfg.entropy.weighting)
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
             if verbose:

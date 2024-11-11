@@ -9,10 +9,12 @@ import logging
 from collections import Counter, defaultdict
 from functools import reduce
 from itertools import combinations, chain
+from itertools import permutations
 
 import pandas as pd
 from tqdm import tqdm
 
+from ..representations.frequencies import Frequencies
 from . import cond_entropy
 
 log = logging.getLogger(__name__)
@@ -98,11 +100,32 @@ class PatternDistribution(object):
                                           "dataset"
                                           ])
 
-    def get_mean(self, measure="cond_entropy", n=1):
+    def get_mean(self, measure="cond_entropy", n=1, weighting=False):
         is_cond_ent = self.data.loc[:, "measure"] == measure
         is_one_pred = self.data.loc[:, "n_preds"] == n
+        results = self.data.loc[is_cond_ent & is_one_pred, :].set_index(['predictor', 'predicted'])
 
-        return self.data.loc[is_cond_ent & is_one_pred, "value"].mean()
+        if weighting and Frequencies.source['cells'] != "empty":
+            cell_freq = Frequencies.get_relative_freq(data="cells")
+            weight = results.value.copy()
+
+            for pred, out in permutations(cell_freq.index.to_list(), 2):
+                nopred = cell_freq[cell_freq.index != pred]
+
+                # Probability of predicting from the predictor cell
+                p_pred = cell_freq.loc[pred, 'result']
+                # Probability of predicting the target cell among the cells other than the predictor
+                p_out = (nopred.loc[nopred.index == out, 'result']/nopred.result.sum()).iloc[0]
+                # Setting the result
+                weight.loc[(pred, out)] = p_out * p_pred
+
+            mean = (weight * results.value).sum()
+        else:
+            if weighting:
+                log.warning("Couldn't find cell frequencies. Falling back on weighting by the number of pairs.")
+            mean = results.loc[:, "value"].mean()
+
+        return mean
 
     def export_file(self, filename):
         """ Export the data DataFrame to file
