@@ -133,6 +133,6 @@ def H_command(cfg, md):
                                 {'computation': 'entropies',
                                  'content': 'results'})
     log.info("Writing to: {}".format(ent_file))
-    distrib.measures.export_file(ent_file)
+    distrib.measures.export_file(ent_file, weighting=cfg.entropy.weighting)
 
     return ent_file

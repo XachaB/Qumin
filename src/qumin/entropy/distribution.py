@@ -76,41 +76,54 @@ class Measures(object):
         Arguments:
             measure (str): Kind of measure to return. Defaults to cond_entropy.
             n (int): Number of predictors to include in the mean.
-            weighting (boolean): Whether the cell frequencies should be used for wheighting.
+            weighting (boolean): Whether the cell frequencies should be used for weighting.
                 Defaults to False.
 
         Returns: mean (float)
         """
 
-        results = self.get_results().set_index(['predictor', 'predicted'])
+        results = self.get_results()
 
-        if weighting and Frequencies.source['cells'] != "empty":
-            cell_freq = Frequencies.get_relative_freq(data="cells")
-            weight = results.value.copy()
+        # Try to weight
+        if weighting:
+            weight = self._get_weights(results)
+            # Check that we got weight
+            if weight is not None:
+                return (weight * results.value).sum()
 
-            for pred, out in permutations(cell_freq.index.to_list(), 2):
-                nopred = cell_freq[cell_freq.index != pred]
+        return results.loc[:, "value"].mean()
 
-                # Probability of predicting from the predictor cell
-                p_pred = cell_freq.loc[pred, 'result']
-                # Probability of predicting the target cell among the cells other than the predictor
-                p_out = (nopred.loc[nopred.index == out, 'result']/nopred.result.sum()).iloc[0]
-                # Setting the result
-                weight.loc[(pred, out)] = p_out * p_pred
+    def _get_weights(self, data):
+        """ Returns weights computed from cell frequencies
 
-            mean = (weight * results.value).sum()
-        else:
-            if weighting:
-                log.warning("Couldn't find cell frequencies. Falling back on weighting by the number of pairs.")
-            mean = results.loc[:, "value"].mean()
+        Returns:
+            an array of weights (:class:`numpy:numpy.ndarray`)
+        """
+        if Frequencies.source['cells'] == "empty":
+            log.warning("Couldn't find cell frequencies. Falling back on weighting by the number of pairs.")
+            return None
 
-        return mean
+        def compute_weight(row):
+            pred = row['predictor']
+            out = row['predicted']
+            nopred = cell_freq[cell_freq.index != pred]
+            # Probability of predicting from the predictor cell
+            p_pred = cell_freq.loc[pred, 'result']
+            # Probability of predicting the target cell among the cells other than the predictor
+            p_out = (nopred.loc[nopred.index == out, 'result']/nopred.result.sum()).iloc[0]
+            return p_out*p_pred
 
-    def export_file(self, filename):
+        cell_freq = Frequencies.get_relative_freq(data="cells")
+        weight = data.apply(compute_weight, axis=1)
+        return weight.values
+
+    def export_file(self, filename, weighting=False):
         """ Export the data DataFrame to file
 
         Arguments:
             filename: the file's path.
+             weighting (boolean): Whether weights should be returned from cell frequencies.
+                Defaults to False.
         """
 
         def join_if_multiple(preds):
@@ -119,6 +132,10 @@ class Measures(object):
             return preds
 
         data = self.data.copy()
+        if weighting:
+            weight = self._get_weights(data)
+            if weight is not None:
+                data.loc[:, 'weight'] = weight.round(5)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
         if "entropy" in data.columns:
             data.loc[:, "entropy"] = value_norm(data.loc[:, "entropy"])
