@@ -974,7 +974,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
         def _best_pattern(row):
             lex, a, b = row
-            if (a, b) != ('', ''):
+            if a != '' and b != '':
                 return attribute_best_pattern(sorted_collection, lex, a, b)
             return None
 
