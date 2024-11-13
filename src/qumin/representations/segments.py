@@ -57,7 +57,7 @@ class Form(str):
     @classmethod
     def from_segmented_str(cls, segmented):
         stripped = segmented.strip(" ")
-        self = str.__new__(cls, stripped + " ")
+        self = cls.__new__(cls, stripped + " ")
         self.tokens = stripped.split()
         return self
 
