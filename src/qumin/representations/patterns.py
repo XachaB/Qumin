@@ -988,7 +988,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
     tqdm.pandas(leave=False, disable=disable_tqdm)
     paradigms_dic = {cells: find_patterns_in_col(df, pat_dict)
                      .rename({cells[0]: "form_a", cells[1]: "form_b"}, axis=1)
-                     .set_index(['lexeme'] + ['form_a', 'form_b']).pattern
+                     .set_index(['lexeme', 'form_a', 'form_b']).pattern
                      for cells, df in tqdm(paradigms_dic.items())}
     return paradigms_dic, pat_dict
 
