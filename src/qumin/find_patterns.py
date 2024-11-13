@@ -6,6 +6,7 @@ Author: Sacha Beniamine.
 """
 import logging
 from itertools import combinations
+import pandas as pd
 
 from .clustering import find_microclasses
 from .representations import patterns, segments, create_paradigms
@@ -53,7 +54,6 @@ def pat_command(cfg, md):
                                  sample=cfg.sample,
                                  most_freq=cfg.most_freq
                                  )
-
     log.info("Looking for patterns...")
     if kind.startswith("endings"):
         patterns_df = patterns.find_endings(paradigms)
@@ -61,53 +61,57 @@ def pat_command(cfg, md):
             patterns_df = patterns.make_pairs(patterns_df)
             log.info(patterns_df)
     elif is_of_pattern_type:
-        patterns_df, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=cfg.pats.optim_mem,
-                                                  gap_prop=cfg.pats.gap_proportion)
+        patterns_dfs, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=cfg.pats.optim_mem,
+                                                   gap_prop=cfg.pats.gap_proportion)
     else:
-        patterns_df = patterns.find_alternations(paradigms, method[kind])
+        patterns_dfs = patterns.find_alternations(paradigms, method[kind])
 
     if merge_cols and not cfg.pats.merged:  # Re-build duplicate columns
-        for a, b in patterns_df.columns:
+        for a, b in patterns_dfs.keys():
             if "#" in a:
                 cols = a.split("#")
                 for c in cols:
-                    patterns_df[(c, b)] = patterns_df[(a, b)]
-                patterns_df.drop((a, b), axis=1, inplace=True)
+                    patterns_dfs[(c, b)] = patterns_dfs[(a, b)]
+                del patterns_dfs[(a, b)]
                 for x, y in combinations(cols, 2):
-                    patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
+                    patterns_dfs[(x, y)].iloc[:] = patterns.Pattern.new_identity((x, y))
 
-        for a, b in patterns_df.columns:
+        for a, b in patterns_dfs.keys():
             if "#" in b:
                 cols = b.split("#")
                 for c in cols:
-                    patterns_df[(a, c)] = patterns_df[(a, b)]
-                patterns_df.drop((a, b), axis=1, inplace=True)
+                    patterns_dfs[(a, c)] = patterns_dfs[(a, b)]
+                patterns_dfs.drop((a, b), axis=1, inplace=True)
                 for x, y in combinations(cols, 2):
-                    patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
+                    patterns_dfs[(x, y)].iloc[:] = patterns.Pattern.new_identity((x, y))
 
-    if patterns_df.isnull().values.any():
+    # Concatenate the patterns as a dict. Cell names are turned into columns.
+    patterns_df = pd.concat(patterns_dfs, names=['name_a', 'name_b']).reset_index()
+
+    empty = (patterns_df.form_a != '') & (patterns_df.form_b != '') & (patterns_df.pattern.isnull())
+    if empty.any():
         log.warning("Some words don't have any patterns "
                     "-- This means something went wrong."
                     "Please report this as a bug !")
-        log.warning(patterns_df[patterns_df.isnull().values])
+        log.warning(patterns_df[empty])
 
-    microclasses = find_microclasses(patterns_df.map(str))
-    filename = md.register_file("microclasses.txt",
-                                {'computation': cfg.pats.kind, 'content': 'microclasses'})
-    log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
-    with open(filename, "w", encoding="utf-8") as flow:
-        for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
-            flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
+    # microclasses = find_microclasses(patterns_df.map(str))
+    # filename = md.register_file("microclasses.txt",
+    #                             {'computation': cfg.pats.kind, 'content': 'microclasses'})
+    # log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
+    # with open(filename, "w", encoding="utf-8") as flow:
+    #     for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
+    #         flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
     patfilename = md.register_file(kind + ".csv",
                                    {'computation': cfg.pats.kind, 'content': 'patterns'})
     log.info("Writing patterns (importable by other scripts) to %s", patfilename)
     if is_of_pattern_type:
         if cfg.pats.optim_mem:
-            patterns.to_csv(patterns_df, patfilename, pretty=True)  # uses str because optim_mem already used repr
+            patterns.to_csv(patterns_df, patfilename, pretty=True, only_id=True)  # uses str because optim_mem already used repr
             log.warning("Since you asked for args.optim_mem, I will not export the human_readable file ")
         else:
-            patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
+            patterns.to_csv(patterns_df, patfilename, pretty=False, only_id=True)  # uses repr
             pathumanfilename = md.register_file("human_readable_" + kind + ".csv",
                                                 {'computation': cfg.pats.kind, 'content': 'patterns_human'})
             log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
