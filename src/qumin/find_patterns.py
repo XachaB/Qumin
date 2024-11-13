@@ -95,13 +95,13 @@ def pat_command(cfg, md):
                     "Please report this as a bug !")
         log.warning(patterns_df[empty])
 
-    # microclasses = find_microclasses(patterns_df.map(str))
-    # filename = md.register_file("microclasses.txt",
-    #                             {'computation': cfg.pats.kind, 'content': 'microclasses'})
-    # log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
-    # with open(filename, "w", encoding="utf-8") as flow:
-    #     for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
-    #         flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
+    microclasses = find_microclasses(patterns_df.map(str))
+    filename = md.register_file("microclasses.txt",
+                                {'computation': cfg.pats.kind, 'content': 'microclasses'})
+    log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
+    with open(filename, "w", encoding="utf-8") as flow:
+        for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
+            flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
     patfilename = md.register_file(kind + ".csv",
                                    {'computation': cfg.pats.kind, 'content': 'patterns'})
