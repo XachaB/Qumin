@@ -1220,7 +1220,7 @@ def to_csv(dataframe, filename, pretty=False, only_id=False):
     export = dataframe.copy()
     export.pattern = export.pattern.map(export_fun)
     if only_id:
-        export[['form_a', 'form_b']] = \
+        export[['form_x', 'form_y']] = \
             export[['form_x', 'form_y']].map(lambda x: x.id if x != '' else x)
     export.to_csv(filename, sep=",", index=False)
 
@@ -1240,46 +1240,48 @@ def from_csv(filename, paradigms, defective=True, overabundant=True):
     #     splitted = item.strip("'() ").split(",")
     #     return splitted[0].strip("' "), splitted[1].strip("' ")
 
-    def read_pattern(raw_value, names, collection):
-        result = []
-        if raw_value and not pd.isnull(raw_value):
-            for string in raw_value.split(";"):
-                if string in collection[names]:
-                    result.append(collection[names][string])
-                else:
-                    pattern = Pattern._from_str(names, string)
-                    collection[names][string] = pattern
-                    result.append(pattern)
-            if overabundant:
-                return PatternCollection(result)
+    def read_pattern(row, collection):
+        """
+        Reads patterns from string representations.
+        Arguments:
+            row (pandas.Series): a pattern file row, containing
+                a string representation of a pattern and cell names.
+            collection (defaultdict): a defaultdict to avoid recomputing
+                patterns from strings.
+        """
+        cells = (row.cell_x, row.cell_y)
+        string = row.pattern
+        if string and not pd.isnull(string):
+            if string in collection[cells]:
+                result = collection[cells][string]
             else:
-                return PatternCollection([result[0]])
+                pattern = Pattern._from_str(cells, string)
+                collection[cells][string] = pattern
+                result = pattern
+            return result
         if defective:
-            return PatternCollection([None])
+            return None
         else:
             return np.nan
 
-    def str_to_pat_column(col, collection):
-        names = col.name
-        collection[names] = {}
-        breakpoint()
-        return col.apply(read_pattern, args=(names, collection))
-
-    collection = {}
+    collection = defaultdict(lambda: defaultdict(str))
     table = pd.read_csv(filename, sep=",", header=0, dtype="str")
 
     is_alt_str = table.pattern.map(lambda x: type(x) is str and "/" not in x).all()
     if is_alt_str:
         log.warning("These are not patterns but alternation strings")
         return table, {}
-    table[['form_x', 'form_y']] = table[['form_x', 'form_y']].replace(paradigms.phon_form.to_dict())
-    breakpoint()
 
-    pat_table = table.groupby('lexeme').pattern.apply(str_to_pat_column, collection=collection)
+    # Restore phon_form based on paradigms and form_ids
+    table[['form_x', 'form_y']] = table[['form_x', 'form_y']].replace(paradigms.form.to_dict())
+
+    table['pattern'] = table.apply(read_pattern, collection=collection, axis=1)
 
     if not defective:
-        pat_table.dropna(axis=0, inplace=True)
+        table.dropna(axis=0, subset="pattern", inplace=True)
+
+    if overabundant:
+        raise NotImplementedError
 
     collection = {column: list(collection[column].values()) for column in collection}
-
-    return pat_table, collection
+    return table, collection

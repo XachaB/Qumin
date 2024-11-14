@@ -36,35 +36,39 @@ def H_command(cfg, md):
     if cells and len(cells) == 1:
         raise ValueError("You can't provide only one cell.")
 
+    # Initialize segment inventory for phonological computations
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
-    paradigms = create_paradigms(md.datasets[0], defective=True, overabundant=False,
+    paradigms = create_paradigms(md.datasets[0], defective=cfg.entropy.defective, overabundant=False,
                                  merge_cols=cfg.entropy.merged,
                                  segcheck=True, cells=cells,
                                  sample=cfg.sample,
                                  most_freq=cfg.most_freq)
 
     pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], paradigms,
-                                           defective=True,
+                                           defective=cfg.entropy.defective,
                                            overabundant=False)
 
-    if pat_table.shape[0] < paradigms.shape[0]:
-        log.info(
-            "It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
-        paradigms = paradigms[(paradigms != "").all(axis=1)]
+    # Raise error if wrong parameters.
+    if cfg.entropy.defective and (paradigms.form == '').any() and table.pattern.notna().all():
+        raise ValueError("It looks like you ignored defective rows when computing patterns. Set entropy.defective=False.")
 
-    if verbose and len(pat_table.columns) > 10:
+    if verbose and len(pat_table.cell_a.unique()) > 10:
         log.warning("Using verbose mode is strongly "
                     "discouraged on large (>10 cells) datasets."
                     "You should probably stop this process now.")
 
     if cfg.entropy.features is not None:
+        # TODO
+        raise NotImplementedError
         features = create_features(md, cfg.entropy.features)
     else:
         features = None
 
     if md.bipartite:
+        # TODO
+        raise NotImplementedError
         names = [p.name for _, p in md.datasets]
         paradigms2 = create_paradigms(md.datasets[0], defective=True,
                                       overabundant=False,
