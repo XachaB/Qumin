@@ -324,6 +324,7 @@ class PatternDistribution(object):
         log.debug("Showing distributions for "
                   + str(len(cond_events))
                   + " classes")
+        summary = []
 
         for i, (classe, members) in enumerate(sorted(cond_events,
                                                      key=lambda x: len(x[1]),
@@ -347,6 +348,7 @@ class PatternDistribution(object):
             # Get the slow computation results
             table['proba'] = table.subclass_size / table.subclass_size.sum()
             ent = 0 + entropy(table.proba)
+            summary.append([table.subclass_size.sum(), ent])
 
             # Log the subclass properties
             headers = ("Pattern", "Example",
@@ -356,7 +358,13 @@ class PatternDistribution(object):
             log.debug(f"\n## Class n°{i} ({len(members)} members), H={ent}")
             log.debug("\n" + table.to_markdown())
 
-            return ent
+        log.debug('\n## Class summary')
+        summary = pd.DataFrame(summary, columns=['Size', 'H(pattern|class)'])
+        summary.index.name = "Class"
+        sum_entropy = (summary.iloc[:, -2] * summary.iloc[:, -1] / summary.iloc[:, -2].sum()).sum()
+        log.debug(f'\nAv. conditional entropy: H(pattern|class)={sum_entropy}')
+        log.debug("\n" + summary.to_markdown())
+        return sum_entropy
 
     def n_preds_distrib_log(self, n):
         r"""Print a log of the probability distribution for n predictors.
