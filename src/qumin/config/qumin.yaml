@@ -31,7 +31,9 @@ data: null            # path to paralex.package.json paradigms, segments
 cells: null           # List of cells to use (subset)
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
 most_freq: null       # restrict to N most frequent items (use the lexeme "frequency" column)
-sample: null        # (int) A number of lexemes to sample, for debug purposes
+sample: null          # (int) A number of lexemes to sample, for debug purposes
+defective: False      # Whether to keep defective entries
+overabundant: False   # Whether to keep overabundant entries
 
 
 lattice:
@@ -70,7 +72,6 @@ entropy:
                       # with n-1 predictors, allows for acceleration on nPreds entropy computation.
   merged: False       # Whether identical columns are merged in the input.
   stacked: False      # whether to stack results in long form
-  defective: False    # Whether to keep defective entries
 
 eval:
   iter: 10            # How many 90/10 train/test folds to do.
@@ -79,8 +80,6 @@ eval:
 pats:
   kind: patternsPhonsim   # Options are (see docs): endings, endingsPairs, globalAlt, localAlt, endingsDisc,
                           # patternsLevenshtein, patternsPhonsim, patternsSuffix, patternsPrefix, patternsBaseline
-  defective: False         # Whether to keep defective entries
-  overabundant: False     # Whether to keep overabundant entries
   gap_proportion: .4      # Proportion of the median score used to set the gap score
   optim_mem: False        # Attempt to use a little bit less memory
   merged: False           # Whether to merge identical columns in the data

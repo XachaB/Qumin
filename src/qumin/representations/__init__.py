@@ -81,10 +81,12 @@ def create_paradigms(dataset, fillna=True, segcheck=False,
     lexemes, cell_col, form_col = ("lexeme", "cell", "phon_form")
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False,
                             usecols=["form_id", lexemes, cell_col, form_col])
-
     if not defective:
         defective_lexemes = set(paradigms.loc[paradigms[form_col].isna(), lexemes].unique())
         paradigms = paradigms[~paradigms.loc[:, lexemes].isin(defective_lexemes)]
+
+    if not overabundant:
+        paradigms.drop_duplicates(['lexeme', 'cell'], inplace=True)
 
     if most_freq:
         inflected = paradigms.loc[:, lexemes].unique()

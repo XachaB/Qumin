@@ -18,8 +18,8 @@ def pat_command(cfg, md):
     r"""Find pairwise alternation patterns from paradigms."""
     # Loading files and paths
     kind = cfg.pats.kind
-    defective = cfg.pats.defective
-    overabundant = cfg.pats.overabundant
+    defective = cfg.defective
+    overabundant = cfg.overabundant
     cells = cfg.cells
     if cells and len(cells) == 1:
         raise ValueError("You can't provide only one cell.")

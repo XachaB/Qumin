@@ -40,19 +40,19 @@ def H_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
-    paradigms = create_paradigms(md.datasets[0], defective=cfg.entropy.defective, overabundant=False,
+    paradigms = create_paradigms(md.datasets[0], defective=cfg.defective, overabundant=False,
                                  merge_cols=cfg.entropy.merged,
                                  segcheck=True, cells=cells,
                                  sample=cfg.sample,
                                  most_freq=cfg.most_freq)
 
     pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], paradigms,
-                                           defective=cfg.entropy.defective,
+                                           defective=cfg.defective,
                                            overabundant=False)
 
     # Raise error if wrong parameters.
-    if cfg.entropy.defective and (paradigms.form == '').any() and pat_table.pattern.notna().all():
-        raise ValueError("It looks like you ignored defective rows when computing patterns. Set entropy.defective=False.")
+    if cfg.defective and (paradigms.form == '').any() and pat_table.pattern.notna().all():
+        raise ValueError("It looks like you ignored defective rows when computing patterns. Set defective=False.")
 
     if verbose and len(pat_table.cell_a.unique()) > 10:
         log.warning("Using verbose mode is strongly "
