@@ -54,7 +54,7 @@ def H_command(cfg, md):
     if cfg.defective and (paradigms.form == '').any() and pat_table.pattern.notna().all():
         raise ValueError("It looks like you ignored defective rows when computing patterns. Set defective=False.")
 
-    if verbose and len(pat_table.cell_a.unique()) > 10:
+    if verbose and len(pat_table.cell_x.unique()) > 10:
         log.warning("Using verbose mode is strongly "
                     "discouraged on large (>10 cells) datasets."
                     "You should probably stop this process now.")
@@ -116,9 +116,7 @@ def H_command(cfg, md):
         mean = distrib.get_results().loc[:, "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
-            # TODO
-            raise NotImplementedError
-            distrib.one_pred_distrib_log()
+            distrib.one_pred_entropy(debug=verbose)
     if preds:
         # TODO
         raise NotImplementedError

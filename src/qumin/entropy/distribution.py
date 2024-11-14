@@ -13,7 +13,7 @@ from itertools import combinations, chain
 import pandas as pd
 from tqdm import tqdm
 
-from . import cond_entropy
+from . import cond_entropy, entropy
 
 log = logging.getLogger(__name__)
 
@@ -223,8 +223,28 @@ class PatternDistribution(object):
 
         self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
 
-    def one_pred_entropy(self):
-        r"""Return a:class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
+    def prepare_data(self, patterns, debug=False):
+        """
+        Prepares the dataframe to store the results for an entropy computation
+        """
+        rows = patterns.cell_x.unique()
+
+        data = pd.DataFrame(index=rows,
+                            columns=rows).reset_index(drop=False,
+                                                      names="predictor").melt(id_vars="predictor",
+                                                                              var_name="predicted",
+                                                                              value_name="value")
+        data = data[data.predictor != data.predicted]  # drop a -> a cases
+        data.loc[:, "n_pairs"] = None
+        data.loc[:, "n_preds"] = 1
+        data.loc[:, "measure"] = "cond_entropy" if not debug else "cond_entropy_debug"
+        data.loc[:, "dataset"] = self.name
+        data.set_index(['predictor', 'predicted'], inplace=True)
+
+        return data
+
+    def one_pred_entropy(self, debug=False):
+        r"""Return a :class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
 
@@ -241,37 +261,41 @@ class PatternDistribution(object):
                 H( patterns_{c1, c2} | classes_{c1, c2} )
         """
         log.info("Computing c1 → c2 entropies")
+        log.debug("Logging one predictor probabilities")
+        log.debug(" P(x → y) = P(x~y | Class(x))")
 
         # For faster access
         patterns = self.patterns
-        rows = patterns.cell_x.unique()
-
-        data = pd.DataFrame(index=rows,
-                            columns=rows).reset_index(drop=False,
-                                                      names="predictor").melt(id_vars="predictor",
-                                                                              var_name="predicted",
-                                                                              value_name="value")
-        data = data[data.predictor != data.predicted]  # drop a -> a cases
-        data.loc[:, "n_pairs"] = None
-        data.loc[:, "n_preds"] = 1
-        data.loc[:, "measure"] = "cond_entropy"
-        data.loc[:, "dataset"] = self.name
-        data.set_index(['predictor', 'predicted'], inplace=True)
+        data = self.prepare_data(patterns, debug=debug)
 
         def calc_condent(group, data):
+            """
+            Computes the conditional entropy for a pair of cells.
+
+            Arguments:
+                group (pandas.DataFrame):
+                    Subset of a patterns table for a single pair.
+                data (pandas.DataFrame):
+                    DataFrame to store computation results.
+            """
             cells = group.name
             selector = group.pattern.notna()
             data.loc[cells, "n_pairs"] = sum(selector)
             # TODO reimplement features
             # known_ab = self.add_features(classes[(a, b)])
-            data.loc[cells, "value"] = cond_entropy(group.pattern.apply(lambda x: (x,)),
-                                                    group.applicable,
-                                                    subset=selector)
+            if debug:
+                data.loc[cells, "value"] = cond_entropy(group.pattern.apply(lambda x: (x,)),
+                                                        group.applicable,
+                                                        subset=selector)
+            else:
+                data.loc[cells, "value"] = self.cond_entropy_log(group,
+                                                                 group.applicable,
+                                                                 subset=selector)
 
         patterns.groupby(['cell_x', 'cell_y']).apply(calc_condent, data=data)
         self.data = pd.concat([self.data, data.reset_index()])
 
-    def one_pred_distrib_log(self):
+    def cond_entropy_log(self, group, classes, subset=None):
         """Print a log of the probability distribution for one predictor.
 
         Writes down the distributions
@@ -281,69 +305,58 @@ class PatternDistribution(object):
         Also writes the entropy of the distributions.
         """
 
-        def count_with_examples(row, counter, examples, paradigms, cells):
-            c1, c2 = cells
-            lemma, pattern = row
-            example = "{}: {} → {}".format(lemma,
-                                           paradigms.at[lemma, c1],
-                                           paradigms.at[lemma, c2])
-            counter[pattern] += 1
-            examples[pattern] = example
+        def subclass_summary(subgroup):
+            """ Produces a nice summary for a subclass"""
+            ex = subgroup.iloc[0, :]
+            return pd.Series([
+                              f"{ex.lexeme}: {ex.form_x} → {ex.form_y}",
+                              subgroup.shape[0]
+                             ],
+                             index=["example", 'subclass_size'])
 
-        log.info("Printing log for P(c1 → c2).")
-        log.debug("Logging one predictor probabilities")
-        log.debug(" P(x → y) = P(x~y | Class(x))")
+        cells = group.name
+        log.debug("\n# Distribution of {}→{} \n".format(cells[0], cells[1]))
 
-        patterns = self.patterns.map(lambda x: x[0])
+        A = group[subset]
+        B = self.add_features(group.applicable[subset])
+        cond_events = A.groupby(B, sort=False)
 
-        for column in patterns:
-            for pred, out in [column, column[::-1]]:
-                selector = self.hasforms[pred] & self.hasforms[out]
-                log.debug("\n# Distribution of {}→{} \n".format(pred, out))
+        log.debug("Showing distributions for "
+                  + str(len(cond_events))
+                  + " classes")
 
-                A = patterns.loc[selector, :][column]
-                B = self.add_features(self.classes.loc[selector, :][(pred, out)])
-                cond_events = A.groupby(B, sort=False)
+        for i, (classe, members) in enumerate(sorted(cond_events,
+                                                     key=lambda x: len(x[1]),
+                                                     reverse=True)):
+            # Group by patterns and build a summary
+            table = members.groupby('pattern').apply(subclass_summary)
 
-                log.debug("Showing distributions for "
-                          + str(len(cond_events))
-                          + " classes")
+            if self.features is not None:
+                # TODO
+                raise NotImplementedError
+                log.debug("Features:"
+                          + " ".join(str(x)
+                                     for x in classe[-self.features_len:]))
+                classe = classe[:-self.features_len]
 
-                for i, (classe, members) in enumerate(sorted(cond_events,
-                                                             key=lambda x: len(x[1]),
-                                                             reverse=True)):
-                    headers = ("Pattern", "Example",
-                               "Size", "P(Pattern|class)")
-                    table = []
+            # List possible patterns that are not used in this class.
+            for pattern in classe:
+                if pattern not in table.index:
+                    table.loc[str(pattern), :] = ["-", 0]
 
-                    log.debug("\n## Class n°%s (%s members).", i, len(members))
-                    counter = Counter()
-                    examples = defaultdict()
-                    members.reset_index().apply(count_with_examples,
-                                                args=(counter,
-                                                      examples,
-                                                      self.paradigms,
-                                                      (pred, out)),
-                                                axis=1)
-                    total = sum(list(counter.values()))
-                    if self.features is not None:
-                        log.debug("Features:"
-                                  + " ".join(str(x)
-                                             for x in classe[-self.features_len:]))
-                        classe = classe[:-self.features_len]
+            # Get the slow computation results
+            table['proba'] = table.subclass_size / table.subclass_size.sum()
+            ent = 0 + entropy(table.proba)
 
-                    for my_pattern in classe:
-                        if my_pattern in counter:
-                            row = (str(my_pattern),
-                                   examples[my_pattern],
-                                   counter[my_pattern],
-                                   counter[my_pattern] / total)
-                        else:
-                            row = (str(my_pattern), "-", 0, 0)
-                        table.append(row)
+            # Log the subclass properties
+            headers = ("Pattern", "Example",
+                       "Size", "P(Pattern|class)")
+            table.reset_index(inplace=True)
+            table.columns = headers
+            log.debug(f"\n## Class n°{i} ({len(members)} members), H={ent}")
+            log.debug("\n" + table.to_markdown())
 
-                    log.debug("\n" + pd.DataFrame(table,
-                                                  columns=headers).to_markdown())
+            return ent
 
     def n_preds_distrib_log(self, n):
         r"""Print a log of the probability distribution for n predictors.
