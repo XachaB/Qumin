@@ -41,39 +41,28 @@ class PatternDistribution(object):
     """Statistical distribution of patterns.
 
     Attributes:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            containing forms.
-
         patterns (:class:`pandas:pandas.DataFrame`):
-            containing pairwise patterns of alternation.
-
-        classes (:class:`pandas:pandas.DataFrame`):
-            containing a representation of applicable patterns
-            from one cell to another.
-            Index are lemmas.
+            A table where each row describes an alternation between
+            two cells forms belonging to different cells of the same lexeme.
+            The row also contains the correct pattern and the set of applicable patterns.
 
         entropies (dict[int, pandas.DataFrame]):
             dict mapping n to a dataframe containing the entropies
             for the distribution :math:`P(c_{1}, ..., c_{n} → c_{n+1})`.
     """
 
-    def __init__(self, paradigms, patterns, classes, name, features=None):
+    def __init__(self, patterns, name, features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
-            paradigms (:class:`pandas:pandas.DataFrame`):
-                containing forms.
             patterns (:class:`pandas:pandas.DataFrame`):
-                patterns (columns are pairs of cells, index are lemmas).
-            classes (:class:`pandas:pandas.DataFrame`):
-                classes of applicable patterns from one cell to another.
+                Table containing forms and patterns.
+            name (str): dataset name.
             features:
                 optional table of features
         """
         self.name = name
-        self.paradigms = paradigms.map(lambda x: x[0] if x else x)
-        self.classes = classes
-        self.patterns = patterns.map(lambda x: (str(x),) if type(x) is not tuple else x)
+        self.patterns = patterns
 
         if features is not None:
             # Add feature names
@@ -87,7 +76,6 @@ class PatternDistribution(object):
             self.features = None
             self.add_features = lambda x: x
 
-        self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
         self.data = pd.DataFrame(None,
                                  columns=["predictor",
                                           "predicted",
@@ -256,8 +244,7 @@ class PatternDistribution(object):
 
         # For faster access
         patterns = self.patterns
-        classes = self.classes
-        rows = list(self.paradigms.columns)
+        rows = patterns.cell_x.unique()
 
         data = pd.DataFrame(index=rows,
                             columns=rows).reset_index(drop=False,
@@ -269,18 +256,20 @@ class PatternDistribution(object):
         data.loc[:, "n_preds"] = 1
         data.loc[:, "measure"] = "cond_entropy"
         data.loc[:, "dataset"] = self.name
+        data.set_index(['predictor', 'predicted'], inplace=True)
 
-        def calc_condent(row):
-            a, b = row["predictor"], row["predicted"]
-            selector = self.hasforms[a] & self.hasforms[b]
-            row["n_pairs"] = sum(selector)
-            known_ab = self.add_features(classes[(a, b)])
-            pats = patterns[(a, b)] if (a, b) in patterns else patterns[(b, a)]
-            row["value"] = cond_entropy(pats, known_ab, subset=selector)
-            return row
+        def calc_condent(group, data):
+            cells = group.name
+            selector = group.pattern.notna()
+            data.loc[cells, "n_pairs"] = sum(selector)
+            # TODO reimplement features
+            # known_ab = self.add_features(classes[(a, b)])
+            data.loc[cells, "value"] = cond_entropy(group.pattern.apply(lambda x: (x,)),
+                                                    group.applicable,
+                                                    subset=selector)
 
-        data = data.apply(calc_condent, axis=1)
-        self.data = pd.concat([self.data, data])
+        patterns.groupby(['cell_x', 'cell_y']).apply(calc_condent, data=data)
+        self.data = pd.concat([self.data, data.reset_index()])
 
     def one_pred_distrib_log(self):
         """Print a log of the probability distribution for one predictor.

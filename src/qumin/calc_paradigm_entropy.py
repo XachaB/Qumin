@@ -104,12 +104,9 @@ def H_command(cfg, md):
     else:
         log.info("Looking for classes of applicable patterns")
         pat_table = patterns.find_applicable(pat_table, pat_dic)
-        breakpoint()
         log.debug("Patterns with classes:")
         log.debug(pat_table)
-        distrib = PatternDistribution(paradigms,
-                                      pat_table,
-                                      classes,
+        distrib = PatternDistribution(pat_table,
                                       "&".join([p.name for p in md.datasets]),
                                       features=features)
 
@@ -119,8 +116,12 @@ def H_command(cfg, md):
         mean = distrib.get_results().loc[:, "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
+            # TODO
+            raise NotImplementedError
             distrib.one_pred_distrib_log()
     if preds:
+        # TODO
+        raise NotImplementedError
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
 
