@@ -86,9 +86,9 @@ def pat_command(cfg, md):
                     patterns_dfs[(x, y)].iloc[:] = patterns.Pattern.new_identity((x, y))
 
     # Concatenate the patterns as a dict. Cell names are turned into columns.
-    patterns_df = pd.concat(patterns_dfs, names=['name_a', 'name_b']).reset_index()
+    patterns_df = pd.concat([df for df in patterns_dfs.values()]).reset_index(drop=True)
 
-    empty = (patterns_df.form_a != '') & (patterns_df.form_b != '') & (patterns_df.pattern.isnull())
+    empty = (patterns_df.form_x != '') & (patterns_df.form_y != '') & (patterns_df.pattern.isnull())
     if empty.any():
         log.warning("Some words don't have any patterns "
                     "-- This means something went wrong."

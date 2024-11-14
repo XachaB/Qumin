@@ -122,16 +122,18 @@ def merge_duplicate_columns(df, sep=";", keep_names=True):
             columns by merging them onto the columns we keep.
     """
     names = defaultdict(list)
-    l = len(df.columns)
+    col = df.cell.unique()
+    n_col = len(col)
 
-    for c in tqdm(df.columns):
-        hashable = tuple(df.loc[:, c])
+    for c in tqdm(col):
+        hashable = tuple(sorted(df.loc[df.cell == c, ['phon_form', 'lexeme']]
+                                .apply(tuple, axis=1).to_list()))
         names[hashable].append(c)
 
-    keep = [names[i][0] for i in names]
-    new_df = df[keep]
+    keep = [i[0] for i in names.values()]
+    new_df = df[df.cell.isin(keep)]
     if keep_names:
-        new_df.columns = [sep.join(names[i]) for i in names]
+        new_df.loc[:, 'cell'] = new_df.loc[:, 'cell'].replace({i[0]: sep.join(i) for i in names.values()})
 
-    log.info("Reduced from %s to %s columns", l, len(new_df.columns))
+    log.info("Reduced from %s to %s columns", n_col, len(new_df.cell.unique()))
     return new_df

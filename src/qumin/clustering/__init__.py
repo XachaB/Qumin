@@ -28,9 +28,9 @@ def find_microclasses(paradigms, freqs=None):
 
     # Reformating to wide format required here.
     data = paradigms.copy()
-    data['cells'] = list(zip(data.name_a, data.name_b))
-    data.drop(['name_a', 'name_b'], axis=1, inplace=True)
-    data.set_index(['cells', 'lexeme', 'form_a', 'form_b'], inplace=True)
+    data['cells'] = list(zip(data.cell_x, data.cell_y))
+    data.drop(['cell_x', 'cell_y'], axis=1, inplace=True)
+    data.set_index(['cells', 'lexeme', 'form_x', 'form_y'], inplace=True)
     data = data.groupby(['lexeme', 'cells']).pattern.apply(lambda x: tuple(sorted(set(x)))).unstack('cells')
 
     grouped = data.fillna(0).groupby(list(data.columns))

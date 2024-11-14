@@ -860,14 +860,14 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                                   "Call find_patterns(paradigms, method) "
                                   "rather than this function.".format(scoring_method))
 
-    cols = paradigms.columns
-    pairs = list(combinations(cols, 2))
+    cells = paradigms.cell.unique()
+    pairs = list(combinations(cells, 2))
 
-    paradigms_dic = {pair: paradigms[list(pair)]
-                     .explode(pair[0])
-                     .explode(pair[1])
-                     .reset_index()
-                     for pair in pairs}
+    paradigms_dic = {}
+    for a, b in pairs:
+        paradigms_dic[(a, b)] = pd.merge(paradigms.loc[paradigms.cell == a],
+                                         paradigms.loc[paradigms.cell == b],
+                                         on="lexeme")
 
     pat_dict = {}
 
@@ -879,12 +879,13 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
             row (pandas.Series): a dataframe row containing the two forms.
             collection (defaultdict): the patterns collection
         """
-        cells = list(row.index)[1:]
-        _, a, b = row.values
+        cells = [row.cell_x, row.cell_y]
+        lex, a, b = row.lexeme, row.form_x, row.form_y
+
         if a and b:
             if a == b:
                 new_rule = Pattern(cells, zip(a.tokens, b.tokens), aligned=True)
-                new_rule.lexemes = {(row.name, a, b)}
+                new_rule.lexemes = {(lex, a, b)}
                 alt = new_rule.to_alt(exhaustive_blanks=False)
                 t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
                 collection[alt][t].append(new_rule)
@@ -894,7 +895,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                 for aligned in alignment.align_auto(a.tokens, b.tokens, insert_cost, sub_cost):
                     log.debug((aligned))
                     new_rule = Pattern(cells, aligned, aligned=True)
-                    new_rule.lexemes = {(row.name, a, b)}
+                    new_rule.lexemes = {(lex, a, b)}
                     log.debug("pattern: " + str(new_rule))
                     if str(new_rule) not in done:
                         done.append(str(new_rule))
@@ -911,14 +912,15 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
             if (lex, a, b) in p.lexemes:
                 return p
 
-    def _score(p, cells, df):
+    def _score(p, df):
         """Scores each pattern"""
-        def test_all(row, p, cells):
+        def test_all(row, p):
             """Tests each pattern against each form"""
             correct = 0
-            l, a, b = row
+            cells = [row.cell_x, row.cell_y]
+            lex, a, b = row.lexeme, row.form_x, row.form_y
             if a and b:
-                if (l, a, b) in p.lexemes:
+                if (lex, a, b) in p.lexemes:
                     correct += 1
                 else:
                     B = p.apply(a, cells, raiseOnFail=False)
@@ -927,14 +929,15 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                             p.apply(b, cells[::-1], raiseOnFail=False) == a)
                     if correct_one:
                         correct += 1
-                        p.lexemes.add((l, a, b))
+                        p.lexemes.add((lex, a, b))
             return correct
-        counts = df.apply(test_all, axis=1, p=p, cells=cells)
+        counts = df.apply(test_all, axis=1, p=p)
         return counts.sum()
 
     def find_patterns_in_col(df, pat_dict):
         collection = defaultdict(lambda: defaultdict(list))
-        _, c1, c2 = df.columns
+        c1 = df.cell_x.iloc[0]
+        c2 = df.cell_y.iloc[0]
 
         # Identify pairwise alternations
         df.apply(generate_rules, axis=1, collection=collection)
@@ -966,14 +969,14 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
             log.debug("Result:" + str(collection[alt]))
             # Score
             for p in collection[alt]:
-                p.score = _score(p, (c1, c2), df)
+                p.score = _score(p, df)
                 sorted_collection.append(p)
 
         # Sort by score and choose best patterns
         sorted_collection = sorted(sorted_collection, key=lambda x: x.score, reverse=True)
 
         def _best_pattern(row):
-            lex, a, b = row
+            lex, a, b = row.lexeme, row.form_x, row.form_y
             if a != '' and b != '':
                 return attribute_best_pattern(sorted_collection, lex, a, b)
             return None
@@ -987,8 +990,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
     tqdm.pandas(leave=False, disable=disable_tqdm)
     paradigms_dic = {cells: find_patterns_in_col(df, pat_dict)
-                     .rename({cells[0]: "form_a", cells[1]: "form_b"}, axis=1)
-                     .set_index(['lexeme', 'form_a', 'form_b']).pattern
+                     # .set_index(['lexeme', 'form_a', 'form_b']).pattern
                      for cells, df in tqdm(paradigms_dic.items())}
     return paradigms_dic, pat_dict
 
@@ -1219,17 +1221,24 @@ def to_csv(dataframe, filename, pretty=False, only_id=False):
     export.pattern = export.pattern.map(export_fun)
     if only_id:
         export[['form_a', 'form_b']] = \
-            export[['form_a', 'form_b']].map(lambda x: x.id if x != '' else x)
-        export.drop(['name_a', 'name_b'], axis=1, inplace=True)
+            export[['form_x', 'form_y']].map(lambda x: x.id if x != '' else x)
     export.to_csv(filename, sep=",", index=False)
 
 
-def from_csv(filename, defective=True, overabundant=True):
-    """Read a Patterns Dataframe from a csv"""
+def from_csv(filename, paradigms, defective=True, overabundant=True):
+    """Read a Patterns Dataframe from a csv.
 
-    def format_header(item):
-        splitted = item.strip("'() ").split(",")
-        return splitted[0].strip("' "), splitted[1].strip("' ")
+    Arguments:
+        filename (str): path to the file
+        paradigms (pandas.DataFrame): a paradigms dataframe, with form id's as index.
+        defective (bool): whether to consider defective lexemes.
+        overabundant (bool): whether to consider overabundance.
+    """
+
+    # TODO: remove ?
+    # def format_header(item):
+    #     splitted = item.strip("'() ").split(",")
+    #     return splitted[0].strip("' "), splitted[1].strip("' ")
 
     def read_pattern(raw_value, names, collection):
         result = []
@@ -1253,18 +1262,20 @@ def from_csv(filename, defective=True, overabundant=True):
     def str_to_pat_column(col, collection):
         names = col.name
         collection[names] = {}
+        breakpoint()
         return col.apply(read_pattern, args=(names, collection))
 
     collection = {}
-    table = pd.read_csv(filename, sep=",", header=0, index_col=0)
-    table.columns = [format_header(item) for item in table.columns]
-    table = table.map(lambda x: None if x == "None" else x)
+    table = pd.read_csv(filename, sep=",", header=0, dtype="str")
 
-    is_alt_str = table.map(lambda x: type(x) is str and "/" not in x).all().all()
+    is_alt_str = table.pattern.map(lambda x: type(x) is str and "/" not in x).all()
     if is_alt_str:
         log.warning("These are not patterns but alternation strings")
         return table, {}
-    pat_table = table.apply(str_to_pat_column, args=(collection,))
+    table[['form_x', 'form_y']] = table[['form_x', 'form_y']].replace(paradigms.phon_form.to_dict())
+    breakpoint()
+
+    pat_table = table.groupby('lexeme').pattern.apply(str_to_pat_column, collection=collection)
 
     if not defective:
         pat_table.dropna(axis=0, inplace=True)

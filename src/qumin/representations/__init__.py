@@ -44,8 +44,7 @@ def create_features(md, feature_cols):
     return features.loc[:, feature_cols]
 
 
-def create_paradigms(dataset, fillna=True,
-                     segcheck=False, merge_duplicates=False,
+def create_paradigms(dataset, fillna=True, segcheck=False,
                      defective=False, overabundant=False, merge_cols=False,
                      cells=None, sample=None, most_freq=None):
     """Read paradigms data, and prepare it according to a Segment class pool.
@@ -55,7 +54,6 @@ def create_paradigms(dataset, fillna=True,
             All characters occuring in the paradigms except the first column
             should be inventoried in this class.
         verbose (bool): verbosity switch.
-        merge_duplicates (bool): should identical columns be merged ?
         fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ? Otherwise they are filled with empty strings ("").
         segcheck (bool): Defaults to False. Should I check that all the phonological segments in the table are defined in the segments table ?
         defective (bool): Defaults to False. Should I keep rows with defective forms ?
@@ -64,17 +62,19 @@ def create_paradigms(dataset, fillna=True,
         cells (List[str]): List of cell names to consider. Defaults to all.
 
     Returns:
-        paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
+        paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (row are forms, lemmas, cells).
     """
 
-    def get_unknown_segments(forms, unknowns, name):
+    def get_unknown_segments(row, unknowns):
+        """
+        Checks whether all segments that appear in the paradigms are known.
+        """
+        cell, form = row
         known_sounds = set(Inventory._classes) | set(Inventory._normalization) | {"", " "}
-        for form_id in forms:
-            form = form_dic[form_id]
-            tokens = Inventory._segmenter.split(form)
-            for char in tokens:
-                if char not in known_sounds:
-                    unknowns[char].append(form + " " + name)
+        tokens = Inventory._segmenter.split(form)
+        for char in tokens:
+            if char not in known_sounds:
+                unknowns[char].append(form + " " + cell)
 
     # Reading the paradigms.
     data_file_name = Path(dataset.basepath) / dataset.get_resource("forms").path
@@ -87,7 +87,7 @@ def create_paradigms(dataset, fillna=True,
         paradigms = paradigms[~paradigms.loc[:, lexemes].isin(defective_lexemes)]
 
     if most_freq:
-        inflected = paradigms.loc[:,lexemes].unique()
+        inflected = paradigms.loc[:, lexemes].unique()
         lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
         lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
         # Restrict to lexemes we have kept, if we dropped defectives
@@ -96,12 +96,9 @@ def create_paradigms(dataset, fillna=True,
                                               ascending=False
                                               ).iloc[:most_freq, :].loc[:, "lexeme_id"].to_list())
         paradigms = paradigms.loc[paradigms.lexeme.isin(selected), :]
+
     if sample:
         paradigms = paradigms.sample(sample)
-
-    def aggregator(s):
-        form_ids = tuple(form_id for form_id in s if form_dic[form_id] != '')
-        return form_ids if len(form_ids) > 0 else ""
 
     def check_cells(cells, par_cols):
         unknown_cells = set(cells) - set(par_cols)
@@ -112,7 +109,6 @@ def create_paradigms(dataset, fillna=True,
     if not {lexemes, cell_col, form_col} < set(paradigms.columns):
         log.warning("Please use Paralex-style long-form table (http://www.paralex-standard.org).")
 
-    # Filter cells before pivoting for speed reasons
     if cells is not None:
         to_drop = check_cells(cells, paradigms[cell_col].unique())
         if len(to_drop) > 0:
@@ -120,64 +116,35 @@ def create_paradigms(dataset, fillna=True,
             paradigms = paradigms[(paradigms[cell_col].isin(cells))]
 
     paradigms.fillna(value="", inplace=True)
-    form_dic = paradigms.set_index('form_id')[form_col].to_dict()
-
-    paradigms = paradigms.pivot_table(values='form_id', index=lexemes,
-                                      columns=cell_col,
-                                      aggfunc=aggregator)
-    paradigms.fillna(value="", inplace=True)
-
-    paradigms.reset_index(inplace=True, drop=False)
-    log.debug(paradigms)
-
-    # Lexemes must be unique identifiers
-    unique_lexemes(paradigms[lexemes], 'paradigms')
-    paradigms.set_index(lexemes, inplace=True)
-
-    if merge_duplicates:
-        agenda = list(paradigms.columns)
-        while agenda:
-            a = agenda.pop(0)
-            for i, b in enumerate(agenda):
-                apar = paradigms[a].apply(lambda x: [form_dic[i] for i in x])
-                bpar = paradigms[b].apply(lambda x: [form_dic[i] for i in x])
-                if (apar == bpar).all():
-                    log.debug("Identical columns %s and %s ", a, b)
-                    new = a + " & " + b
-                    agenda.pop(i)
-                    agenda.append(new)
-                    paradigms[new] = paradigms[a]
-                    paradigms.drop([a, b], inplace=True, axis=1)
-                    break
 
     if segcheck:
         log.info("Checking we have definitions for all the phonological segments in this data...")
         unknowns = defaultdict(list)
-        paradigms.apply(lambda x: x.apply(get_unknown_segments, args=(unknowns, x.name)), axis=1)
+        paradigms[['cell', 'phon_form']].apply(get_unknown_segments, unknowns=unknowns, axis=1)
 
         if len(unknowns) > 0:
             alert = "Your paradigm has unknown segments: " + "\n ".join(
                 "[{}] (in {} forms:{}) ".format(u, len(unknowns[u]), ", ".join(unknowns[u][:10])) for u in unknowns)
             raise ValueError(alert)
 
-    def parse_cell(cell):
-        if not cell:
-            return cell
-        forms = [Form(form_dic[f], form_id=f) for f in cell]
-        if overabundant:
-            forms = tuple(sorted(forms))
-        else:
-            forms = (forms[0],)
-        return forms
+    def parse_cell(row):
+        """
+        Reads a string representation of a phon_form and returns a Form
+        """
+        id, segm = row
+        if not segm:
+            return segm
+        return Form(segm, form_id=id)
 
-    paradigms = paradigms.map(parse_cell)
+    paradigms.phon_form = paradigms[['form_id', 'phon_form']].apply(parse_cell, axis=1)
 
-    log.info("Merging identical columns...")
     if merge_cols:
+        log.info("Merging identical columns...")
         merge_duplicate_columns(paradigms, sep="#")
 
     if not fillna:
         paradigms = paradigms.replace("", np.NaN)
-
+    paradigms.set_index('form_id', inplace=True)
+    paradigms.rename(columns={"phon_form": "form"}, inplace=True)
     log.debug(paradigms)
     return paradigms

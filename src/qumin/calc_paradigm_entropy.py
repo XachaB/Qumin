@@ -38,13 +38,15 @@ def H_command(cfg, md):
 
     segments.Inventory.initialize(sounds_file_name)
 
-    # Inflectional paradigms: columns are cells, rows are lexemes.
+    # Inflectional paradigms: rows are forms, with lexeme and cell..
     paradigms = create_paradigms(md.datasets[0], defective=True, overabundant=False,
                                  merge_cols=cfg.entropy.merged,
                                  segcheck=True, cells=cells,
                                  sample=cfg.sample,
                                  most_freq=cfg.most_freq)
-    pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], defective=True,
+
+    pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], paradigms,
+                                           defective=True,
                                            overabundant=False)
 
     if pat_table.shape[0] < paradigms.shape[0]:
