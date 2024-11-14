@@ -995,7 +995,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
     return paradigms_dic, pat_dict
 
 
-def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
+def find_applicable(pat_table, pat_dict, disable_tqdm=False, **kwargs):
     """Find all applicable rules for each form.
 
     We name sets of applicable rules *classes*. *Classes* are oriented:
@@ -1003,8 +1003,8 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
     for each pair of columns (a, b) in the paradigm.
 
     Arguments:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            paradigms (columns are cells, index are lemmas).
+        pat_table (:class:`pandas:pandas.DataFrame`):
+            patterns table, containing the forms and the cells.
         pat_dict  (dict): a dict mapping a column name to a list of patterns.
         disable_tqdm (bool): if true, do not show progressbar
 
@@ -1015,43 +1015,30 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
             to a tuple representing a class of applicable patterns.
     """
 
-    def _iter_applicable_patterns(form, local_patterns, cell):
-        known_regexes = set()
-        if type(form) is tuple:  # if overabundant
-            form = form[0]  # from tuple to Form
-        for pattern in local_patterns:
-            regex = pattern._regex[cell]
-            if regex in known_regexes:
-                yield pattern
-
-            elif pattern.applicable(form, cell):
-                known_regexes.add(regex)
+    def _iter_applicable_patterns(row):
+        pair = (row.cell_x, row.cell_y)
+        if pair not in pat_dict:
+            pair = (row.cell_y, row.cell_x)
+        for pattern in pat_dict[pair]:
+            if pattern.applicable(row.form_x, row.cell_x):
                 yield pattern
 
     def applicable(*args):
+        """Returns all applicable patterns to a single row"""
         return tuple(_iter_applicable_patterns(*args))
 
-    # The result has (a, b) and (b, a) columns
-    # for each (a, b) column of patterns
-    # -> pairs are ordered, patterns.columns weren't
-    pairs = [y for x in pat_dict for y in (x, x[::-1])]
+    # Making the table bidirectionnal
+    col_rename = {'cell_x': 'cell_y', 'cell_y': 'cell_x',
+                  'form_x': 'form_y', 'form_y': 'form_x'}
+    pat_table = pd.concat([pat_table, pat_table.rename(columns=col_rename)])
 
-    # Initialisation
-    classes = pd.DataFrame(index=paradigms.index,
-                           columns=pairs)
+    # Computing classes
+    tqdm.pandas(leave=False, disable=disable_tqdm)
+    has_pat = pat_table.pattern.notna()
+    pat_table.loc[has_pat, "applicable"] = pat_table.loc[has_pat, :]\
+        .progress_apply(applicable, axis=1)
 
-    for a, b in tqdm(pat_dict, leave=False, disable=disable_tqdm):
-        local_patterns = pat_dict[(a, b)]
-
-        # Iterate on paradigms' rows of corresponding columns to fill with the
-        # result
-        classes[(a, b)] = paradigms[a].apply(applicable,
-                                             args=(local_patterns, a))
-        classes[(b, a)] = paradigms[b].apply(applicable,
-                                             args=(local_patterns, b))
-
-    return classes
-
+    return pat_table
 
 def find_alternations(paradigms, method, **kwargs):
     """Find local alternations in a Dataframe of paradigms.

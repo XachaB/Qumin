@@ -103,9 +103,10 @@ def H_command(cfg, md):
 
     else:
         log.info("Looking for classes of applicable patterns")
-        classes = patterns.find_applicable(paradigms, pat_dic)
-        log.debug("Classes:")
-        log.debug(classes)
+        pat_table = patterns.find_applicable(pat_table, pat_dic)
+        breakpoint()
+        log.debug("Patterns with classes:")
+        log.debug(pat_table)
         distrib = PatternDistribution(paradigms,
                                       pat_table,
                                       classes,
