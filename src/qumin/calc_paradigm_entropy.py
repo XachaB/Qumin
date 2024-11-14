@@ -51,7 +51,7 @@ def H_command(cfg, md):
                                            overabundant=False)
 
     # Raise error if wrong parameters.
-    if cfg.entropy.defective and (paradigms.form == '').any() and table.pattern.notna().all():
+    if cfg.entropy.defective and (paradigms.form == '').any() and pat_table.pattern.notna().all():
         raise ValueError("It looks like you ignored defective rows when computing patterns. Set entropy.defective=False.")
 
     if verbose and len(pat_table.cell_a.unique()) > 10:
