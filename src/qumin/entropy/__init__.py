@@ -54,6 +54,23 @@ def cond_entropy(A, B, **kwargs):
     return entropy(P(A + B, **kwargs)) - entropy(P(B, **kwargs))
 
 
+def cond_entropy_OA(group, mapping="norm"):
+    """
+    Computes entropy for overabundant distributions.
+    """
+    # Here we can apply various functions to map weights to probabilities (softmax, etc).
+    func = {
+        "norm": lambda x: x / x.sum(),  # Normalize weights.
+        "uni": lambda x: 1/x.sum()      # Use a bare Uniform distribution.
+            }[mapping]
+
+    # We apply this normalizing function to the overall frequency of the pattern.
+    pat_proba = func(group.groupby('pattern').w.sum())
+    # accuracy = (group.pattern.map(pat_proba)*group.w/group.w.sum()).sum()
+    return [0 + entropy(pat_proba),
+            group.w.sum()]
+
+
 def entropy(A):
     """Calculate the entropy for a series of probabilities.
 

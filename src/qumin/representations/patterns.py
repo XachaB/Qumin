@@ -1267,8 +1267,10 @@ def from_csv(filename, paradigms, defective=True, overabundant=True):
     if not defective:
         table.dropna(axis=0, subset="pattern", inplace=True)
 
-    if overabundant:
-        raise NotImplementedError
+    if not overabundant:
+        dupl = table.duplicated(['cell_x', 'cell_y', 'lexeme'])
+        if dupl.any():
+            raise ValueError(f"Overabundant is false, but some rows are duplicated. Recompute patterns:\n{table[dupl].head()}.")
 
     collection = {column: list(collection[column].values()) for column in collection}
     return table, collection

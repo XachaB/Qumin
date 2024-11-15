@@ -13,7 +13,7 @@ from itertools import combinations, chain
 import pandas as pd
 from tqdm import tqdm
 
-from . import cond_entropy, entropy
+from . import cond_entropy, cond_entropy_OA, entropy
 
 log = logging.getLogger(__name__)
 
@@ -243,7 +243,7 @@ class PatternDistribution(object):
 
         return data
 
-    def one_pred_entropy(self, debug=False):
+    def one_pred_entropy(self, debug=False, **kwargs):
         r"""Return a :class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
@@ -268,7 +268,7 @@ class PatternDistribution(object):
         patterns = self.patterns
         data = self.prepare_data(patterns, debug=debug)
 
-        def calc_condent(group, data):
+        def calc_condent(group, data, **kwargs):
             """
             Computes the conditional entropy for a pair of cells.
 
@@ -283,17 +283,37 @@ class PatternDistribution(object):
             data.loc[cells, "n_pairs"] = sum(selector)
             # TODO reimplement features
             # known_ab = self.add_features(classes[(a, b)])
-            if debug:
-                data.loc[cells, "value"] = cond_entropy(group.pattern.apply(lambda x: (x,)),
-                                                        group.applicable,
-                                                        subset=selector)
-            else:
-                data.loc[cells, "value"] = self.cond_entropy_log(group,
-                                                                 group.applicable,
-                                                                 subset=selector)
+            data.loc[cells, "value"] = self.get_entropy_measure(group, subset=selector, **kwargs)
 
-        patterns.groupby(['cell_x', 'cell_y']).apply(calc_condent, data=data)
+        patterns.groupby(['cell_x', 'cell_y']).apply(calc_condent, data=data, **kwargs)
         self.data = pd.concat([self.data, data.reset_index()])
+
+    def get_entropy_measure(self, group, debug=False, overabundant=False, **kwargs):
+        if overabundant:
+            return self.cond_entropy_OA_pair(group, **kwargs)
+        else:
+            if debug:
+                return cond_entropy(group.pattern.apply(lambda x: (x,)),
+                                    group.applicable,
+                                    **kwargs)
+            else:
+                return self.cond_entropy_log(group,
+                                             group.applicable,
+                                             **kwargs)
+
+    def cond_entropy_OA_pair(self, group, subset=None, **kwargs):
+        """
+        Computes entropy for overabundant distributions.
+        """
+        group = group[subset]
+        # Get the pattern frequencies
+        group['w'] = 1 / group.groupby(['lexeme', 'form_x']).transform('size')
+
+        # Compute metrics.
+        results = pd.DataFrame(group.groupby(group.applicable).apply(cond_entropy_OA, **kwargs)
+                               .to_list(),
+                               columns=['entropy', 'population'])
+        return (results.entropy * results.population / results.population.sum()).sum()
 
     def cond_entropy_log(self, group, classes, subset=None):
         """Print a log of the probability distribution for one predictor.

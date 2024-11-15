@@ -40,7 +40,7 @@ def H_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
-    paradigms = create_paradigms(md.datasets[0], defective=cfg.defective, overabundant=False,
+    paradigms = create_paradigms(md.datasets[0], defective=cfg.defective, overabundant=cfg.overabundant,
                                  merge_cols=cfg.entropy.merged,
                                  segcheck=True, cells=cells,
                                  sample=cfg.sample,
@@ -48,7 +48,7 @@ def H_command(cfg, md):
 
     pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], paradigms,
                                            defective=cfg.defective,
-                                           overabundant=False)
+                                           overabundant=cfg.overabundant)
 
     # Raise error if wrong parameters.
     if cfg.defective and (paradigms.form == '').any() and pat_table.pattern.notna().all():
@@ -112,11 +112,11 @@ def H_command(cfg, md):
 
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
-            distrib.one_pred_entropy()
+            distrib.one_pred_entropy(overabundant=cfg.overabundant)
         mean = distrib.get_results().loc[:, "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
-            distrib.one_pred_entropy(debug=verbose)
+            distrib.one_pred_entropy(debug=verbose, overabundant=cfg.overabundant)
     if preds:
         # TODO
         raise NotImplementedError
