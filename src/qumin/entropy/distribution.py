@@ -125,8 +125,8 @@ class PatternDistribution(object):
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(split_if_multiple)
         self.data = pd.concat(self.data, data)
 
-    def add_features(self, series):
-        return series + self.features[series.index]
+    def add_features(self, group):
+        return group.applicable + group.lexeme.map(self.features)
 
     def n_preds_entropy_matrix(self, n):
         r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies, and one with counts of lexemes.
@@ -279,17 +279,24 @@ class PatternDistribution(object):
                     DataFrame to store computation results.
             """
             cells = group.name
+
+            # Defective rows can't be kept here.
             selector = group.pattern.notna()
+
+            # We compute the number of pairs concerned with this calculation.
             data.loc[cells, "n_pairs"] = sum(selector)
-            # TODO reimplement features
-            # known_ab = self.add_features(classes[(a, b)])
+
+            # We aggregate features and applicable patterns.
+            # Lexemes that share these properties belong to similar classes.
+            classes = self.add_features(group)
+
             if debug:
                 data.loc[cells, "value"] = cond_entropy(group.pattern.apply(lambda x: (x,)),
-                                                        group.applicable,
+                                                        classes,
                                                         subset=selector)
             else:
                 data.loc[cells, "value"] = self.cond_entropy_log(group,
-                                                                 group.applicable,
+                                                                 classes,
                                                                  subset=selector)
 
         patterns.groupby(['cell_x', 'cell_y']).apply(calc_condent, data=data)
@@ -318,7 +325,7 @@ class PatternDistribution(object):
         log.debug("\n# Distribution of {}→{} \n".format(cells[0], cells[1]))
 
         A = group[subset]
-        B = self.add_features(group.applicable[subset])
+        B = classes[subset]
         cond_events = A.groupby(B, sort=False)
 
         log.debug("Showing distributions for "
@@ -333,11 +340,9 @@ class PatternDistribution(object):
             table = members.groupby('pattern').apply(subclass_summary)
 
             if self.features is not None:
-                # TODO
-                raise NotImplementedError
-                log.debug("Features:"
-                          + " ".join(str(x)
-                                     for x in classe[-self.features_len:]))
+                feature_log = (
+                    "Features: "
+                    + ", ".join(str(x) for x in classe[-self.features_len:]))
                 classe = classe[:-self.features_len]
 
             # List possible patterns that are not used in this class.
@@ -356,6 +361,7 @@ class PatternDistribution(object):
             table.reset_index(inplace=True)
             table.columns = headers
             log.debug(f"\n## Class n°{i} ({len(members)} members), H={ent}")
+            log.debug(feature_log)
             log.debug("\n" + table.to_markdown())
 
         log.debug('\n## Class summary')
