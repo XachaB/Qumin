@@ -295,23 +295,21 @@ class PatternDistribution(object):
         # We aggregate features and applicable patterns.
         # Lexemes that share these properties belong to similar classes.
         classes = self.add_features(group)
-        
+
         if overabundant:
             if debug:
-                return self.cond_entropy_OA_pair_log(group, **kwargs)
+                return self.cond_entropy_OA_pair_log(group, classes, **kwargs)
             else:
-                return self.cond_entropy_OA_pair(group, **kwargs)
+                return self.cond_entropy_OA_pair(group, classes, **kwargs)
         else:
             if debug:
                 return cond_entropy(group.pattern.apply(lambda x: (x,)),
                                     classes,
                                     **kwargs)
             else:
-                return self.cond_entropy_log(group,
-                                             classes,
-                                             **kwargs)
+                return self.cond_entropy_log(group, classes, **kwargs)
 
-    def cond_entropy_OA_pair(self, group, subset=None, **kwargs):
+    def cond_entropy_OA_pair(self, group, classes, subset=None, **kwargs):
         """
         Computes entropy for overabundant distributions for a pair of cells.
         """
@@ -320,19 +318,20 @@ class PatternDistribution(object):
         group['w'] = 1 / group.groupby(['lexeme', 'form_x']).transform('size')
 
         # Compute metrics.
-        results = pd.DataFrame(group.groupby(group.applicable).apply(cond_entropy_OA, **kwargs)
+        results = pd.DataFrame(group.groupby(classes).apply(cond_entropy_OA, **kwargs)
                                .to_list(),
                                columns=['entropy', 'population'])
 
         return (results.entropy * results.population / results.population.sum()).sum()
 
-    def cond_entropy_OA_pair_log(self, group, subset=None, **kwargs):
+    def cond_entropy_OA_pair_log(self, group, classes, subset=None, **kwargs):
         """
         Compute and log entropy for overabundant distributions for a pair of cells
         """
 
         def subclass_summary(subgroup, patterns):
             """ Produces a nice summary for a subclass"""
+            # Get the first item and all associated rows, it will be our example.
             ex = subgroup.iloc[0, :]
             all_ex = subgroup[(subgroup.form_x == ex.form_x) & (subgroup.lexeme == ex.lexeme)]
 
@@ -353,8 +352,9 @@ class PatternDistribution(object):
         log.debug("\n# Distribution of {}→{} \n".format(cells[0], cells[1]))
 
         group.loc[subset, 'w'] = 1 / group[subset].groupby(['lexeme', 'form_x']).transform('size')
+
         A = group[subset]
-        B = self.add_features(group.applicable[subset])
+        B = classes[subset]
         cond_events = A.groupby(B, sort=False)
 
         log.debug("\nShowing distributions for "
@@ -379,27 +379,23 @@ class PatternDistribution(object):
                 .apply(subclass_summary, patterns=p_table)\
                 .reset_index(drop=True)
 
+            # Show the features used in this class.
             if self.features is not None:
-                # TODO
-                raise NotImplementedError
-                log.debug("Features:"
-                          + " ".join(str(x)
-                                     for x in classe[-self.features_len:]))
+                feature_log = (
+                    "Features: "
+                    + ", ".join(str(x) for x in classe[-self.features_len:]))
                 classe = classe[:-self.features_len]
 
             # Get the slow computation results
-            # table['proba'] = table.subclass_size / table.subclass_size.sum()
-            # ent = 0 + entropy(table.proba)
             summary.append([table.subclass_size.sum(), results[0]])
 
             # Log the subclass properties
-            headers = ("Pattern", "Example",
-                       "Size", "P(Pattern|class)")
             table.reset_index(inplace=True)
             table.rename(columns={
                 "example": "Example",
                 "subgroup_size": "Size"})
             log.debug(f"\n## Class n°{i} (weight = {results[1]}, H={results[0]})")
+            log.debug(feature_log)
             log.debug("\nPatterns found\n\n"+p_table.to_markdown())
             log.debug("\nDistribution of the forms\n\n" + table.to_markdown())
 
