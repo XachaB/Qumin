@@ -62,7 +62,10 @@ class Form(str):
         return self
 
     def __repr__(self):
-        return f"Form({self}, id:{self.id})" if self.id else f"Form({self})"
+        return f"Form({self}, id={self.id})" if self.id else f"Form({self})"
+
+    def __str__(self):
+        return "".join([x.strip() for x in self.tokens])
 
 
 class Inventory(object):
