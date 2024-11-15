@@ -17,28 +17,11 @@ from ..utils import merge_duplicate_columns
 log = logging.getLogger()
 
 
-def unique_lexemes(series, file_type):
-    """Check if there are duplicates in the lexemes list.
-    If yes, raise an error.
-
-    Arguments:
-        series (:class:`pandas:pandas.Series`): list of lexemes as a Series object.
-        file_type (str): used for error messages. Should describe the dataset which is being tested.
-    """
-    duplicated = list(series[series.duplicated()])
-
-    if duplicated:
-        raise ValueError(f"""There are {len(duplicated)} duplicates among lexemes.
-            Please check the {file_type} table.
-            Duplicates are: {", ".join(duplicated)}""")
-
-
 def create_features(md, feature_cols):
     """Read feature and preprocess to be coindexed with paradigms."""
-    if type(feature_cols) == str:
+    if isinstance(feature_cols, str):
         feature_cols = [feature_cols]
     features = pd.read_csv(md.get_table_path('lexemes'))
-    unique_lexemes(features["lexeme_id"], "lexemes")
     features.set_index("lexeme_id", inplace=True)
     features.fillna(value="", inplace=True)
     return features.loc[:, feature_cols]

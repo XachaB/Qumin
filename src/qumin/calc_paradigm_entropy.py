@@ -60,8 +60,6 @@ def H_command(cfg, md):
                     "You should probably stop this process now.")
 
     if cfg.entropy.features is not None:
-        # TODO
-        raise NotImplementedError
         features = create_features(md, cfg.entropy.features)
     else:
         features = None
