@@ -350,7 +350,7 @@ class PatternDistribution(object):
         B = self.add_features(group.applicable[subset])
         cond_events = A.groupby(B, sort=False)
 
-        log.debug("Showing distributions for "
+        log.debug("\nShowing distributions for "
                   + str(len(cond_events))
                   + " classes")
         summary = []
@@ -392,16 +392,16 @@ class PatternDistribution(object):
             table.rename(columns={
                 "example": "Example",
                 "subgroup_size": "Size"})
-            log.debug(f"## Class n°{i} (weight = {results[1]}, H={results[0]})")
-            log.debug("Patterns found\n"+p_table.to_markdown())
-            log.debug("Distribution of the forms\n" + table.to_markdown())
+            log.debug(f"\n## Class n°{i} (weight = {results[1]}, H={results[0]})")
+            log.debug("\nPatterns found\n\n"+p_table.to_markdown())
+            log.debug("\nDistribution of the forms\n\n" + table.to_markdown())
 
         log.debug('## Class summary')
         summary = pd.DataFrame(summary, columns=['Size', 'H(pattern|class)'])
         summary.index.name = "Class"
         sum_entropy = (summary.iloc[:, -2] * summary.iloc[:, -1] / summary.iloc[:, -2].sum()).sum()
-        log.debug(f'Av. conditional entropy: H(pattern|class)={sum_entropy}')
-        log.debug("\n" + summary.to_markdown())
+        log.debug(f'\nAv. conditional entropy: H(pattern|class)={sum_entropy}\n\n'
+                  + summary.to_markdown())
         return sum_entropy
 
     def cond_entropy_log(self, group, classes, subset=None):
