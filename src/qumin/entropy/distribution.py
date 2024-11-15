@@ -329,7 +329,7 @@ class PatternDistribution(object):
             ex = subgroup.iloc[0, :]
             all_ex = subgroup[(subgroup.form_x == ex.form_x) & (subgroup.lexeme == ex.lexeme)]
 
-            values = {"example": f"{ex.lexeme}: {ex.form_x} → {", ".join(all_ex.form_y.values)}"}
+            values = {"example": f"{ex.lexeme}: {ex.form_x} → {', '.join(all_ex.form_y.values)}"}
             for pid in patterns.index.values:
                 id = f"p_{str(pid)}"
                 pat = patterns.loc[pid, 'pattern']
@@ -403,7 +403,6 @@ class PatternDistribution(object):
         log.debug(f'Av. conditional entropy: H(pattern|class)={sum_entropy}')
         log.debug("\n" + summary.to_markdown())
         return sum_entropy
-
 
     def cond_entropy_log(self, group, classes, subset=None):
         """Print a log of the probability distribution for one predictor.
