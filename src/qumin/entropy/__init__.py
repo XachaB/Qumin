@@ -63,9 +63,8 @@ def cond_entropy_OA(group, mapping="norm", debug=False):
         "norm": lambda x: x / x.sum(),  # Normalize weights.
         "uni": lambda x: 1/x.sum()      # Use a bare Uniform distribution.
             }[mapping]
-
     # We apply this normalizing function to the overall frequency of the pattern.
-    pat_freq = group.groupby('pattern').w.sum()
+    pat_freq = group.groupby('pattern').w.sum() / group.w.sum()
     pat_proba = func(pat_freq)
     # accuracy = (group.pattern.map(pat_proba)*group.w/group.w.sum()).sum()
     results = [0 + entropy(pat_proba), group.w.sum()]
