@@ -115,6 +115,7 @@ def H_command(cfg, md):
         log.info("Mean H(c1 -> c2) = %s ", mean)
         if verbose:
             distrib.one_pred_entropy(debug=verbose, overabundant=cfg.overabundant)
+            distrib.sanity_check()
     if preds:
         # TODO
         raise NotImplementedError

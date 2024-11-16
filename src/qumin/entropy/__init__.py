@@ -54,7 +54,7 @@ def cond_entropy(A, B, **kwargs):
     return entropy(P(A + B, **kwargs)) - entropy(P(B, **kwargs))
 
 
-def cond_entropy_OA(group, mapping="norm", debug=False):
+def cond_entropy_OA(group, mapping="norm", debug=False, cat_success=True):
     """
     Computes entropy for overabundant distributions.
     """
@@ -66,8 +66,13 @@ def cond_entropy_OA(group, mapping="norm", debug=False):
     # We apply this normalizing function to the overall frequency of the pattern.
     pat_freq = group.groupby('pattern').w.sum() / group.w.sum()
     pat_proba = func(pat_freq)
-    # accuracy = (group.pattern.map(pat_proba)*group.w/group.w.sum()).sum()
-    results = [0 + entropy(pat_proba), group.w.sum()]
+    if cat_success:
+        fact = (group.w_y != 0) * group.w_x
+    else:
+        fact = group.w
+    results = [0 + entropy(pat_proba),  # Entropy "0+" to ensure positive values.
+               (group.pattern.map(pat_proba)*fact).sum() / group.w.sum(),  # Accuracy
+               group.w.sum()]
 
     if debug:
         results.extend([pat_freq, pat_proba])
