@@ -12,6 +12,8 @@ import seaborn as sns
 import logging
 
 log = logging.getLogger()
+# Prevent matplotlib font manager from spamming the log
+log('matplotlib.font_manager').disabled = True
 
 
 def get_features_order(features_file, results, sort_order=False):
@@ -51,7 +53,6 @@ def get_features_order(features_file, results, sort_order=False):
 def entropy_heatmap(results, md, cmap_name=False,
                     feat_order=None, dense=False, annotate=False,
                     parameter=False):
-
     """Make a FacetGrid heatmap of all metrics.
 
     Arguments:
