@@ -86,8 +86,10 @@ class PatternDistribution(object):
                                           "dataset"
                                           ])
 
-    def get_results(self, measure="cond_entropy", n=1):
-        is_cond_ent = self.data.loc[:, "measure"] == measure
+    def get_results(self, measure=["cond_entropy"], n=1):
+        if isinstance(measure, str):
+            measure = [measure]
+        is_cond_ent = self.data.loc[:, "measure"].isin(measure)
         is_one_pred = self.data.loc[:, "n_preds"] == n
         return self.data.loc[is_cond_ent & is_one_pred, :]
 
@@ -339,7 +341,7 @@ class PatternDistribution(object):
         return [(results.entropy * results.population / results.population.sum()).sum(),
                 (results.accuracy * results.population / results.population.sum()).sum(),]
 
-    def cond_entropy_OA_pair_log(self, group, classes, cells, **kwargs):
+    def cond_entropy_OA_pair_log(self, group, classes, cells, cat_success=True, **kwargs):
         """
         Compute and log entropy for overabundant distributions for a pair of cells
         """
@@ -351,16 +353,26 @@ class PatternDistribution(object):
             all_ex = subgroup[(subgroup.form_x == ex.form_x) & (subgroup.lexeme == ex.lexeme)]
 
             values = {"example": f"{ex.lexeme}: {ex.form_x} → {', '.join(all_ex.form_y.values)}"}
+            p_success = 0
             for pid in patterns.index.values:
                 id = f"p_{str(pid)}"
                 pat = patterns.loc[pid, 'pattern']
                 if pat in subgroup.name:
                     row = all_ex[all_ex.pattern == pat]
                     values[id] = row.w_y.sum()
+
+                    # Data for detailed probability of success.
+                    pat_proba = patterns.loc[pid].iloc[-1]
+                    if cat_success:
+                        success = 1 if values[id] > 0 else 0
+                    else:
+                        success = values[id]
+                    p_success += (success * pat_proba)
                 else:
                     values[id] = 0
 
             values['weight'] = subgroup.w.sum()
+            values['p_success'] = p_success
             return pd.Series(values)
 
         cond_events = group.groupby(classes, sort=False)
@@ -383,7 +395,7 @@ class PatternDistribution(object):
                     + ", ".join(str(x) for x in classe[-self.features_len:]))
 
             # Compute the results and catch intermediate measures
-            results = cond_entropy_OA(members, debug=True, **kwargs)
+            results = cond_entropy_OA(members, debug=True, cat_success=cat_success, **kwargs)
 
             # Create a table of the patterns, to show
             # the mapping between pattern frequency and pattern probability.
@@ -403,15 +415,15 @@ class PatternDistribution(object):
             summary.append([table.weight.sum(), results[0], results[1]])
 
             # Log the subclass properties
-            table.reset_index(inplace=True)
-            table.rename(columns={
-                "example": "Example",
-                "subgroup_size": "Size"})
-            log.debug(f"\n## Class n°{i} (weight = {results[1]}, H={results[0]}, P={results[1]})")
+            table = table.rename(columns={
+                                    "example": "Example",
+                                    "weight": "Weight",
+                                    "p_success": "P(success)"})
+            log.debug(f"\n## Class n°{i} (weight = {results[2]}, H={results[0]:.3f}, P={results[1]:.3f})")
             if self.features is not None:
                 log.debug(feature_log)
             log.debug("\nPatterns found\n\n"+p_table.to_markdown())
-            log.debug("\nDistribution of the forms\n\n" + table.to_markdown())
+            log.debug("\nDistribution of the forms\n\n" + table.to_markdown(index=False))
 
         # Build a nice summary of all classes.
         summary = pd.DataFrame(summary, columns=['Size', 'H(pattern|class)', "P(success|class)"])

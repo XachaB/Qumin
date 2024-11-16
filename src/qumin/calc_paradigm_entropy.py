@@ -110,12 +110,16 @@ def H_command(cfg, md):
 
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
-            distrib.one_pred_entropy(overabundant=cfg.overabundant)
-        mean = distrib.get_results().loc[:, "value"].mean()
-        log.info("Mean H(c1 -> c2) = %s ", mean)
+            distrib.one_pred_entropy(overabundant=cfg.overabundant,
+                                     **cfg.entropy.extra)
+        measures = ['cond_entropy', 'accuracy'] if cfg.overabundant else ['cond_entropy']
+        mean = distrib.get_results(measure=measures)\
+            .loc[:, ["value", "measure"]].groupby('measure').mean()
         if verbose:
-            distrib.one_pred_entropy(debug=verbose, overabundant=cfg.overabundant)
+            distrib.one_pred_entropy(debug=verbose, overabundant=cfg.overabundant,
+                                     **cfg.entropy.extra)
             distrib.sanity_check()
+        log.info(f"Mean metrics:\n{mean.to_markdown()}")
     if preds:
         # TODO
         raise NotImplementedError
@@ -126,7 +130,6 @@ def H_command(cfg, md):
             distrib.n_preds_entropy_matrix(n)
             mean = distrib.get_results(n=n).loc[:, "value"].mean()
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
-
             if verbose:
                 distrib.n_preds_distrib_log(n)
 

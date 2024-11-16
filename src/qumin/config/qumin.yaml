@@ -72,6 +72,14 @@ entropy:
                       # with n-1 predictors, allows for acceleration on nPreds entropy computation.
   merged: False       # Whether identical columns are merged in the input.
   stacked: False      # whether to stack results in long form
+  extra:               # These options are only available in overabundant mode.
+    cat_success: True  # Consider a form as correct (=1) if its probability > 0.
+                       # If False, its probability of being correct = its frequency.
+    mapping: "norm"    # Provide a mapping from pattern frequencies to pattern probabilities.
+                       # Possible values: "norm"(alized), "soft"(max), "uni"(form).
+    beta: 5            # Value of the beta parameter for computations with func=soft.
+
+
 
 eval:
   iter: 10            # How many 90/10 train/test folds to do.
