@@ -1,3 +1,4 @@
+:hero: A python package for QUantitative Modelling of INflection
 
 .. include:: ../README.rst
 
