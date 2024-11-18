@@ -15,6 +15,7 @@ import pandas as pd
 from pandas.api.types import union_categoricals
 
 log = logging.getLogger()
+tqdm.pandas()
 
 
 class Paradigms(object):
@@ -114,8 +115,8 @@ class Paradigms(object):
         if segcheck:
             log.info("Checking we have definitions for all the phonological segments in this data...")
             unknowns = defaultdict(list)
-            paradigms[[cell_col, form_col]].apply(self._get_unknown_segments,
-                                                  unknowns=unknowns, axis=1)
+            paradigms[[cell_col, form_col]].progress_apply(self._get_unknown_segments,
+                                                           unknowns=unknowns, axis=1)
 
             if len(unknowns) > 0:
                 alert = "Your paradigm has unknown segments: " + "\n ".join(
@@ -185,8 +186,8 @@ class Paradigms(object):
         patterns for two cells.
         """
         new = pd.merge(self.data.loc[self.data.cell == a],
-                        self.data.loc[self.data.cell == b],
-                        on="lexeme")
+                       self.data.loc[self.data.cell == b],
+                       on="lexeme")
         return new
 
     def _update_cell(self):
