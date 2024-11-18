@@ -298,11 +298,15 @@ class PatternDistribution(object):
             data.at[cells, "value"] = self.get_entropy_measure(group, subset=selector, **kwargs)
 
         patterns.groupby(['cell_x', 'cell_y'], observed=True).apply(calc_condent, data=data,
-                                                     debug=debug, overabundant=overabundant,
-                                                     **kwargs)
+                                                                    debug=debug,
+                                                                    overabundant=overabundant,
+                                                                    **kwargs)
 
-        self.data = pd.concat([self.data,
-                               data.explode(['value', 'measure']).reset_index()])
+        data = data.explode(['value', 'measure']).reset_index()
+        if self.data.empty:
+            self.data = data
+        else:
+            self.data = pd.concat([self.data, data])
 
     def get_entropy_measure(self, group, debug=False, overabundant=False, subset=None, **kwargs):
 
@@ -316,8 +320,10 @@ class PatternDistribution(object):
             cells = group.name
             if subset is not None:
                 group = group[subset]
-            group['w_x'] = 1 / group.groupby(['lexeme']).form_x.transform('nunique')
-            group['w_y'] = 1 / group.groupby(['lexeme', 'form_x']).form_y.transform('nunique')
+            group['w_x'] = 1 / group.groupby(['lexeme'], observed=True)\
+                .form_x.transform('nunique')
+            group['w_y'] = 1 / group.groupby(['lexeme', 'form_x'], observed=True)\
+                .form_y.transform('nunique')
             group['w'] = group.w_x * group.w_y
             if debug:
                 return self.cond_entropy_OA_pair_log(group, classes, cells, **kwargs)
