@@ -5,11 +5,11 @@
 Author: Sacha Beniamine.
 """
 import logging
-from itertools import combinations
 import pandas as pd
 
 from .clustering import find_microclasses
-from .representations import patterns, segments, create_paradigms
+from .representations import patterns, segments
+from .representations.paradigms import Paradigms
 
 log = logging.getLogger()
 
@@ -48,12 +48,13 @@ def pat_command(cfg, md):
     if is_of_pattern_type:
         merge_cols = True
 
-    paradigms = create_paradigms(md.datasets[0], defective=defective,
-                                 overabundant=overabundant, merge_cols=merge_cols,
-                                 segcheck=segcheck, cells=cells,
-                                 sample=cfg.sample,
-                                 most_freq=cfg.most_freq
-                                 )
+    paradigms = Paradigms(md.datasets[0], defective=defective,
+                          overabundant=overabundant, merge_cols=merge_cols,
+                          segcheck=segcheck, cells=cells,
+                          sample=cfg.sample,
+                          most_freq=cfg.most_freq,
+                          )
+
     log.info("Looking for patterns...")
     if kind.startswith("endings"):
         patterns_df = patterns.find_endings(paradigms)
@@ -66,29 +67,15 @@ def pat_command(cfg, md):
     else:
         patterns_dfs = patterns.find_alternations(paradigms, method[kind])
 
-    if merge_cols and not cfg.pats.merged:  # Re-build duplicate columns
-        for a, b in patterns_dfs.keys():
-            if "#" in a:
-                cols = a.split("#")
-                for c in cols:
-                    patterns_dfs[(c, b)] = patterns_dfs[(a, b)]
-                del patterns_dfs[(a, b)]
-                for x, y in combinations(cols, 2):
-                    patterns_dfs[(x, y)].iloc[:] = patterns.Pattern.new_identity((x, y))
-
-        for a, b in patterns_dfs.keys():
-            if "#" in b:
-                cols = b.split("#")
-                for c in cols:
-                    patterns_dfs[(a, c)] = patterns_dfs[(a, b)]
-                patterns_dfs.drop((a, b), axis=1, inplace=True)
-                for x, y in combinations(cols, 2):
-                    patterns_dfs[(x, y)].iloc[:] = patterns.Pattern.new_identity((x, y))
-
     # Concatenate the patterns as a dict. Cell names are turned into columns.
     patterns_df = pd.concat([df for df in patterns_dfs.values()]).reset_index(drop=True)
 
+    if merge_cols and not cfg.pats.merged:  # Re-build duplicate columns
+        paradigms.unmerge_columns()
+        patterns_df = patterns.unmerge_columns(patterns_df, paradigms)
+
     empty = (patterns_df.form_x != '') & (patterns_df.form_y != '') & (patterns_df.pattern.isnull())
+
     if empty.any():
         log.warning("Some words don't have any patterns "
                     "-- This means something went wrong."

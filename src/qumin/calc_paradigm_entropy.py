@@ -10,7 +10,8 @@ import logging
 from hydra.core.hydra_config import HydraConfig
 
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
-from .representations import segments, patterns, create_paradigms, create_features
+from .representations import segments, patterns, create_features
+from .representations.paradigms import Paradigms
 
 log = logging.getLogger()
 
@@ -40,18 +41,18 @@ def H_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
-    paradigms = create_paradigms(md.datasets[0], defective=cfg.defective, overabundant=False,
-                                 merge_cols=cfg.entropy.merged,
-                                 segcheck=True, cells=cells,
-                                 sample=cfg.sample,
-                                 most_freq=cfg.most_freq)
+    paradigms = Paradigms(md.datasets[0], defective=cfg.defective, overabundant=False,
+                          merge_cols=cfg.entropy.merged,
+                          segcheck=True, cells=cells,
+                          sample=cfg.sample,
+                          most_freq=cfg.most_freq)
 
-    pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], paradigms,
+    pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], paradigms.data,
                                            defective=cfg.defective,
                                            overabundant=False)
 
     # Raise error if wrong parameters.
-    if cfg.defective and (paradigms.form == '').any() and pat_table.pattern.notna().all():
+    if cfg.defective and (paradigms.data.form == '').any() and pat_table.pattern.notna().all():
         raise ValueError("It looks like you ignored defective rows when computing patterns. Set defective=False.")
 
     if verbose and len(pat_table.cell_x.unique()) > 10:
@@ -68,10 +69,10 @@ def H_command(cfg, md):
         # TODO
         raise NotImplementedError
         names = [p.name for _, p in md.datasets]
-        paradigms2 = create_paradigms(md.datasets[0], defective=True,
-                                      overabundant=False,
-                                      merge_cols=cfg.entropy.merged, segcheck=True,
-                                      cells=cells)
+        paradigms2 = Paradigms(md.datasets[0], defective=True,
+                               overabundant=False,
+                               merge_cols=cfg.entropy.merged, segcheck=True,
+                               cells=cells)
         paradigms2 = paradigms2.loc[paradigms.index, :]
         pat_table2, pat_dic2 = patterns.from_csv(patterns_file_path[1], defective=True,
                                                  overabundant=False)
