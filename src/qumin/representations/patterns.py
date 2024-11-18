@@ -11,7 +11,7 @@ from .segments import Inventory, Form
 from .contexts import Context
 from .quantity import one, optional, some, kleenestar
 from .generalize import generalize_patterns, incremental_generalize_patterns
-from itertools import groupby, zip_longest
+from itertools import groupby, zip_longest, combinations
 from collections import defaultdict
 from copy import deepcopy
 import numpy as np
@@ -832,7 +832,8 @@ def _with_deterministic_alignment(paradigms, method="suffix", disable_tqdm=False
     return patterns, pat_dict
 
 
-def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, disable_tqdm=False, **kwargs):
+def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False,
+                            disable_tqdm=False, **kwargs):
     """Find Patterns in a DataFrame with automatic alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -860,83 +861,85 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                                   "Call find_patterns(paradigms, method) "
                                   "rather than this function.".format(scoring_method))
 
-    cols = paradigms.columns
-    pairs = list(combinations(cols, 2))
-    patterns_df = pd.DataFrame(index=paradigms.index,
-                               columns=pairs)
+    cells = paradigms.data.cell.unique()
+    pairs = list(combinations(cells, 2))
+
+    paradigms_dic = {}
+    for pair in pairs:
+        paradigms_dic[pair] = paradigms.get_empty_pattern_df(*pair)
 
     pat_dict = {}
 
-    def generate_rules(row, cells, collection):
-        if row.iloc[0] == row.iloc[1]:  # If the lists are identical, do not compute product
-            pairs = [(x, x) for x in row.iloc[0]]
-        else:
-            pairs = product(*row)
+    def generate_rules(row, collection):
+        """
+        Generates the patterns for each pair of forms.
 
-        for a, b in pairs:
-            if a and b:
-                if a == b:
-                    new_rule = Pattern(cells, zip(a.tokens, b.tokens), aligned=True)
-                    new_rule.lexemes = {(row.name, a, b)}
-                    alt = new_rule.to_alt(exhaustive_blanks=False)
-                    t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
-                    collection[alt][t].append(new_rule)
-                else:
-                    done = []
-                    log.debug("All alignments of {}, {}".format(a, b))
-                    for aligned in alignment.align_auto(a.tokens, b.tokens, insert_cost, sub_cost):
-                        log.debug((aligned))
-                        new_rule = Pattern(cells, aligned, aligned=True)
-                        new_rule.lexemes = {(row.name, a, b)}
-                        log.debug("pattern: " + str(new_rule))
-                        if str(new_rule) not in done:
-                            done.append(str(new_rule))
-                            if new_rule._gen_alt:
-                                alt = new_rule.to_alt(exhaustive_blanks=False, use_gen=True)
-                                log.debug("gen alt: " + str(alt))
-                            else:
-                                alt = new_rule.to_alt(exhaustive_blanks=False)
-                            t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
-                            collection[alt][t].append(new_rule)
+        Arguments:
+            row (pandas.Series): a dataframe row containing the two forms.
+            collection (defaultdict): the patterns collection
+        """
+        cells = [row.cell_x, row.cell_y]
+        lex, a, b = row.lexeme, row.form_x, row.form_y
 
-    def attribute_best_pattern(sorted_collection, l, a, b):
+        if a and b:
+            if a == b:
+                new_rule = Pattern(cells, zip(a.tokens, b.tokens), aligned=True)
+                new_rule.lexemes = {(lex, a, b)}
+                alt = new_rule.to_alt(exhaustive_blanks=False)
+                t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
+                collection[alt][t].append(new_rule)
+            else:
+                done = []
+                log.debug("All alignments of {}, {}".format(a, b))
+                for aligned in alignment.align_auto(a.tokens, b.tokens, insert_cost, sub_cost):
+                    log.debug((aligned))
+                    new_rule = Pattern(cells, aligned, aligned=True)
+                    new_rule.lexemes = {(lex, a, b)}
+                    log.debug("pattern: " + str(new_rule))
+                    if str(new_rule) not in done:
+                        done.append(str(new_rule))
+                        if new_rule._gen_alt:
+                            alt = new_rule.to_alt(exhaustive_blanks=False, use_gen=True)
+                            log.debug("gen alt: " + str(alt))
+                        else:
+                            alt = new_rule.to_alt(exhaustive_blanks=False)
+                        t = _get_pattern_matchtype(new_rule, cells[0], cells[1])
+                        collection[alt][t].append(new_rule)
+
+    def attribute_best_pattern(sorted_collection, lex, a, b):
         for p in sorted_collection:
-            if (l, a, b) in p.lexemes:
+            if (lex, a, b) in p.lexemes:
                 return p
 
-    def _score(p, cells, forms, index):
-        def test_all(row, p, cells):
+    def _score(p, df):
+        """Scores each pattern"""
+        def test_all(row, p):
+            """Tests each pattern against each form"""
             correct = 0
-            l, a_list, b_list = row
-            if a_list == b_list:  # If the lists are identical, do not compute product
-                pairs = [(x, x) for x in b_list]
-            else:
-                pairs = product(a_list, b_list)
-            for a, b in pairs:
-                if a and b:
-                    if (l, a, b) in p.lexemes:
+            cells = [row.cell_x, row.cell_y]
+            lex, a, b = row.lexeme, row.form_x, row.form_y
+            if a and b:
+                if (lex, a, b) in p.lexemes:
+                    correct += 1
+                else:
+                    B = p.apply(a, cells, raiseOnFail=False)
+                    A = p.apply(b, cells[::-1], raiseOnFail=False)
+                    correct_one = (p.apply(a, cells, raiseOnFail=False) == b) and (
+                            p.apply(b, cells[::-1], raiseOnFail=False) == a)
+                    if correct_one:
                         correct += 1
-                    else:
-                        B = p.apply(a, cells, raiseOnFail=False)
-                        A = p.apply(b, cells[::-1], raiseOnFail=False)
-                        correct_one = (p.apply(a, cells, raiseOnFail=False) == b) and (
-                                p.apply(b, cells[::-1], raiseOnFail=False) == a)
-                        if correct_one:
-                            correct += 1
-                            p.lexemes.add((l, a, b))
+                        p.lexemes.add((lex, a, b))
             return correct
+        counts = df.apply(test_all, axis=1, p=p)
+        return counts.sum()
 
-        counts = np.apply_along_axis(test_all, 1, forms, p, cells)
-        return counts.sum(axis=0)
-
-    def find_patterns_in_col(column, pat_dict):
+    def find_patterns_in_col(df, pat_dict):
         collection = defaultdict(lambda: defaultdict(list))
-        c1, c2 = column.name
-        col = paradigms[[c1, c2]]
-        index = col.index
-        forms = col.reset_index().values
+        c1 = df.cell_x.iloc[0]
+        c2 = df.cell_y.iloc[0]
 
-        col.apply(generate_rules, axis=1, args=((c1, c2), collection))
+        # Identify pairwise alternations
+        df.apply(generate_rules, axis=1, collection=collection)
 
         sorted_collection = []
 
@@ -965,44 +968,33 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
             log.debug("Result:" + str(collection[alt]))
             # Score
             for p in collection[alt]:
-                p.score = _score(p, (c1, c2), forms, index)
+                p.score = _score(p, df)
                 sorted_collection.append(p)
 
         # Sort by score and choose best patterns
         sorted_collection = sorted(sorted_collection, key=lambda x: x.score, reverse=True)
-        best = defaultdict(set)
 
-        nullset = {''}
+        def _best_pattern(row):
+            lex, a, b = row.lexeme, row.form_x, row.form_y
+            if a != '' and b != '':
+                return attribute_best_pattern(sorted_collection, lex, a, b)
+            return None
 
-        for l in index:
-            row = col.at[l, c1], col.at[l, c2]
-
-            if row != (nullset, nullset):
-                if row[0] == row[1]:  # If the lists are identical, do not compute product
-                    pairs = [(x, x) for x in row[0]]
-                else:
-                    pairs = product(*row)
-
-                for a, b in pairs:
-                    best[l].add(attribute_best_pattern(sorted_collection, l, a, b))
-            else:
-                best[l].add(None)
-
+        df['pattern'] = df.apply(_best_pattern, axis=1)
         if optim_mem:
-            result = [repr(PatternCollection(list(best[l]))) for l in index]
+            df.pattern = df.pattern.apply(repr)
         else:
-            result = [PatternCollection(list(best[l])) for l in index]
-            pat_dict[(c1, c2)] = list(set.union(*[set(coll.collection) for coll in result]))
-
-        return result
+            pat_dict[(c1, c2)] = df['pattern'].unique()
+        return df
 
     tqdm.pandas(leave=False, disable=disable_tqdm)
-    patterns_df = patterns_df.progress_apply(find_patterns_in_col, axis=0, args=(pat_dict,))
+    paradigms_dic = {cells: find_patterns_in_col(df, pat_dict)
+                     # .set_index(['lexeme', 'form_a', 'form_b']).pattern
+                     for cells, df in tqdm(paradigms_dic.items())}
+    return paradigms_dic, pat_dict
 
-    return patterns_df, pat_dict
 
-
-def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
+def find_applicable(pat_table, pat_dict, disable_tqdm=False, **kwargs):
     """Find all applicable rules for each form.
 
     We name sets of applicable rules *classes*. *Classes* are oriented:
@@ -1010,8 +1002,8 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
     for each pair of columns (a, b) in the paradigm.
 
     Arguments:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            paradigms (columns are cells, index are lemmas).
+        pat_table (:class:`pandas:pandas.DataFrame`):
+            patterns table, containing the forms and the cells.
         pat_dict  (dict): a dict mapping a column name to a list of patterns.
         disable_tqdm (bool): if true, do not show progressbar
 
@@ -1022,43 +1014,30 @@ def find_applicable(paradigms, pat_dict, disable_tqdm=False, **kwargs):
             to a tuple representing a class of applicable patterns.
     """
 
-    def _iter_applicable_patterns(form, local_patterns, cell):
-        known_regexes = set()
-        if type(form) is tuple:  # if overabundant
-            form = form[0]  # from tuple to Form
-        for pattern in local_patterns:
-            regex = pattern._regex[cell]
-            if regex in known_regexes:
-                yield pattern
-
-            elif pattern.applicable(form, cell):
-                known_regexes.add(regex)
+    def _iter_applicable_patterns(row):
+        pair = (row.cell_x, row.cell_y)
+        if pair not in pat_dict:
+            pair = (row.cell_y, row.cell_x)
+        for pattern in pat_dict[pair]:
+            if pattern.applicable(row.form_x, row.cell_x):
                 yield pattern
 
     def applicable(*args):
+        """Returns all applicable patterns to a single row"""
         return tuple(_iter_applicable_patterns(*args))
 
-    # The result has (a, b) and (b, a) columns
-    # for each (a, b) column of patterns
-    # -> pairs are ordered, patterns.columns weren't
-    pairs = [y for x in pat_dict for y in (x, x[::-1])]
+    # Making the table bidirectionnal
+    col_rename = {'cell_x': 'cell_y', 'cell_y': 'cell_x',
+                  'form_x': 'form_y', 'form_y': 'form_x'}
+    pat_table = pd.concat([pat_table, pat_table.rename(columns=col_rename)])
 
-    # Initialisation
-    classes = pd.DataFrame(index=paradigms.index,
-                           columns=pairs)
+    # Computing classes
+    tqdm.pandas(leave=False, disable=disable_tqdm)
+    has_pat = pat_table.pattern.notna()
+    pat_table.loc[has_pat, "applicable"] = pat_table.loc[has_pat, :]\
+        .progress_apply(applicable, axis=1)
 
-    for a, b in tqdm(pat_dict, leave=False, disable=disable_tqdm):
-        local_patterns = pat_dict[(a, b)]
-
-        # Iterate on paradigms' rows of corresponding columns to fill with the
-        # result
-        classes[(a, b)] = paradigms[a].apply(applicable,
-                                             args=(local_patterns, a))
-        classes[(b, a)] = paradigms[b].apply(applicable,
-                                             args=(local_patterns, b))
-
-    return classes
-
+    return pat_table
 
 def find_alternations(paradigms, method, **kwargs):
     """Find local alternations in a Dataframe of paradigms.
@@ -1221,57 +1200,150 @@ def make_pairs(paradigms):
     return paired.apply(pair_columns, args=(paradigms,))
 
 
-def to_csv(dataframe, filename, pretty=False):
+def to_csv(dataframe, filename, pretty=False, only_id=False):
     """Export a Patterns DataFrame to csv."""
     export_fun = str if pretty else repr
-    dataframe.map(export_fun).to_csv(filename, sep=",")
+    export = dataframe.copy()
+    export.pattern = export.pattern.map(export_fun)
+    if only_id:
+        export[['form_x', 'form_y']] = \
+            export[['form_x', 'form_y']].map(lambda x: x.id)
+    export.drop(["lexeme", "cell_x", "cell_y"], axis=1).to_csv(filename, sep=",", index=False)
 
 
-def from_csv(filename, defective=True, overabundant=True):
-    """Read a Patterns Dataframe from a csv"""
+def from_csv(filename, paradigms, defective=True, overabundant=True):
+    """Read a Patterns Dataframe from a csv.
 
-    def format_header(item):
-        splitted = item.strip("'() ").split(",")
-        return splitted[0].strip("' "), splitted[1].strip("' ")
+    Arguments:
+        filename (str): path to the file
+        paradigms (pandas.DataFrame): a paradigms dataframe, with form id's as index.
+        defective (bool): whether to consider defective lexemes.
+        overabundant (bool): whether to consider overabundance.
+    """
 
-    def read_pattern(raw_value, names, collection):
-        result = []
-        if raw_value and not pd.isnull(raw_value):
-            for string in raw_value.split(";"):
-                if string in collection[names]:
-                    result.append(collection[names][string])
-                else:
-                    pattern = Pattern._from_str(names, string)
-                    collection[names][string] = pattern
-                    result.append(pattern)
-            if overabundant:
-                return PatternCollection(result)
+    # TODO: remove ?
+    # def format_header(item):
+    #     splitted = item.strip("'() ").split(",")
+    #     return splitted[0].strip("' "), splitted[1].strip("' ")
+
+    def read_pattern(row, collection):
+        """
+        Reads patterns from string representations.
+        Arguments:
+            row (pandas.Series): a pattern file row, containing
+                a string representation of a pattern and cell names.
+            collection (defaultdict): a defaultdict to avoid recomputing
+                patterns from strings.
+        """
+        cells = (row.cell_x, row.cell_y)
+        string = row.pattern
+        if string and not pd.isnull(string):
+            if string in collection[cells]:
+                result = collection[cells][string]
             else:
-                return PatternCollection([result[0]])
+                pattern = Pattern._from_str(cells, string)
+                collection[cells][string] = pattern
+                result = pattern
+            return result
         if defective:
-            return PatternCollection([None])
+            return None
         else:
             return np.nan
 
-    def str_to_pat_column(col, collection):
-        names = col.name
-        collection[names] = {}
-        return col.apply(read_pattern, args=(names, collection))
+    collection = defaultdict(lambda: defaultdict(str))
+    table = pd.read_csv(filename, sep=",", header=0, dtype="str")
 
-    collection = {}
-    table = pd.read_csv(filename, sep=",", header=0, index_col=0)
-    table.columns = [format_header(item) for item in table.columns]
-    table = table.map(lambda x: None if x == "None" else x)
-
-    is_alt_str = table.map(lambda x: type(x) is str and "/" not in x).all().all()
+    is_alt_str = table.pattern.map(lambda x: type(x) is str and "/" not in x).all()
     if is_alt_str:
         log.warning("These are not patterns but alternation strings")
         return table, {}
-    pat_table = table.apply(str_to_pat_column, args=(collection,))
+
+    # Restore phon_form based on paradigms and form_ids
+    table[['lexeme', 'cell_x', 'form_x']] = pd.merge(table, paradigms, right_index=True,
+                                                     left_on='form_x').iloc[:, -3:]
+    table[['cell_y', 'form_y']] = pd.merge(table, paradigms, right_index=True,
+                                           left_on='form_y').iloc[:, -2:]
+
+    table['pattern'] = table.apply(read_pattern, collection=collection, axis=1)
 
     if not defective:
-        pat_table.dropna(axis=0, inplace=True)
+        table.dropna(axis=0, subset="pattern", inplace=True)
 
+    if not overabundant:
+        dupl = table.duplicated(['cell_x', 'cell_y', 'lexeme'])
+        if dupl.any():
+            raise ValueError(f"Overabundant is false, but some rows are duplicated. Recompute patterns:\n{table[dupl].head()}.")
     collection = {column: list(collection[column].values()) for column in collection}
+    return table, collection
 
-    return pat_table, collection
+
+def unmerge_columns(df, paradigms):
+    """
+    Recreates merged columns in a memory efficient ways
+    (that is, keeping category detype for cells and lexemes).
+
+    Arguments:
+        df (pandas.Dataframe): a pandas DataFrame containing patterns for each pair of cells.
+        paradigms (Paradigms): a Paradigms object with already unmerged columns.
+    """
+
+    # Variables to store asynchronous changes.
+    mapping = {}
+    identity = set()
+    new_cat = {"x": set(), "y": set()}
+
+    # List the values that we will need to add.
+    # TODO simplify this
+    for x, y in df[['cell_x', 'cell_y']].drop_duplicates().itertuples(index=False):
+        dedup = False
+        if "#" in x:
+            col_x = x.split('#')
+            new_cat['x'].update(col_x)
+            identity.add(frozenset(sorted(col_x)))
+            dedup = True
+        else:
+            col_x = [x]
+        if "#" in y:
+            col_y = y.split('#')
+            new_cat['y'].update(col_y)
+            identity.add(frozenset(sorted(col_y)))
+            dedup = True
+        else:
+            col_y = [y]
+        if dedup:
+            mapping[(x, y)] = list(product(col_x, col_y))
+
+    # We remove unused categories and add the new ones.
+    for n in new_cat.keys():
+        s = df['cell_' + n]\
+            .cat.remove_unused_categories()\
+            .cat.add_categories(new_cat[n])
+        df['cell_' + n] = s
+
+    to_add = []
+    # We create the new pairs and delete the old ones.
+    for old, news in mapping.items():
+        old_loc = (df.cell_x == old[0]) & (df.cell_y == old[1])
+        for new in news:
+            new_df = paradigms.get_empty_pattern_df(*new)
+            new_df['pattern'] = df.loc[old_loc, "pattern"].values
+            to_add.append(new_df)
+        df.drop(df[old_loc].index, axis=0, inplace=True)
+
+    # We create identity patterns
+    for sets in identity:
+        for pair in combinations(sets, 2):
+            new_df = paradigms.get_empty_pattern_df(*pair)
+            defective = (new_df.form_x == "") | (new_df.form_y == "")
+            new_df.loc[~defective, 'pattern'] = Pattern.new_identity(pair)
+            new_df.loc[defective, 'pattern'] = None
+            to_add.append(new_df)
+
+    # We resolve all concatenations
+    # First set categories in a memory efficient way
+    cat = paradigms.data.cell.cat.categories
+    df.cell_y = df.cell_y.cat.set_categories(cat)
+    df.cell_x = df.cell_x.cat.set_categories(cat)
+    df = pd.concat([df] + to_add).reset_index(drop=True)
+
+    return df

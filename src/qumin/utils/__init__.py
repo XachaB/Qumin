@@ -110,28 +110,3 @@ def get_version():
         (str): svn/git version or ''.
      """
     return __version__
-
-
-def merge_duplicate_columns(df, sep=";", keep_names=True):
-    """Merge duplicate columns and return new DataFrame.
-
-    Arguments:
-        df (:class:`pandas:pandas.DataFrame`): A dataframe
-        sep (str): separator to use when joining columns names.
-        keep_names (bool): Whether to keep the names of the original duplicated
-            columns by merging them onto the columns we keep.
-    """
-    names = defaultdict(list)
-    l = len(df.columns)
-
-    for c in tqdm(df.columns):
-        hashable = tuple(df.loc[:, c])
-        names[hashable].append(c)
-
-    keep = [names[i][0] for i in names]
-    new_df = df[keep]
-    if keep_names:
-        new_df.columns = [sep.join(names[i]) for i in names]
-
-    log.info("Reduced from %s to %s columns", l, len(new_df.columns))
-    return new_df

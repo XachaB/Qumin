@@ -10,7 +10,8 @@ import logging
 from hydra.core.hydra_config import HydraConfig
 
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
-from .representations import segments, patterns, create_paradigms, create_features
+from .representations import segments, patterns, create_features
+from .representations.paradigms import Paradigms
 
 log = logging.getLogger()
 
@@ -36,23 +37,25 @@ def H_command(cfg, md):
     if cells and len(cells) == 1:
         raise ValueError("You can't provide only one cell.")
 
+    # Initialize segment inventory for phonological computations
     segments.Inventory.initialize(sounds_file_name)
 
-    # Inflectional paradigms: columns are cells, rows are lexemes.
-    paradigms = create_paradigms(md.datasets[0], defective=True, overabundant=False,
-                                 merge_cols=cfg.entropy.merged,
-                                 segcheck=True, cells=cells,
-                                 sample=cfg.sample,
-                                 most_freq=cfg.most_freq)
-    pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], defective=True,
-                                           overabundant=False)
+    # Inflectional paradigms: rows are forms, with lexeme and cell..
+    paradigms = Paradigms(md.datasets[0], defective=cfg.defective, overabundant=cfg.overabundant,
+                          merge_cols=cfg.entropy.merged,
+                          segcheck=True, cells=cells,
+                          sample=cfg.sample,
+                          most_freq=cfg.most_freq)
 
-    if pat_table.shape[0] < paradigms.shape[0]:
-        log.info(
-            "It looks like you ignored defective rows when computing patterns. I'll drop all defectives.")
-        paradigms = paradigms[(paradigms != "").all(axis=1)]
+    pat_table, pat_dic = patterns.from_csv(patterns_file_path[0], paradigms.data,
+                                           defective=cfg.defective,
+                                           overabundant=cfg.overabundant)
 
-    if verbose and len(pat_table.columns) > 10:
+    # Raise error if wrong parameters.
+    if cfg.defective and (paradigms.data.form == '').any() and pat_table.pattern.notna().all():
+        raise ValueError("It looks like you ignored defective rows when computing patterns. Set defective=False.")
+
+    if verbose and len(pat_table.cell_x.unique()) > 10:
         log.warning("Using verbose mode is strongly "
                     "discouraged on large (>10 cells) datasets."
                     "You should probably stop this process now.")
@@ -63,11 +66,13 @@ def H_command(cfg, md):
         features = None
 
     if md.bipartite:
+        # TODO
+        raise NotImplementedError
         names = [p.name for _, p in md.datasets]
-        paradigms2 = create_paradigms(md.datasets[0], defective=True,
-                                      overabundant=False,
-                                      merge_cols=cfg.entropy.merged, segcheck=True,
-                                      cells=cells)
+        paradigms2 = Paradigms(md.datasets[0], defective=True,
+                               overabundant=False,
+                               merge_cols=cfg.entropy.merged, segcheck=True,
+                               cells=cells)
         paradigms2 = paradigms2.loc[paradigms.index, :]
         pat_table2, pat_dic2 = patterns.from_csv(patterns_file_path[1], defective=True,
                                                  overabundant=False)
@@ -97,23 +102,28 @@ def H_command(cfg, md):
 
     else:
         log.info("Looking for classes of applicable patterns")
-        classes = patterns.find_applicable(paradigms, pat_dic)
-        log.debug("Classes:")
-        log.debug(classes)
-        distrib = PatternDistribution(paradigms,
-                                      pat_table,
-                                      classes,
+        pat_table = patterns.find_applicable(pat_table, pat_dic)
+        log.debug("Patterns with classes:")
+        log.debug(pat_table)
+        distrib = PatternDistribution(pat_table,
                                       "&".join([p.name for p in md.datasets]),
                                       features=features)
 
     if onePred:
         if not md.bipartite:  # Already computed in bipartite systems :)
-            distrib.one_pred_entropy()
-        mean = distrib.get_results().loc[:, "value"].mean()
-        log.info("Mean H(c1 -> c2) = %s ", mean)
+            distrib.one_pred_entropy(overabundant=cfg.overabundant,
+                                     **cfg.entropy.extra)
+        measures = ['cond_entropy', 'accuracy'] if cfg.overabundant else ['cond_entropy']
+        mean = distrib.get_results(measure=measures)\
+            .loc[:, ["value", "measure"]].groupby('measure').mean()
         if verbose:
-            distrib.one_pred_distrib_log()
+            distrib.one_pred_entropy(debug=verbose, overabundant=cfg.overabundant,
+                                     **cfg.entropy.extra)
+            distrib.sanity_check()
+        log.info(f"Mean metrics:\n{mean.to_markdown()}")
     if preds:
+        # TODO
+        raise NotImplementedError
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
 
@@ -121,7 +131,6 @@ def H_command(cfg, md):
             distrib.n_preds_entropy_matrix(n)
             mean = distrib.get_results(n=n).loc[:, "value"].mean()
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
-
             if verbose:
                 distrib.n_preds_distrib_log(n)
 

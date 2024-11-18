@@ -13,7 +13,7 @@ def find_microclasses(paradigms, freqs=None):
     Arguments:
         paradigms (pandas.DataFrame):
             a dataframe containing inflectional paradigms.
-            Columns are cells, and rows are lemmas.
+            rows describe a pattern between forms from a given lexeme for a given cell.
         freqs (pandas.Series): a series of frequencies for each lemma
 
     Return:
@@ -25,7 +25,17 @@ def find_microclasses(paradigms, freqs=None):
             {"a":["a","A","aa"], "b":["b","B","BBB"]}
 
     """
-    grouped = paradigms.fillna(0).groupby(list(paradigms.columns))
+
+    # Reformating to wide format required here.
+    data = paradigms.copy()
+    data['cells'] = list(zip(data.cell_x, data.cell_y))
+    data.drop(['cell_x', 'cell_y'], axis=1, inplace=True)
+    data.set_index(['cells', 'lexeme', 'form_x', 'form_y'], inplace=True)
+    data = data.groupby(['lexeme', 'cells'], observed=True)\
+        .pattern.apply(lambda x: tuple(sorted(set(x))))\
+        .unstack('cells')
+
+    grouped = data.fillna(0).groupby(list(data.columns))
     mc = {}
 
     for name, group in grouped:
