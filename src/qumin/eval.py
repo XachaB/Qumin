@@ -7,6 +7,7 @@ Author: Sacha Beniamine.
 from .entropy import cond_P, P
 import numpy as np
 from .representations import segments, patterns, create_features
+from .representations.paradigms import Paradigms
 import pandas as pd
 from itertools import combinations, chain
 from multiprocessing import Pool
@@ -178,15 +179,15 @@ def predict_two_directions(test_items, train_items, method, features=None):
 
 def prepare_data(cfg, md):
     """Create a multi-index paradigm table and if given a path, a features table."""
-    paradigms = create_paradigms(md.datasets[0],
-                                 segcheck=True,
-                                 fillna=False,
-                                 merge_cols=cfg.pats.merged,
-                                 overabundant=cfg.pats.overabundant,
-                                 defective=cfg.pats.defective,
-                                 sample=cfg.sample,
-                                 most_freq=cfg.most_freq
-                                 )
+    paradigms = Paradigms(md.datasets[0],
+                          segcheck=True,
+                          fillna=False,
+                          merge_cols=cfg.pats.merged,
+                          overabundant=cfg.pats.overabundant,
+                          defective=cfg.pats.defective,
+                          sample=cfg.sample,
+                          most_freq=cfg.most_freq
+                          )
     indexes = paradigms.index
     features = None
 

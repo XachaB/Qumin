@@ -1334,7 +1334,9 @@ def unmerge_columns(df, paradigms):
     for sets in identity:
         for pair in combinations(sets, 2):
             new_df = paradigms.get_empty_pattern_df(*pair)
-            new_df['pattern'] = Pattern.new_identity(pair)
+            defective = (new_df.form_x == "") | (new_df.form_y == "")
+            new_df.loc[~defective, 'pattern'] = Pattern.new_identity(pair)
+            new_df.loc[defective, 'pattern'] = None
             to_add.append(new_df)
 
     # We resolve all concatenations
