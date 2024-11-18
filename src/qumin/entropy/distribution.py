@@ -74,7 +74,6 @@ class PatternDistribution(object):
         else:
             self.features_len = 0
             self.features = None
-            self.add_features = lambda x: x.applicable
 
         self.data = pd.DataFrame(None,
                                  columns=["predictor",
@@ -128,7 +127,11 @@ class PatternDistribution(object):
         self.data = pd.concat(self.data, data)
 
     def add_features(self, group):
-        return group.applicable + group.lexeme.map(self.features)
+        if self.features:
+            ret = group.applicable + group.lexeme.map(self.features)
+            return ret
+        else:
+            return group.applicable
 
     def n_preds_entropy_matrix(self, n):
         r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies, and one with counts of lexemes.
@@ -294,7 +297,7 @@ class PatternDistribution(object):
             data.loc[cells, "n_pairs"] = sum(selector)
             data.at[cells, "value"] = self.get_entropy_measure(group, subset=selector, **kwargs)
 
-        patterns.groupby(['cell_x', 'cell_y']).apply(calc_condent, data=data,
+        patterns.groupby(['cell_x', 'cell_y'], observed=True).apply(calc_condent, data=data,
                                                      debug=debug, overabundant=overabundant,
                                                      **kwargs)
 
@@ -499,7 +502,8 @@ class PatternDistribution(object):
             table.reset_index(inplace=True)
             table.columns = headers
             log.debug(f"\n## Class n°{i} ({len(members)} members), H={ent}")
-            log.debug(feature_log)
+            if self.features is not None:
+                log.debug(feature_log)
             log.debug("\n" + table.to_markdown())
 
         log.debug('\n## Class summary')

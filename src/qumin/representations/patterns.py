@@ -11,7 +11,7 @@ from .segments import Inventory, Form
 from .contexts import Context
 from .quantity import one, optional, some, kleenestar
 from .generalize import generalize_patterns, incremental_generalize_patterns
-from itertools import groupby, zip_longest
+from itertools import groupby, zip_longest, combinations
 from collections import defaultdict
 from copy import deepcopy
 import numpy as np
@@ -832,7 +832,8 @@ def _with_deterministic_alignment(paradigms, method="suffix", disable_tqdm=False
     return patterns, pat_dict
 
 
-def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, disable_tqdm=False, **kwargs):
+def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False,
+                            disable_tqdm=False, **kwargs):
     """Find Patterns in a DataFrame with automatic alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -860,14 +861,12 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
                                   "Call find_patterns(paradigms, method) "
                                   "rather than this function.".format(scoring_method))
 
-    cells = paradigms.cell.unique()
+    cells = paradigms.data.cell.unique()
     pairs = list(combinations(cells, 2))
 
     paradigms_dic = {}
-    for a, b in pairs:
-        paradigms_dic[(a, b)] = pd.merge(paradigms.loc[paradigms.cell == a],
-                                         paradigms.loc[paradigms.cell == b],
-                                         on="lexeme")
+    for pair in pairs:
+        paradigms_dic[pair] = paradigms.get_empty_pattern_df(*pair)
 
     pat_dict = {}
 
@@ -1208,8 +1207,8 @@ def to_csv(dataframe, filename, pretty=False, only_id=False):
     export.pattern = export.pattern.map(export_fun)
     if only_id:
         export[['form_x', 'form_y']] = \
-            export[['form_x', 'form_y']].map(lambda x: x.id if x != '' else x)
-    export.to_csv(filename, sep=",", index=False)
+            export[['form_x', 'form_y']].map(lambda x: x.id)
+    export.drop(["lexeme", "cell_x", "cell_y"], axis=1).to_csv(filename, sep=",", index=False)
 
 
 def from_csv(filename, paradigms, defective=True, overabundant=True):
@@ -1260,7 +1259,10 @@ def from_csv(filename, paradigms, defective=True, overabundant=True):
         return table, {}
 
     # Restore phon_form based on paradigms and form_ids
-    table[['form_x', 'form_y']] = table[['form_x', 'form_y']].replace(paradigms.form.to_dict())
+    table[['lexeme', 'cell_x', 'form_x']] = pd.merge(table, paradigms, right_index=True,
+                                                     left_on='form_x').iloc[:, -3:]
+    table[['cell_y', 'form_y']] = pd.merge(table, paradigms, right_index=True,
+                                           left_on='form_y').iloc[:, -2:]
 
     table['pattern'] = table.apply(read_pattern, collection=collection, axis=1)
 
@@ -1271,6 +1273,75 @@ def from_csv(filename, paradigms, defective=True, overabundant=True):
         dupl = table.duplicated(['cell_x', 'cell_y', 'lexeme'])
         if dupl.any():
             raise ValueError(f"Overabundant is false, but some rows are duplicated. Recompute patterns:\n{table[dupl].head()}.")
-
     collection = {column: list(collection[column].values()) for column in collection}
     return table, collection
+
+
+def unmerge_columns(df, paradigms):
+    """
+    Recreates merged columns in a memory efficient ways
+    (that is, keeping category detype for cells and lexemes).
+
+    Arguments:
+        df (pandas.Dataframe): a pandas DataFrame containing patterns for each pair of cells.
+        paradigms (Paradigms): a Paradigms object with already unmerged columns.
+    """
+
+    # Variables to store asynchronous changes.
+    mapping = {}
+    identity = set()
+    new_cat = {"x": set(), "y": set()}
+
+    # List the values that we will need to add.
+    # TODO simplify this
+    for x, y in df[['cell_x', 'cell_y']].drop_duplicates().itertuples(index=False):
+        dedup = False
+        if "#" in x:
+            col_x = x.split('#')
+            new_cat['x'].update(col_x)
+            identity.add(frozenset(sorted(col_x)))
+            dedup = True
+        else:
+            col_x = [x]
+        if "#" in y:
+            col_y = y.split('#')
+            new_cat['y'].update(col_y)
+            identity.add(frozenset(sorted(col_y)))
+            dedup = True
+        else:
+            col_y = [y]
+        if dedup:
+            mapping[(x, y)] = list(product(col_x, col_y))
+
+    # We remove unused categories and add the new ones.
+    for n in new_cat.keys():
+        s = df['cell_' + n]\
+            .cat.remove_unused_categories()\
+            .cat.add_categories(new_cat[n])
+        df['cell_' + n] = s
+
+    to_add = []
+    # We create the new pairs and delete the old ones.
+    for old, news in mapping.items():
+        old_loc = (df.cell_x == old[0]) & (df.cell_y == old[1])
+        for new in news:
+            new_df = paradigms.get_empty_pattern_df(*new)
+            new_df['pattern'] = df.loc[old_loc, "pattern"].values
+            to_add.append(new_df)
+        df.drop(df[old_loc].index, axis=0, inplace=True)
+
+    # We create identity patterns
+    for sets in identity:
+        for pair in combinations(sets, 2):
+            new_df = paradigms.get_empty_pattern_df(*pair)
+            new_df['pattern'] = Pattern.new_identity(pair)
+            to_add.append(new_df)
+
+    # We resolve all concatenations
+    # First set categories in a memory efficient way
+    cat = paradigms.data.cell.cat.categories
+    df.cell_y = df.cell_y.cat.set_categories(cat)
+    df.cell_x = df.cell_x.cat.set_categories(cat)
+    df = pd.concat([df] + to_add).reset_index(drop=True)
+
+    return df

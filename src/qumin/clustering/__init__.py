@@ -31,7 +31,9 @@ def find_microclasses(paradigms, freqs=None):
     data['cells'] = list(zip(data.cell_x, data.cell_y))
     data.drop(['cell_x', 'cell_y'], axis=1, inplace=True)
     data.set_index(['cells', 'lexeme', 'form_x', 'form_y'], inplace=True)
-    data = data.groupby(['lexeme', 'cells']).pattern.apply(lambda x: tuple(sorted(set(x)))).unstack('cells')
+    data = data.groupby(['lexeme', 'cells'], observed=True)\
+        .pattern.apply(lambda x: tuple(sorted(set(x))))\
+        .unstack('cells')
 
     grouped = data.fillna(0).groupby(list(data.columns))
     mc = {}

@@ -6,7 +6,7 @@ Author: Sacha Beniamine.
 """
 from .entropy import cond_P, P
 import numpy as np
-from .representations import segments, create_paradigms, patterns, create_features
+from .representations import segments, patterns, create_features
 import pandas as pd
 from itertools import combinations, chain
 from multiprocessing import Pool
