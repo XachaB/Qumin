@@ -75,7 +75,8 @@ class Paradigms(object):
         paradigms = self.data
         if not defective:
             defective_lexemes = set(paradigms.loc[paradigms[form_col].isna(), lexemes].unique())
-            paradigms = paradigms[~paradigms.loc[:, lexemes].isin(defective_lexemes)]
+            paradigms.drop(paradigms[paradigms.loc[:, lexemes].isin(defective_lexemes)].index,
+                           inplace=True)
 
         if not overabundant:
             paradigms.drop_duplicates([lexemes, cell_col], inplace=True)
@@ -89,27 +90,16 @@ class Paradigms(object):
             lexemes_df = lexemes_df[lexemes_df.lexeme_id.isin(inflected)]
             selected = set(lexemes_df.sort_values("frequency", ascending=False)
                            .iloc[:most_freq, :].loc[:, "lexeme_id"].to_list())
-            paradigms = paradigms.loc[paradigms.lexeme.isin(selected), :]
+            paradigms.drop(paradigms.loc[~paradigms.lexeme.isin(selected), :],
+                           inplace=True)
 
         if sample:
             paradigms = paradigms.sample(sample)
 
-        def check_cells(cells, par_cols):
-            unknown_cells = set(cells) - set(par_cols)
-            if unknown_cells:
-                raise ValueError(f"You specified some cells which aren't in the paradigm : {' '.join(unknown_cells)}")
-            return sorted(list(set(par_cols) - set(cells)))
-
         if not {lexemes, cell_col, form_col} < set(paradigms.columns):
             log.warning("Please use Paralex-style long-form table (http://www.paralex-standard.org).")
 
-        if cells is not None:
-            to_drop = check_cells(cells, paradigms[cell_col].unique())
-            if len(to_drop) > 0:
-                log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
-                paradigms.drop(paradigms[~paradigms[cell_col].isin(cells)].index,
-                               axis=0, inplace=True)
-
+        self._drop_cells(paradigms, cells, 'cell')
         paradigms[form_col] = paradigms[form_col].fillna(value="")
 
         if segcheck:
@@ -136,6 +126,27 @@ class Paradigms(object):
         log.debug(paradigms)
         self.data = paradigms
         self._update_cell()
+
+    def _drop_cells(self, paradigms, cells, column):
+        """ Drops cells from a table.
+        Performs security check before dropping.
+
+        Arguments:
+            paradigms (pandas.DataFrame): the paradigms to alter.
+            cells (List[Str]): the list of cells to drop.
+            column (str): name of the column which contains the cells
+        """
+
+        col_cells = paradigms[column].unique()
+        if cells is not None:
+            unknown_cells = set(cells) - set(col_cells)
+            if unknown_cells:
+                raise ValueError(f"You specified some cells which aren't in the paradigm : {' '.join(unknown_cells)}")
+            to_drop = set(col_cells) - set(cells)
+            if len(to_drop) > 0:
+                log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
+            paradigms.drop(paradigms[paradigms[column].isin(to_drop)].index,
+                           inplace=True)
 
     def merge_duplicate_columns(self, sep="#", keep_names=True):
         """Merge duplicate columns and return new DataFrame.
