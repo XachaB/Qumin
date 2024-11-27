@@ -4,14 +4,16 @@
 
 This module addresses the modeling of inflectional alternation patterns."""
 
-from os.path import commonprefix
-from itertools import combinations, product
+# Our modules
 from . import alignment
 from .segments import Inventory, Form
 from .contexts import Context
 from .quantity import one, optional, some, kleenestar
 from .generalize import generalize_patterns, incremental_generalize_patterns
-from itertools import groupby, zip_longest, combinations
+
+# External tools
+from os.path import commonprefix
+from itertools import groupby, zip_longest, combinations, product
 from collections import defaultdict
 from copy import deepcopy
 import numpy as np
@@ -1263,6 +1265,11 @@ def from_csv(filename, paradigms, defective=True, overabundant=True):
                                                      left_on='form_x').iloc[:, -3:]
     table[['cell_y', 'form_y']] = pd.merge(table, paradigms, right_index=True,
                                            left_on='form_y').iloc[:, -2:]
+
+    # The paradigms table already dropped unnecessary cells.
+    # After the merge, NaN cells can be dropped also.
+    table.drop(table[table.cell_x.isna() | table.cell_y.isna()].index,
+               inplace=True)
 
     table['pattern'] = table.apply(read_pattern, collection=collection, axis=1)
 
