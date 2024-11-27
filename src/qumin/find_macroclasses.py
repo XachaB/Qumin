@@ -24,6 +24,7 @@ import logging
 
 log = logging.getLogger()
 
+
 def macroclasses_command(cfg, md):
     r"""Cluster lexemes in macroclasses according to alternation patterns."""
     # Loading files and paths
