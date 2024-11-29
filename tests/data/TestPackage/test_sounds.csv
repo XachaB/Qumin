@@ -1,0 +1,6 @@
+sound_id,syllabic,stress,long,extra-long,consonantal,sonorant,continuant,delayed release,approximant,tap,trill,nasal,voice,spread gl,constr gl,LABIAL,round,labiodental,CORONAL,anterior,distributed,strident,lateral,DORSAL,high,low,front,back,tense,diphthong,diph_front,diph_high,diph_low,C_high,C_low,C_front,C_back,palatalised
+f,0,,0,0,1,0,1,1,0,0,0,0,0,0,0,1,0,1,0,,,,0,0,,,,,,,,,,,,,,0
+k,0,,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,,0,1,,,,,,,,,,1,0,1,0,0
+p,0,,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,,,,0,0,,,,,,,,,,,,,,0
+s,0,,0,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,1,0,0,,,,,,,,,,,,,,0
+t,0,,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,,,,,,,,,,1,0,1,0,0

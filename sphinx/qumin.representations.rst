@@ -28,6 +28,14 @@ qumin.representations.contexts module
    :undoc-members:
    :show-inheritance:
 
+qumin.representations.frequencies module
+----------------------------------------
+
+.. automodule:: qumin.representations.frequencies
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 qumin.representations.generalize module
 ---------------------------------------
 
