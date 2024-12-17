@@ -38,6 +38,13 @@ class PatternsTestCase(unittest.TestCase):
                  'ˈẽ', 'ˈaj'}),),)}
         self.assertDictEqual(p._gen_alt, expected)
 
+    def test_applicable_optional_end(self):
+        c = ("A","B")
+        fa = "sat"
+        p = patterns.Pattern._from_str(c,"t ⇌  / sa_i?<2.0>")
+        self.assertTrue(p.applicable(fa, "A"), f"{p} should be applicable to {fa}")
+
+
     def test_applicable(self):
         c = ("a", "b")
         p = patterns.Pattern._from_str(c,
