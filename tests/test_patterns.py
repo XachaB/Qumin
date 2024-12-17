@@ -40,7 +40,7 @@ class PatternsTestCase(unittest.TestCase):
 
     def test_applicable_optional_end(self):
         c = ("A","B")
-        fa = "sat"
+        fa = segments.Form.from_segmented_str("s a t")
         p = patterns.Pattern._from_str(c,"t ⇌  / sa_i?<2.0>")
         self.assertTrue(p.applicable(fa, "A"), f"{p} should be applicable to {fa}")
 
