@@ -120,15 +120,11 @@ class Inventory(object):
         """
         id = frozenset(extent) if len(extent) > 1 else extent[0]
         ordered = sorted(extent)
-        joined = "|".join(ordered)
+        cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
+        cls._regexes_end[id] = "(?:" + "|".join(ordered) + ")"
         if len(extent) == 1:
-            cls._regexes[id] = id + " "
-            cls._regexes_end[id] = id
             cls._pretty_str[id] = id
         else:
-            # The non capturing group of each segment
-            cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
-            cls._regexes_end[id] = "(?:" + "|".join(x for x in ordered) + ")"
             cls._pretty_str[id] = "{" + ",".join(ordered) + "}"
         cls._classes[id] = set(classes)
         cls._features[id] = set(intent)
@@ -148,7 +144,7 @@ class Inventory(object):
         """
         if end:
             return cls._regexes_end[sound]
-        return "(?:" + cls._regexes[sound] + ")"
+        return  cls._regexes[sound]
 
     @classmethod
     def pretty_str(cls, sound, **kwargs):
