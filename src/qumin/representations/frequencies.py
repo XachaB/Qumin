@@ -79,8 +79,8 @@ class Frequencies(object):
             cls.source.update(source)
 
         cls._read_form_frequencies(**kwargs)
-        cls._read_other_frequencies("lexemes", **kwargs)
-        cls._read_other_frequencies("cells", **kwargs)
+        cls._read_aggregate_frequencies("lexemes", **kwargs)
+        cls._read_aggregate_frequencies("cells", **kwargs)
 
     @classmethod
     def _read_form_frequencies(cls, real=True):
@@ -151,7 +151,7 @@ class Frequencies(object):
         cls.forms.index.name = "form"
 
     @classmethod
-    def _read_other_frequencies(cls, name, real=True):
+    def _read_aggregate_frequencies(cls, name, real=True):
         """
         Recover frequency information for cells and lexemes.
 
