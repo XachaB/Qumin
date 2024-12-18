@@ -222,11 +222,16 @@ class Frequencies(object):
             s     33.0
             Name: value, dtype: float64
 
+        Todo:
+            Replace if mean/else by an aggfunc parameter, once skipna will be supported
+                by pandas functions.
+
         Arguments:
             group_on (List[str]): columns for which absolute frequencies should be computed.
                 If `False`, aggregates across all records.
             mean (bool): Defaults to False. If True, returns a mean instead of a sum.
             skipna(bool): Defaults to False. Skip `nan` values for sums or means.
+
         Returns:
             `pandas.Series`: a Series which contains the output values.
                 The index is either the original one, or the grouping columns.
