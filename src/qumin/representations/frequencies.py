@@ -77,27 +77,32 @@ class Frequencies(object):
         if source:
             self.source.update(source)
 
-        self._read_form_frequencies(**kwargs)
+        self._read_aggregate_frequencies("forms", **kwargs)
         self._read_aggregate_frequencies("lexemes", **kwargs)
         self._read_aggregate_frequencies("cells", **kwargs)
 
-    def _read_form_frequencies(self, force_uniform=False):
-        """Recover the available information about form frequencies.
+    def _read_aggregate_frequencies(self, name, force_uniform=False):
+        """
+        Recover frequency information for forms, cells or lexemes.
 
         Arguments:
+            name(str): Frequency table to build. Either forms, cells or lexemes.
             force_uniform (bool): Whether to replace everywhere real frequencies
                 by empty uniform distributions. Defaults to False
+
         """
-        paradigms = px.read_table("forms", self.p)
+        table = px.read_table(name, self.p, index_col=name[:-1] + "_id")
 
-        if not force_uniform and "frequency" in paradigms.columns:
-            log.info('forms: Frequencies in the table. Reading them.')
-            self.forms = paradigms
-            self.forms['source'] = 'forms_table'
-            self.forms.rename({"frequency": "value"}, axis=1, inplace=True)
-            self.source['forms'] = 'forms_table'
+        # There are 4 different situations:
+        # 1. Reading frequencies from the given table.
+        if not force_uniform and "frequency" in table.columns:
+            log.info(f'{name}: Frequencies in the table. Reading them.')
+            table['source'] = f'{name}_table'
+            table.rename({"frequency": "value"}, axis=1, inplace=True)
+            self.source[name] = name + '_table'
 
-        elif not force_uniform and self.p.has_resource("frequencies"):
+        # 2. For forms, try to read from the frequencies table.
+        elif not force_uniform and name == 'forms' and self.p.has_resource("frequencies"):
             log.info('No frequencies in the paradigms table, looking for a frequency table.')
             freq = px.read_table('frequency', self.p, index_col='freq_id',
                                  usecols=['form', 'value', 'freq_id'])
@@ -116,81 +121,54 @@ class Frequencies(object):
                 log.info(f"No default source provided for frequencies. Using {self.source['forms']}")
 
             # We use the form_id column to match both dataframes
-            paradigms.set_index('form_id', inplace=True)
             freq.set_index('form', inplace=True)
 
-            missing_idx = ~paradigms.index.isin(freq.index)
+            missing_idx = ~table.index.isin(freq.index)
             if missing_idx.any():
                 log.warning(f"The frequencies table does not contain"
                             f"a row for every form_id row."
-                            f"Missing:\n{paradigms.loc[missing_idx].head()}")
+                            f"Missing:\n{table.loc[missing_idx].head()}")
 
-            paradigms.loc[self.freq.index, 'value'] = freq.value
-            self.forms = paradigms.copy()
-        else:
-            raise ValueError("Frequency information for forms couldn't be found"
-                             "in this dataset. You should probably pass"
-                             "uniform=True or report this issue.")
-            log.info('forms: Building empty frequencies.')
-            self.forms = paradigms
-            self.forms['source'] = 'empty'
-            self.forms['value'] = pd.NA
-            self.source['forms'] = 'empty'
+            table.loc[self.freq.index, 'value'] = freq.value
 
-        # Check for duplicate overabundant phon_forms and sum the frequencies.
-        # This handles cases where the orth_form is different and has two records.
-        # Paradigms should be read only once, and this code shouldn't be redundant with
-        # the main script. This should be fixed elsewhere. TODO
-        self.forms['form'] = self.forms.phon_form
-        dup = self.forms.duplicated(subset=self.col_names, keep=False)
-        if dup.any():
-            self.forms.loc[dup, 'value'] = \
-                self.forms.loc[dup].groupby(self.col_names).value.transform(sum)
-            self.forms.drop_duplicates(subset=self.col_names, inplace=True)
-
-        self.forms = self.forms[['form_id', 'cell', 'lexeme', 'value', 'source']]\
-            .set_index('form_id').sort_index()
-        self.forms.index.name = "form"
-
-    def _read_aggregate_frequencies(self, name, force_uniform=False):
-        """
-        Recover frequency information for cells and lexemes.
-
-        Arguments:
-            name(str): Frequency table to build. Either cells or lexemes.
-            force_uniform (bool): Whether to replace everywhere real frequencies
-                by empty uniform distributions. Defaults to False
-
-        """
-        table = px.read_table(name, self.p, index_col=name[:-1] + "_id")
-
-        # There are up to 3 different situations:
-        # 1. Reading frequencies from the given table.
-        if not force_uniform and "frequency" in table.columns:
-            log.info(f'{name}: Frequencies in the table. Reading them.')
-            table['source'] = 'cells_table'
-            table.rename({"frequency": "value"}, axis=1, inplace=True)
-            self.source[name] = name + '_table'
-
-        # 2. Building frequencies from the forms table.
-        elif not force_uniform and (self.source['forms'] != "empty"):
-            log.info(f'{name}: No frequencies in the {name} table, building from the forms.')
+        # 3. For cells and lexemes build from the forms table.
+        # TODO read directly from the frequencies table if possible
+        elif not force_uniform and name != 'forms' and (self.source['forms'] != "empty"):
+            log.info(f'{name}: No frequencies in the {name} table, building from the forms table.')
             freq = self.forms.groupby(name[:-1]).value.sum()
             table.loc[freq.index, "value"] = freq.values
             table['source'] = 'forms_table'
             self.source[name] = 'forms_table'
 
-        # 3. Building a fake uniform frequency distribution.
+        # 4. Building a fake uniform frequency distribution.
         else:
+            if not force_uniform:
+                log.warning(f"Frequency information for {name} couldn't be found"
+                            "in this dataset.")
             log.info(f'{name}: Building empty frequencies.')
             table['source'] = 'empty'
             table['value'] = pd.NA
             self.source[name] = 'empty'
 
+        if name == "forms":
+            # Check for duplicate overabundant phon_forms and sum the frequencies.
+            # This handles cases where the orth_form is different and has two records.
+            # Paradigms should be read only once, and this code shouldn't be redundant with
+            # the main script. This should be fixed elsewhere. TODO
+            table['form'] = table.phon_form
+            dup = table.duplicated(subset=self.col_names, keep=False)
+            if dup.any():
+                table.loc[dup, 'value'] = \
+                    table.loc[dup].groupby(self.col_names).value.transform(sum)
+                table.drop_duplicates(subset=self.col_names, inplace=True)
+            cols = ['cell', 'lexeme', 'value', 'source']
+        else:
+            cols = ['value', 'source']
+
         # We save the resulting table
         table.sort_index(inplace=True)
         table.index.name = name[:-1]
-        setattr(self, name, table[['value', 'source']])
+        setattr(self, name, table[cols])
 
     def get_absolute_freq(self, mean=False, group_on=False, skipna=False, **kwargs):
         """
