@@ -17,7 +17,7 @@ def quantity_largest(args):
 
     Example:
         >>> quantity_largest([Quantity(0,1),Quantity(1,1),Quantity(1,np.inf)])
-        Quantity(0,np.inf)
+        Quantity(0,inf)
 
     Argument:
         args: an iterable of quantities.

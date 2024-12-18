@@ -62,7 +62,7 @@ class Form(str):
         return self
 
     def __repr__(self):
-        return f"Form({self}, id:{self.id})" if self.id else f"Form({self})"
+        return f"Form({self}, id:{self.id})" if hasattr(self, "id") and self.id else f"Form({self})"
 
 
 class Inventory(object):
@@ -72,6 +72,8 @@ class Inventory(object):
     without passing an inventory instance everywhere.
 
     The inventory first needs to be initialized with a distinctive features file.
+
+    >>> Inventory.initialize("tests/data/frenchipa.csv")
 
     Each sound class in the inventory is a concept in a FCA lattice.
     Sound class identifiers are either strings (for phonemes)
@@ -483,8 +485,10 @@ class Inventory(object):
             p -> f
 
             >>> a,b = Inventory.transformation("t","s")
-            >>> print(a,b)
-            {"b","d","p","t"} {"f","s","v","z"}
+            >>> a == frozenset({'d', 't', 'b', 'p'})
+            True
+            >>> b == frozenset({'s', 'z', 'f', 'v'})
+            True
 
         Arguments:
             a,b (str): Segment identifiers.
@@ -513,7 +517,7 @@ class Inventory(object):
     def id_to_frozenset(cls, sound_id):
         if cls.is_leaf(sound_id):
             return frozenset({sound_id})
-        return sound_id
+        return frozenset(sound_id)
 
     @classmethod
     def get_transform_features(cls, left, right):
@@ -524,8 +528,8 @@ class Inventory(object):
             right (frozenset): set of phonemes
 
         Example:
-            >>> inventory.get_from_transform({"b","d"}, {"p","t"})
-            frozenset({'+vois'}), frozenset({'-vois'})
+            >>> Inventory.get_transform_features({"b","d"}, {"p","t"})
+            (frozenset({'+voi'}), frozenset({'-voi'}))
         """
 
         t1 = cls.features(cls.get(cls.id_to_frozenset(left)))
@@ -538,16 +542,14 @@ class Inventory(object):
     def get_from_transform(cls, a, transform):
         """ Get a segment from another according to a transformation tuple.
 
-        In the following example, the segments have been initialized with French segment definitions.
-
         Arguments:
             a (str): Segment alias
             transform (tuple): Couple of two segment IDs
 
         Example:
-            >>> segments.Inventory.get_from_transform("d",
-            ...                                     (frozenset({"b","d","p","t"}),
-            ...                                     frozenset({"f","s","v","z"})))
+            >>> Inventory.get_from_transform("d",
+            ...                                     (frozenset({"d","t"}),
+            ...                                     frozenset({"s","z"})))
             'z'
         """
         a = cls.features(a)
