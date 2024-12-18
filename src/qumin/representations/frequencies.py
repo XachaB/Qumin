@@ -41,7 +41,6 @@ class Frequencies(object):
 
     Attributes:
         p (frictionless.Package): package to analyze
-        real (bool): Whether the frequencies are real or fake.
         source (Dict[str, str]): source used by default for each table.
             Contains either a value for the source field of a Paralex frequency table,
             or the name of the table used to extract the frequency.
@@ -62,9 +61,10 @@ class Frequencies(object):
     def __init__(self, package, source=False, **kwargs):
         """Constructor for Frequencies. We gather and store frequencies
         for forms, lexemes and cells. Behaviour is the following:
-            - If `real` is `False`, we use the paradigms table to generate a Uniform distribution.
+            - If `force_uniform` is `True`, we use the paradigms table to generate a Uniform distribution.
             - If not, we try to get a frequency column from the tables: form, lexemes, cell
             - If any of those is missing, we use the frequencies table.
+            - If we can't use the frequency table, we fall back to a uniform.
 
         Arguments:
             p (frictionless.Package): package to analyze
@@ -81,29 +81,32 @@ class Frequencies(object):
         self._read_aggregate_frequencies("lexemes", **kwargs)
         self._read_aggregate_frequencies("cells", **kwargs)
 
-    def _read_form_frequencies(self, real=True):
+    def _read_form_frequencies(self, force_uniform=False):
         """Recover the available information about form frequencies.
 
         Arguments:
-            real (bool): Whether to use real frequencies or
-                empty uniform distributions. Defaults to True.
+            force_uniform (bool): Whether to replace everywhere real frequencies
+                by empty uniform distributions. Defaults to False
         """
         paradigms = px.read_table("forms", self.p)
 
-        if real and "frequency" in paradigms.columns:
+        if not force_uniform and "frequency" in paradigms.columns:
             log.info('forms: Frequencies in the table. Reading them.')
             self.forms = paradigms
             self.forms['source'] = 'forms_table'
             self.forms.rename({"frequency": "value"}, axis=1, inplace=True)
             self.source['forms'] = 'forms_table'
 
-        elif real and self.p.has_resource("frequencies"):
+        elif not force_uniform and self.p.has_resource("frequencies"):
             log.info('No frequencies in the paradigms table, looking for a frequency table.')
             freq = px.read_table('frequency', self.p, index_col='freq_id',
                                  usecols=['form', 'value', 'freq_id'])
             freq_col = freq.columns
             if "form" not in freq_col:
-                raise ValueError("The form column is required in the frequency table if real=True and no frequencies in the forms table.")
+                raise ValueError("No form column in the frequency table."
+                                 "I can't build frequency information for forms."
+                                 "You should probably pass uniform=True "
+                                 "or report this issue.")
 
             if "source" not in freq_col:
                 freq['source'] = 'frequencies_table'
@@ -118,15 +121,16 @@ class Frequencies(object):
 
             missing_idx = ~paradigms.index.isin(freq.index)
             if missing_idx.any():
-                log.warning(f"""The frequencies table does not contain a row for every form_id row. Missing:
-                            {paradigms.loc[missing_idx].head()}""")
+                log.warning(f"The frequencies table does not contain"
+                            f"a row for every form_id row."
+                            f"Missing:\n{paradigms.loc[missing_idx].head()}")
 
             paradigms.loc[self.freq.index, 'value'] = freq.value
             self.forms = paradigms.copy()
-
         else:
-            if real:
-                log.warning("""No form frequencies were available in the Paralex dataset.""")
+            raise ValueError("Frequency information for forms couldn't be found"
+                             "in this dataset. You should probably pass"
+                             "uniform=True or report this issue.")
             log.info('forms: Building empty frequencies.')
             self.forms = paradigms
             self.forms['source'] = 'empty'
@@ -136,7 +140,7 @@ class Frequencies(object):
         # Check for duplicate overabundant phon_forms and sum the frequencies.
         # This handles cases where the orth_form is different and has two records.
         # Paradigms should be read only once, and this code shouldn't be redundant with
-        # the main script. This should be fixed elsewhere.
+        # the main script. This should be fixed elsewhere. TODO
         self.forms['form'] = self.forms.phon_form
         dup = self.forms.duplicated(subset=self.col_names, keep=False)
         if dup.any():
@@ -148,34 +152,35 @@ class Frequencies(object):
             .set_index('form_id').sort_index()
         self.forms.index.name = "form"
 
-    def _read_aggregate_frequencies(self, name, real=True):
+    def _read_aggregate_frequencies(self, name, force_uniform=False):
         """
         Recover frequency information for cells and lexemes.
 
         Arguments:
             name(str): Frequency table to build. Either cells or lexemes.
-            real (bool): Whether to use real frequencies or
-                empty uniform distributions. Defaults to True.
+            force_uniform (bool): Whether to replace everywhere real frequencies
+                by empty uniform distributions. Defaults to False
+
         """
         table = px.read_table(name, self.p, index_col=name[:-1] + "_id")
 
         # There are up to 3 different situations:
         # 1. Reading frequencies from the given table.
-        if real and "frequency" in table.columns:
+        if not force_uniform and "frequency" in table.columns:
             log.info(f'{name}: Frequencies in the table. Reading them.')
             table['source'] = 'cells_table'
             table.rename({"frequency": "value"}, axis=1, inplace=True)
             self.source[name] = name + '_table'
 
         # 2. Building frequencies from the forms table.
-        elif real and (self.source['forms'] != "empty"):
+        elif not force_uniform and (self.source['forms'] != "empty"):
             log.info(f'{name}: No frequencies in the {name} table, building from the forms.')
             freq = self.forms.groupby(name[:-1]).value.sum()
             table.loc[freq.index, "value"] = freq.values
             table['source'] = 'forms_table'
             self.source[name] = 'forms_table'
 
-        # 3. Building a fake uniform frequency distribution.
+        # 3. Building a fake uniform frequency distribution.
         else:
             log.info(f'{name}: Building empty frequencies.')
             table['source'] = 'empty'
@@ -197,7 +202,7 @@ class Frequencies(object):
         Examples:
 
             >>> p = fl.Package('tests/data/TestPackage/test.package.json')
-            >>> f = Frequencies(p, real=True)
+            >>> f = Frequencies(p)
             >>> f.get_absolute_freq(filters={'lexeme':'q'}, group_on="index", skipna=True)
             form
             11    12.0
@@ -218,10 +223,10 @@ class Frequencies(object):
             Name: value, dtype: float64
 
         Arguments:
-            group_on (List[str]): columns on for which absolute frequencies should be computed.
-                If `False, aggregates across all records.
+            group_on (List[str]): columns for which absolute frequencies should be computed.
+                If `False`, aggregates across all records.
             mean (bool): Defaults to False. If True, returns a mean instead of a sum.
-            skipna(bool): Defaults to False. Skip nan values for sums or means.
+            skipna(bool): Defaults to False. Skip `nan` values for sums or means.
         Returns:
             `pandas.Series`: a Series which contains the output values.
                 The index is either the original one, or the grouping columns.
@@ -265,7 +270,7 @@ class Frequencies(object):
         Examples:
 
             >>> p = fl.Package('tests/data/TestPackage/test.package.json')
-            >>> f = Frequencies(p, real=True)
+            >>> f = Frequencies(p)
             >>> f.get_relative_freq(filters={'lexeme': 'p', 'cell':'first'}, group_on=["lexeme"])['result'].values
             array([0.05882353, 0.94117647])
             >>> f.get_relative_freq(filters={'lexeme': 's', 'cell':'second'}, group_on=["lexeme"])['result'].values
