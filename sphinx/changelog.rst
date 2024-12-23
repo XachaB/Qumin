@@ -6,9 +6,10 @@ Qumin follows the `semver <https://semver.org/>`_ principles for versioning. Thi
 dev version (forthcoming)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+- Add a `pos` keyword to filter paradigms on POS.
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Deprecations:
-    - Sound table "Seg." column not supported.
+    - Sound table "Seg." column not supported anymore.
 
 Version 2.0
 ~~~~~~~~~~~
