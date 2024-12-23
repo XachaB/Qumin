@@ -29,6 +29,7 @@ disable_existing_loggers: false
 action: patterns      # Action, one of: patterns, H, lattice, eval, macroclasses, heatmap, ent_heatmap
 data: null            # path to paralex.package.json paradigms, segments
 cells: null           # List of cells to use (subset)
+pos: null             # POS to analyse
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
 most_freq: null       # restrict to N most frequent items (use the lexeme "frequency" column)
 sample: null        # (int) A number of lexemes to sample, for debug purposes

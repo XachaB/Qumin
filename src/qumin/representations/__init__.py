@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
+from paralex import read_table
 from .segments import Inventory, Form
 from ..utils import merge_duplicate_columns
 
@@ -47,13 +47,11 @@ def create_features(md, feature_cols):
 def create_paradigms(dataset, fillna=True,
                      segcheck=False, merge_duplicates=False,
                      defective=False, overabundant=False, merge_cols=False,
-                     cells=None, sample=None, most_freq=None):
+                     cells=None, sample=None, most_freq=None, pos=None):
     """Read paradigms data, and prepare it according to a Segment class pool.
 
     Arguments:
         dataset (str): paralex frictionless Package
-            All characters occuring in the paradigms except the first column
-            should be inventoried in this class.
         verbose (bool): verbosity switch.
         merge_duplicates (bool): should identical columns be merged ?
         fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ? Otherwise they are filled with empty strings ("").
@@ -62,6 +60,7 @@ def create_paradigms(dataset, fillna=True,
         overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
         merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
         cells (List[str]): List of cell names to consider. Defaults to all.
+        pos (List[str]): List of parts of speech to consider. Defaults to all.
 
     Returns:
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (columns are cells, index are lemmas).
@@ -82,12 +81,26 @@ def create_paradigms(dataset, fillna=True,
     paradigms = pd.read_csv(data_file_name, na_values=["", "#DEF#"], dtype="str", keep_default_na=False,
                             usecols=["form_id", lexemes, cell_col, form_col])
 
+    if pos:
+        if 'lexemes' in dataset.resource_names:
+            table = read_table('lexemes', dataset)
+            if 'POS' not in table.columns:
+                log.warning('No POS column in the lexemes table.')
+            else:
+                if isinstance(pos, str):
+                    pos = [pos]
+                paradigms = paradigms[paradigms['lexeme']
+                                      .map(table.set_index('lexeme_id').POS)
+                                      .isin(pos)]
+        else:
+            log.warning("No lexemes table. Can't filter based on POS.")
+
     if not defective:
         defective_lexemes = set(paradigms.loc[paradigms[form_col].isna(), lexemes].unique())
         paradigms = paradigms[~paradigms.loc[:, lexemes].isin(defective_lexemes)]
 
     if most_freq:
-        inflected = paradigms.loc[:,lexemes].unique()
+        inflected = paradigms.loc[:, lexemes].unique()
         lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
         lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
         # Restrict to lexemes we have kept, if we dropped defectives
