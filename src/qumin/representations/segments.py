@@ -628,9 +628,19 @@ def shorten_feature_names(table):
                 short_features_names.append(_to_short_feature[name])
             elif name.lower() in _to_short_feature:  # Uppercase
                 short_features_names.append(_to_short_feature[name.lower()].upper())
-            else:  # Make an abbreviation on the fly
+            else:
+                # Make an abbreviation on the fly by shortening the label
                 names = [name[:i] for i in range(3, len(name) + 1)]
-                while names and names[0] in (_short_features + short_features_names):
+                reserved_names = _short_features + short_features_names
+                while names and names[0] in reserved_names:
                     names.pop(0)
-                short_features_names.append(names[0])
+                if len(names) != 0:
+                    new_name = names[0]
+                else:  # Fallback strategy: append a unique integer
+                    key = 1
+                    new_name = name[:3]
+                    while new_name in reserved_names:
+                        key += 1
+                        new_name = name[:3] + str(key)
+                short_features_names.append(new_name)
     table.columns = short_features_names
