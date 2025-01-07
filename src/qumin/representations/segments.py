@@ -381,8 +381,7 @@ class Inventory(object):
                 alert += "\n\t" + leaf + " is the same node as " + str(lattice_node)
                 alert += "\n\t\t" + cls.infos(lattice_node)
                 for o in other:
-                    alert += "\n\t\t" + cls.infos(o)
-
+                    alert += "\n\t\t" + cls.infos(cls.get(o))
             raise Exception("Warning, some segments are  ancestors of other segments:" + alert)
 
         cls._max = max(cls._classes, key=len)
