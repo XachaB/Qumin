@@ -638,7 +638,7 @@ def shorten_feature_names(table):
                     new_name = names[0]
                 else:  # Fallback strategy: append a unique integer
                     key = 1
-                    new_name = name[:3]
+                    new_name = name[:3] + str(key)
                     while new_name in reserved_names:
                         key += 1
                         new_name = name[:3] + str(key)
