@@ -99,31 +99,14 @@ def create_paradigms(dataset, fillna=True,
         defective_lexemes = set(paradigms.loc[paradigms[form_col].isna(), lexemes].unique())
         paradigms = paradigms[~paradigms.loc[:, lexemes].isin(defective_lexemes)]
 
-    if most_freq:
-        inflected = paradigms.loc[:, lexemes].unique()
-        lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
-        lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
-        # Restrict to lexemes we have kept, if we dropped defectives
-        lexemes_df = lexemes_df[lexemes_df.lexeme_id.isin(inflected)]
-        selected = set(lexemes_df.sort_values("frequency",
-                                              ascending=False
-                                              ).iloc[:most_freq, :].loc[:, "lexeme_id"].to_list())
-        paradigms = paradigms.loc[paradigms.lexeme.isin(selected), :]
-    if sample:
-        paradigms = paradigms.sample(sample)
-
-    def aggregator(s):
-        form_ids = tuple(form_id for form_id in s if form_dic[form_id] != '')
-        return form_ids if len(form_ids) > 0 else ""
+    if not {lexemes, cell_col, form_col} < set(paradigms.columns):
+        log.warning("Please use Paralex-style long-form table (http://www.paralex-standard.org).")
 
     def check_cells(cells, par_cols):
         unknown_cells = set(cells) - set(par_cols)
         if unknown_cells:
             raise ValueError(f"You specified some cells which aren't in the paradigm : {' '.join(unknown_cells)}")
         return sorted(list(set(par_cols) - set(cells)))
-
-    if not {lexemes, cell_col, form_col} < set(paradigms.columns):
-        log.warning("Please use Paralex-style long-form table (http://www.paralex-standard.org).")
 
     # Filter cells before pivoting for speed reasons
     if cells is not None:
@@ -132,8 +115,28 @@ def create_paradigms(dataset, fillna=True,
             log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
             paradigms = paradigms[(paradigms[cell_col].isin(cells))]
 
+    # Get only most frequent lexemes
+    if most_freq:
+        inflected = paradigms.loc[:, lexemes].unique()
+        lexemes_file_name = Path(dataset.basepath) / dataset.get_resource("lexemes").path
+        lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
+        # Restrict to lexemes we have kept, if we dropped defectives or cells
+        lexemes_df = lexemes_df[lexemes_df.lexeme_id.isin(inflected)]
+        selected = set(lexemes_df.sort_values("frequency",
+                                              ascending=False
+                                              ).iloc[:most_freq, :].loc[:, "lexeme_id"].to_list())
+        paradigms = paradigms.loc[paradigms.lexeme.isin(selected), :]
+
+    # Sample paradigms
+    if sample:
+        paradigms = paradigms.sample(sample)
+
     paradigms.fillna(value="", inplace=True)
     form_dic = paradigms.set_index('form_id')[form_col].to_dict()
+
+    def aggregator(s):
+        form_ids = tuple(form_id for form_id in s if form_dic[form_id] != '')
+        return form_ids if len(form_ids) > 0 else ""
 
     paradigms = paradigms.pivot_table(values='form_id', index=lexemes,
                                       columns=cell_col,
