@@ -12,7 +12,7 @@ import frictionless as fl
 import logging
 tqdm.pandas()
 
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 
 class Frequencies(object):

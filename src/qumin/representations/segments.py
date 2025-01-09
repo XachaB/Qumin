@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from ..lattice.lattice import table_to_context
 import logging
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 inventory = None
 

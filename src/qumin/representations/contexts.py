@@ -10,7 +10,7 @@ from .alignment import align_right, align_left, align_multi
 from .quantity import one, optional, some, kleenestar, Quantity, quantity_largest, quantity_sum
 from .segments import Inventory
 
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 
 def _pairstr(s, q):

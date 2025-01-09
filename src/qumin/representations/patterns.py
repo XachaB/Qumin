@@ -20,7 +20,7 @@ import re
 from tqdm import tqdm
 import logging
 
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 len = len
 sorted = sorted

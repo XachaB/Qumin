@@ -11,7 +11,7 @@ import numpy as np
 import seaborn as sns
 import logging
 
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 
 def get_features_order(features_file, results, sort_order=False):

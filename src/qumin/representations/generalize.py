@@ -10,7 +10,7 @@ from collections import Counter
 from .contexts import Context
 import logging
 
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 
 def generalize_patterns(pats):
