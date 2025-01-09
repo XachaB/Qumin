@@ -44,6 +44,14 @@ qumin.representations.generalize module
    :undoc-members:
    :show-inheritance:
 
+qumin.representations.paradigms module
+-------------------------------------
+
+.. automodule:: qumin.representations.paradigms
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 qumin.representations.patterns module
 -------------------------------------
 
