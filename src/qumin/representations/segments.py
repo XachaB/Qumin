@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from ..lattice.lattice import table_to_context
 import logging
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 inventory = None
 
@@ -57,12 +57,12 @@ class Form(str):
     @classmethod
     def from_segmented_str(cls, segmented):
         stripped = segmented.strip(" ")
-        self = str.__new__(cls, stripped + " ")
+        self = cls.__new__(cls, stripped + " ")
         self.tokens = stripped.split()
         return self
 
     def __repr__(self):
-        return f"Form({self}, id:{self.id})" if self.id else f"Form({self})"
+        return f"Form({self}, id:{self.id})" if hasattr(self, "id") and self.id else f"Form({self})"
 
 
 class Inventory(object):
@@ -72,6 +72,8 @@ class Inventory(object):
     without passing an inventory instance everywhere.
 
     The inventory first needs to be initialized with a distinctive features file.
+
+    >>> Inventory.initialize("tests/data/frenchipa.csv")
 
     Each sound class in the inventory is a concept in a FCA lattice.
     Sound class identifiers are either strings (for phonemes)
@@ -125,15 +127,11 @@ class Inventory(object):
         """
         id = frozenset(extent) if len(extent) > 1 else extent[0]
         ordered = sorted(extent)
-        joined = "|".join(ordered)
+        cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
+        cls._regexes_end[id] = "(?:" + "|".join(ordered) + ")"
         if len(extent) == 1:
-            cls._regexes[id] = id + " "
-            cls._regexes_end[id] = id
             cls._pretty_str[id] = id
         else:
-            # The non capturing group of each segment
-            cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
-            cls._regexes_end[id] = "(?:" + "|".join(x for x in ordered) + ")"
             cls._pretty_str[id] = "{" + ",".join(ordered) + "}"
         cls._classes[id] = set(classes)
         cls._features[id] = set(intent)
@@ -153,7 +151,7 @@ class Inventory(object):
         """
         if end:
             return cls._regexes_end[sound]
-        return cls._regexes[sound]
+        return  cls._regexes[sound]
 
     @classmethod
     def pretty_str(cls, sound, **kwargs):
@@ -269,17 +267,27 @@ class Inventory(object):
         table = pd.read_table(filename, header=0, dtype=str,
                               index_col=False, sep=',',
                               encoding="utf-8")
-        shorten_feature_names(table)
+
         sound_id = "sound_id"
         if sound_id not in table.columns:
-            raise ValueError("Paralex sound tables must have a sound_id.")
+            raise ValueError("Paralex sound tables must have a sound_id column.")
+
+        drop = {"value", "UNICODE", "ALIAS", "Seg.",  # Legacy columns
+                "label", "tier", "CLTS_id",  # Unused Paralex columns
+                }
+        deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS", "Seg."})
+        if not deprecated_cols.empty:
+            log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
+
+        for col in drop:
+            if col in table.columns:
+                table.drop(col, axis=1, inplace=True)
+
+        shorten_feature_names(table)
 
         table[sound_id] = table[sound_id].astype(str)
         na_vals = {c: "-1" for c in table.columns}
         na_vals[sound_id] = ""
-        na_vals["UNICODE"] = ""
-        na_vals["ALIAS"] = ""
-        na_vals["value"] = ""
         table = table.fillna(na_vals)
 
         # Checking segments names legality
@@ -289,16 +297,6 @@ class Inventory(object):
             if seg.strip("#") == "":
                 raise ValueError("The symbol \"#\" is reserved and can only "
                                  "be used in a shorthand name (#V# for a vowel, etc)")
-
-        drop = {"value", "UNICODE", "ALIAS",  # Legacy columns
-                "label", "tier"  # Unused Paralex columns
-                }
-        deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS"})
-        if not deprecated_cols.empty:
-            log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
-        for col in drop:
-            if col in table.columns:
-                table.drop(col, axis=1, inplace=True)
 
         # Separate shorthand table
         shorthand_selection = table[sound_id].str.match("^#.+#$")
@@ -385,8 +383,7 @@ class Inventory(object):
                 alert += "\n\t" + leaf + " is the same node as " + str(lattice_node)
                 alert += "\n\t\t" + cls.infos(lattice_node)
                 for o in other:
-                    alert += "\n\t\t" + cls.infos(o)
-
+                    alert += "\n\t\t" + cls.infos(cls.get(o))
             raise Exception("Warning, some segments are  ancestors of other segments:" + alert)
 
         cls._max = max(cls._classes, key=len)
@@ -487,8 +484,10 @@ class Inventory(object):
             p -> f
 
             >>> a,b = Inventory.transformation("t","s")
-            >>> print(a,b)
-            {"b","d","p","t"} {"f","s","v","z"}
+            >>> a == frozenset({'d', 't', 'b', 'p'})
+            True
+            >>> b == frozenset({'s', 'z', 'f', 'v'})
+            True
 
         Arguments:
             a,b (str): Segment identifiers.
@@ -517,7 +516,7 @@ class Inventory(object):
     def id_to_frozenset(cls, sound_id):
         if cls.is_leaf(sound_id):
             return frozenset({sound_id})
-        return sound_id
+        return frozenset(sound_id)
 
     @classmethod
     def get_transform_features(cls, left, right):
@@ -528,8 +527,8 @@ class Inventory(object):
             right (frozenset): set of phonemes
 
         Example:
-            >>> inventory.get_from_transform({"b","d"}, {"p","t"})
-            frozenset({'+vois'}), frozenset({'-vois'})
+            >>> Inventory.get_transform_features({"b","d"}, {"p","t"})
+            (frozenset({'+voi'}), frozenset({'-voi'}))
         """
 
         t1 = cls.features(cls.get(cls.id_to_frozenset(left)))
@@ -542,16 +541,14 @@ class Inventory(object):
     def get_from_transform(cls, a, transform):
         """ Get a segment from another according to a transformation tuple.
 
-        In the following example, the segments have been initialized with French segment definitions.
-
         Arguments:
             a (str): Segment alias
             transform (tuple): Couple of two segment IDs
 
         Example:
-            >>> segments.Inventory.get_from_transform("d",
-            ...                                     (frozenset({"b","d","p","t"}),
-            ...                                     frozenset({"f","s","v","z"})))
+            >>> Inventory.get_from_transform("d",
+            ...                                     (frozenset({"d","t"}),
+            ...                                     frozenset({"s","z"})))
             'z'
         """
         a = cls.features(a)
@@ -625,17 +622,26 @@ def shorten_feature_names(table):
         raise ValueError("Using a second row of headers is not supported anymore.")
     short_features_names = []
     for name in table.columns:
-        if name in ["sound_id", "Seg.", "UNICODE", "ALIAS",
-                    "value", "label", "tier"] or len(name) <= 3:  # Not a feature name
+        if name == "sound_id" or len(name) <= 3:  # Not a feature name
             short_features_names.append(name)
         else:
             if name in _to_short_feature:  # Check standard names
                 short_features_names.append(_to_short_feature[name])
             elif name.lower() in _to_short_feature:  # Uppercase
                 short_features_names.append(_to_short_feature[name.lower()].upper())
-            else:  # Make an abbreviation on the fly
+            else:
+                # Make an abbreviation on the fly by shortening the label
                 names = [name[:i] for i in range(3, len(name) + 1)]
-                while names and names[0] in (_short_features + short_features_names):
+                reserved_names = _short_features + short_features_names
+                while names and names[0] in reserved_names:
                     names.pop(0)
-                short_features_names.append(names[0])
+                if len(names) != 0:
+                    new_name = names[0]
+                else:  # Fallback strategy: append a unique integer
+                    key = 1
+                    new_name = name[:3] + str(key)
+                    while new_name in reserved_names:
+                        key += 1
+                        new_name = name[:3] + str(key)
+                short_features_names.append(new_name)
     table.columns = short_features_names
