@@ -337,9 +337,8 @@ class PatternDistribution(object):
         log.debug("Showing distributions for "
                   + str(len(cond_events))
                   + " classes")
-        summary = []
 
-                summary = []
+        summary = []
 
         for i, (classe, members) in enumerate(sorted(cond_events,
                                                      key=lambda x: len(x[1]),

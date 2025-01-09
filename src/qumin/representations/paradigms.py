@@ -39,6 +39,7 @@ class Paradigms(object):
             overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
             merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
             cells (List[str]): List of cell names to consider. Defaults to all.
+            pos (List[str]): List of parts of speech to consider. Defaults to all.
 
         Returns:
             paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (row are forms, lemmas, cells).
@@ -52,7 +53,7 @@ class Paradigms(object):
                                                                      'lexeme': 'category'}),
                                 keep_default_na=False,
                                 usecols=["form_id"] + list(self.default_cols))
-        self.reformat(**kwargs)
+        self.preprocess(**kwargs)
 
     def _get_unknown_segments(self, row, unknowns):
         """
@@ -65,14 +66,30 @@ class Paradigms(object):
             if char not in known_sounds:
                 unknowns[char].append(form + " " + cell)
 
-    def reformat(self, fillna=True, segcheck=False,
-                 defective=False, overabundant=False, merge_cols=False,
-                 cells=None, sample=None, most_freq=None):
+    def preprocess(self, fillna=True, segcheck=False,
+                   defective=False, overabundant=False, merge_cols=False,
+                   cells=None, sample=None, most_freq=None, pos=None):
         """
-        Reformat a Paralex paradigms table to meet the need of computations.
+        Preprocess a Paralex paradigms table to meet the requirements of Qumin:
+            - Remove
         """
         lexemes, cell_col, form_col = self.default_cols
         paradigms = self.data
+
+        if pos:
+            if 'lexemes' in self.dataset.resource_names:
+                table = read_table('lexemes', dataset)
+                if 'POS' not in table.columns:
+                    log.warning('No POS column in the lexemes table.')
+                else:
+                    if isinstance(pos, str):
+                        pos = [pos]
+                    paradigms = paradigms[paradigms['lexeme']
+                                        .map(table.set_index('lexeme_id').POS)
+                                        .isin(pos)]
+        else:
+            log.warning("No lexemes table. Can't filter based on POS.")
+
         if not defective:
             defective_lexemes = set(paradigms.loc[paradigms[form_col].isna(), lexemes].unique())
             paradigms.drop(paradigms[paradigms.loc[:, lexemes].isin(defective_lexemes)].index,
