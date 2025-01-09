@@ -1,5 +1,8 @@
 
-|tests| |DocStatus|_
+|PyPi|_ |tests| |DocStatus|_
+
+.. |PyPi| image:: https://img.shields.io/pypi/v/qumin
+.. _PyPi: https://pypi.org/project/qumin/
 
 .. |tests| image:: https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg
 

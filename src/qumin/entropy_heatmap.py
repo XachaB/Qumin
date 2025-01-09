@@ -11,6 +11,8 @@ import numpy as np
 import seaborn as sns
 import logging
 
+# Prevent matplotlib font manager from spamming the log
+logging.getLogger('matplotlib.font_manager').disabled = True
 log = logging.getLogger("Qumin")
 
 

@@ -57,7 +57,7 @@ class Form(str):
     @classmethod
     def from_segmented_str(cls, segmented):
         stripped = segmented.strip(" ")
-        self = str.__new__(cls, stripped + " ")
+        self = cls.__new__(cls, stripped + " ")
         self.tokens = stripped.split()
         return self
 
@@ -267,17 +267,27 @@ class Inventory(object):
         table = pd.read_table(filename, header=0, dtype=str,
                               index_col=False, sep=',',
                               encoding="utf-8")
-        shorten_feature_names(table)
+
         sound_id = "sound_id"
         if sound_id not in table.columns:
-            raise ValueError("Paralex sound tables must have a sound_id.")
+            raise ValueError("Paralex sound tables must have a sound_id column.")
+
+        drop = {"value", "UNICODE", "ALIAS", "Seg.",  # Legacy columns
+                "label", "tier", "CLTS_id",  # Unused Paralex columns
+                }
+        deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS", "Seg."})
+        if not deprecated_cols.empty:
+            log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
+
+        for col in drop:
+            if col in table.columns:
+                table.drop(col, axis=1, inplace=True)
+
+        shorten_feature_names(table)
 
         table[sound_id] = table[sound_id].astype(str)
         na_vals = {c: "-1" for c in table.columns}
         na_vals[sound_id] = ""
-        na_vals["UNICODE"] = ""
-        na_vals["ALIAS"] = ""
-        na_vals["value"] = ""
         table = table.fillna(na_vals)
 
         # Checking segments names legality
@@ -287,16 +297,6 @@ class Inventory(object):
             if seg.strip("#") == "":
                 raise ValueError("The symbol \"#\" is reserved and can only "
                                  "be used in a shorthand name (#V# for a vowel, etc)")
-
-        drop = {"value", "UNICODE", "ALIAS",  # Legacy columns
-                "label", "tier"  # Unused Paralex columns
-                }
-        deprecated_cols = table.columns.intersection({"value", "UNICODE", "ALIAS"})
-        if not deprecated_cols.empty:
-            log.warning(f"Usage of columns {' ,'.join(deprecated_cols)} is deprecated. Edit your sounds file !")
-        for col in drop:
-            if col in table.columns:
-                table.drop(col, axis=1, inplace=True)
 
         # Separate shorthand table
         shorthand_selection = table[sound_id].str.match("^#.+#$")
@@ -383,8 +383,7 @@ class Inventory(object):
                 alert += "\n\t" + leaf + " is the same node as " + str(lattice_node)
                 alert += "\n\t\t" + cls.infos(lattice_node)
                 for o in other:
-                    alert += "\n\t\t" + cls.infos(o)
-
+                    alert += "\n\t\t" + cls.infos(cls.get(o))
             raise Exception("Warning, some segments are  ancestors of other segments:" + alert)
 
         cls._max = max(cls._classes, key=len)
@@ -623,17 +622,26 @@ def shorten_feature_names(table):
         raise ValueError("Using a second row of headers is not supported anymore.")
     short_features_names = []
     for name in table.columns:
-        if name in ["sound_id", "Seg.", "UNICODE", "ALIAS",
-                    "value", "label", "tier"] or len(name) <= 3:  # Not a feature name
+        if name == "sound_id" or len(name) <= 3:  # Not a feature name
             short_features_names.append(name)
         else:
             if name in _to_short_feature:  # Check standard names
                 short_features_names.append(_to_short_feature[name])
             elif name.lower() in _to_short_feature:  # Uppercase
                 short_features_names.append(_to_short_feature[name.lower()].upper())
-            else:  # Make an abbreviation on the fly
+            else:
+                # Make an abbreviation on the fly by shortening the label
                 names = [name[:i] for i in range(3, len(name) + 1)]
-                while names and names[0] in (_short_features + short_features_names):
+                reserved_names = _short_features + short_features_names
+                while names and names[0] in reserved_names:
                     names.pop(0)
-                short_features_names.append(names[0])
+                if len(names) != 0:
+                    new_name = names[0]
+                else:  # Fallback strategy: append a unique integer
+                    key = 1
+                    new_name = name[:3] + str(key)
+                    while new_name in reserved_names:
+                        key += 1
+                        new_name = name[:3] + str(key)
+                short_features_names.append(new_name)
     table.columns = short_features_names

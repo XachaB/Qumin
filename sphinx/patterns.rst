@@ -8,6 +8,7 @@ The patterns can be further configured, modifying the following keys: ::
 
     data: null                # path to paralex.package.json paradigms, segments
     cells: null               # List of cells to use (subset)
+    pos: null                 # List of parts of speech to use (subset)
     patterns: null            # path to pre-computed patterns. If null, will compute patterns.
     most_freq: null           # (int) restrict to N most frequent items (use the lexeme "frequency" column)
     sample: null              # ( int) A number of lexemes to sample, for debug purposes
