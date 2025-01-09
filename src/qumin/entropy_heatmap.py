@@ -13,8 +13,7 @@ import logging
 
 # Prevent matplotlib font manager from spamming the log
 logging.getLogger('matplotlib.font_manager').disabled = True
-
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 
 def get_features_order(features_file, results, sort_order=False):
@@ -54,6 +53,7 @@ def get_features_order(features_file, results, sort_order=False):
 def entropy_heatmap(results, md, cmap_name=False,
                     feat_order=None, dense=False, annotate=False,
                     parameter=False):
+
     """Make a FacetGrid heatmap of all metrics.
 
     Arguments:

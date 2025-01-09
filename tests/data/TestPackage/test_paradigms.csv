@@ -1,0 +1,19 @@
+"form_id","lexeme","cell","phon_form","frequency"
+1,"s","first","s s p s",0
+2,"s","first","s s s s",0
+16,"s","first","s s s t",0
+3,"s","second","s s p",0
+4,"s","second","s s s",3
+13,"s","third","p s s",30
+5,"p","first","p s s",1
+6,"p","first","p s s s",16
+7,"p","second","p s p",178
+17,"p","third","#DEF#",
+8,"k","first","p s s",156
+9,"k","first","p s s p",14
+10,"k","second","p s p",13
+15,"k","third","p s k",10
+18,"q","first","#DEF#",
+11,"q","second","p s k",12
+12,"q","second","p s f",6
+14,"q","third","p s t",20

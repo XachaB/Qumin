@@ -14,7 +14,7 @@ from paralex import read_table
 from .segments import Inventory, Form
 from ..utils import merge_duplicate_columns
 
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 
 def unique_lexemes(series, file_type):
