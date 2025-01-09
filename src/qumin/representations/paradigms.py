@@ -13,6 +13,7 @@ from .segments import Inventory, Form
 import logging
 import pandas as pd
 from pandas.api.types import union_categoricals
+from paralex import read_table
 
 log = logging.getLogger()
 tqdm.pandas()
@@ -78,15 +79,15 @@ class Paradigms(object):
 
         if pos:
             if 'lexemes' in self.dataset.resource_names:
-                table = read_table('lexemes', dataset)
+                table = read_table('lexemes', self.dataset)
                 if 'POS' not in table.columns:
                     log.warning('No POS column in the lexemes table.')
                 else:
                     if isinstance(pos, str):
                         pos = [pos]
                     paradigms = paradigms[paradigms['lexeme']
-                                        .map(table.set_index('lexeme_id').POS)
-                                        .isin(pos)]
+                                          .map(table.set_index('lexeme_id').POS)
+                                          .isin(pos)]
         else:
             log.warning("No lexemes table. Can't filter based on POS.")
 
@@ -202,8 +203,8 @@ class Paradigms(object):
         self.data.cell = self.data.cell.cat.rename_categories(names)
         # Controlling for category conformity
         uc = union_categoricals([self.data.cell, self.dropped.cell])
-        self.data.cell = pd.Categorical(self.data.cell, categories=uc.categories )
-        self.dropped.cell = pd.Categorical(self.dropped.cell, categories=uc.categories )
+        self.data.cell = pd.Categorical(self.data.cell, categories=uc.categories)
+        self.dropped.cell = pd.Categorical(self.dropped.cell, categories=uc.categories)
         self.data = pd.concat([self.data, self.dropped])
         self.dropped = None
         self._update_cell()
