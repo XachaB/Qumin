@@ -21,18 +21,11 @@ def pat_command(cfg, md):
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
     cells = get_cells(cfg.cells, cfg.pos, md.datasets[0])
-
-    is_of_pattern_type = kind.startswith("patterns")
     segcheck = True
 
     # Initializing segments
-    if not cfg.pats.ortho:
-        sounds_file_name = md.get_table_path("sounds")
-        segments.Inventory.initialize(sounds_file_name)
-    elif is_of_pattern_type:
-        raise ValueError("You can't find patterns on orthographic material, only alternations or endings.")
-    else:
-        segcheck = False
+    sounds_file_name = md.get_table_path("sounds")
+    segments.Inventory.initialize(sounds_file_name)
 
     method = {'globalAlt': 'global',
               'localAlt': 'local',
@@ -42,9 +35,7 @@ def pat_command(cfg, md):
               'patternsPrefix': 'prefix',
               'patternsBaseline': 'baseline'}
 
-    merge_cols = False
-    if is_of_pattern_type:
-        merge_cols = True
+    merge_cols = True
 
     paradigms = create_paradigms(md.datasets[0], defective=defective,
                                  overabundant=overabundant, merge_cols=merge_cols,
@@ -54,16 +45,9 @@ def pat_command(cfg, md):
                                  )
 
     log.info("Looking for patterns...")
-    if kind.startswith("endings"):
-        patterns_df = patterns.find_endings(paradigms)
-        if kind.endswith("Pairs"):
-            patterns_df = patterns.make_pairs(patterns_df)
-            log.info(patterns_df)
-    elif is_of_pattern_type:
-        patterns_df, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=cfg.pats.optim_mem,
-                                                  gap_prop=cfg.pats.gap_proportion)
-    else:
-        patterns_df = patterns.find_alternations(paradigms, method[kind])
+    patterns_df, dic = patterns.find_patterns(paradigms, method[kind],
+                                              optim_mem=cfg.pats.optim_mem,
+                                              gap_prop=cfg.pats.gap_proportion)
 
     if merge_cols and not cfg.pats.merged:  # Re-build duplicate columns
         for a, b in patterns_df.columns:
@@ -101,17 +85,14 @@ def pat_command(cfg, md):
     patfilename = md.register_file(kind + ".csv",
                                    {'computation': cfg.pats.kind, 'content': 'patterns'})
     log.info("Writing patterns (importable by other scripts) to %s", patfilename)
-    if is_of_pattern_type:
-        if cfg.pats.optim_mem:
-            patterns.to_csv(patterns_df, patfilename, pretty=True)  # uses str because optim_mem already used repr
-            log.warning("Since you asked for args.optim_mem, I will not export the human_readable file ")
-        else:
-            patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
-            pathumanfilename = md.register_file("human_readable_" + kind + ".csv",
-                                                {'computation': cfg.pats.kind, 'content': 'patterns_human'})
-            log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
-            patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
+    if cfg.pats.optim_mem:
+        patterns.to_csv(patterns_df, patfilename, pretty=True)  # uses str because optim_mem already used repr
+        log.warning("Since you asked for args.optim_mem, I will not export the human_readable file.")
     else:
-        patterns_df.to_csv(patfilename, sep=",")
+        patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
+        pathumanfilename = md.register_file("human_readable_" + kind + ".csv",
+                                            {'computation': cfg.pats.kind, 'content': 'patterns_human'})
+        log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
+        patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
 
     return patfilename
