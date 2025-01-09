@@ -11,6 +11,7 @@ dev version (forthcoming)
 - Adds a Frequency class able to handle multiple paralex sources for frequencies.
 - Deprecations:
     - Sound table "Seg." column not supported anymore.
+    - Bipartite entropy computations
 
 Version 2.0
 ~~~~~~~~~~~
