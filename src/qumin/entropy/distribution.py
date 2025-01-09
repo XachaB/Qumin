@@ -14,7 +14,6 @@ from itertools import permutations
 import pandas as pd
 from tqdm import tqdm
 
-from ..representations.frequencies import Frequencies
 from . import cond_entropy, entropy
 
 log = logging.getLogger(__name__)
@@ -46,7 +45,8 @@ class Measures(object):
         data (:class:`pandas:pandas.DataFrame`):
             containing measures.    """
 
-    def __init__(self):
+    def __init__(self, frequencies):
+        self.frequencies = frequencies
         self.data = pd.DataFrame(None,
                                  columns=["predictor",
                                           "predicted",
@@ -98,7 +98,7 @@ class Measures(object):
         Returns:
             an array of weights (:class:`numpy:numpy.ndarray`)
         """
-        if Frequencies.source['cells'] == "empty":
+        if self.frequencies.source['cells'] == "empty":
             log.warning("Couldn't find cell frequencies. Falling back on weighting by the number of pairs.")
             return None
 
@@ -125,7 +125,7 @@ class Measures(object):
             p_out = cell_freq.loc[out, 'result'] / cell_freq.loc[~cell_freq.index.isin(preds), "result"].sum()
             return p_out*p_pred
 
-        cell_freq = Frequencies.get_relative_freq(data="cells")
+        cell_freq = self.frequencies.get_relative_freq(data="cells")
         weight = data.apply(compute_weight, axis=1)
         return weight.values
 
@@ -200,7 +200,7 @@ class PatternDistribution(object):
             and other measures for the distribution.
     """
 
-    def __init__(self, paradigms, patterns, classes, name, features=None):
+    def __init__(self, paradigms, patterns, classes, name, frequencies, features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -217,6 +217,7 @@ class PatternDistribution(object):
         self.paradigms = paradigms.map(lambda x: x[0] if x else x)
         self.classes = classes
         self.patterns = patterns.map(lambda x: (str(x),) if type(x) is not tuple else x)
+        self.frequencies = frequencies
 
         if features is not None:
             # Add feature names
@@ -231,7 +232,7 @@ class PatternDistribution(object):
             self.add_features = lambda x: x
 
         self.hasforms = {cell: (paradigms[cell] != "") for cell in self.paradigms}
-        self.measures = Measures()
+        self.measures = Measures(self.frequencies)
 
     def add_features(self, series):
         return series + self.features[series.index]

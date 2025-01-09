@@ -26,7 +26,8 @@ def H_command(cfg, md):
             cfg.patterns) == 2, "You must pass either a single dataset and patterns file, or a list of two of each (coindexed)."
         md.bipartite = True
 
-    Frequencies.initialize(md.datasets[0], real=True)
+    # Get frequencies object
+    frequencies = Frequencies(md.datasets[0])
 
     patterns_file_path = cfg.patterns if md.bipartite else [cfg.patterns]
     sounds_file_name = md.get_table_path("sounds")
@@ -106,6 +107,7 @@ def H_command(cfg, md):
                                       pat_table,
                                       classes,
                                       "&".join([p.name for p in md.datasets]),
+                                      frequencies,
                                       features=features)
 
     if onePred:
