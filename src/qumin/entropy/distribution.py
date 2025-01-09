@@ -339,6 +339,8 @@ class PatternDistribution(object):
                   + " classes")
         summary = []
 
+                summary = []
+
         for i, (classe, members) in enumerate(sorted(cond_events,
                                                      key=lambda x: len(x[1]),
                                                      reverse=True)):

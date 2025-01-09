@@ -22,7 +22,7 @@ import re
 from tqdm import tqdm
 import logging
 
-log = logging.getLogger()
+log = logging.getLogger("Qumin")
 
 len = len
 sorted = sorted
@@ -118,11 +118,12 @@ class Pattern(object):
             A score used to choose among patterns.
 
     Example:
+        >>> Inventory.initialize("tests/data/frenchipa.csv")
         >>> cells = ("prs.1.sg", "prs.1.pl","prs.2.pl")
-        >>> forms = ("amEn", "amənõ", "amənE")
-        >>> p = patterns.Pattern(cells, forms, aligned=False)
+        >>> forms = (Form("amEn"), Form("amənɔ̃"), Form("amənE"))
+        >>> p = Pattern(cells, forms, aligned=False)
         >>> p
-        E_ ⇌ ə_ɔ̃ ⇌ ə_E / am_n_ <0>
+        E_ ⇌ Ø_ɔ̃ ⇌ Ø_E / am_n_ <0>
     """
 
     def __new__(cls, *args, **kwargs):
@@ -178,7 +179,10 @@ class Pattern(object):
     @classmethod
     def _from_str(cls, cells, string):
         """Parse a repr str to a pattern.
-        >>> _ ⇌ E / abEs_ <0.5>
+
+        Str patterns look like:
+            _ ⇌ E / abEs_ <0.5>
+
         Note: Phonemes in context classes are now separated by ","
 
 
@@ -360,7 +364,7 @@ class Pattern(object):
         """Join the alternating material obtained with alternation_list() in a str."""
         return " ⇌ ".join(self.alternation_list(exhaustive_blanks=exhaustive_blanks, use_gen=use_gen, **kwargs))
 
-    def _iter_alt(self, *kwargs):
+    def _iter_alt(self, **kwargs):
         """Generator of formatted alternating material for each cell."""
         for cell in self.cells:
             formatted = []
@@ -416,15 +420,16 @@ class BinaryPattern(Pattern):
     ========================== ========================== ==========================
 
     Example:
+        >>> Inventory.initialize("tests/data/frenchipa.csv")
         >>> cells = ("prs.1.sg", "prs.2.pl")
-        >>> forms = ("amEn", "amənE")
+        >>> forms = (Form("amEn"), Form("amənE"))
         >>> p = Pattern(cells, forms, aligned=False)
         >>> type(p)
-        representations.patterns.BinaryPattern
+        <class 'qumin.representations.patterns.BinaryPattern'>
         >>> p
-        E_ ⇌ ə_E / am_n_ <0>
-        >>> p.apply("amEn",cells)
-        'amənE'
+        E_ ⇌ Ø_E / am_n_ <0>
+        >>> p.apply(Form("amEn"), cells)
+        Form(a m Ø n E )
     """
 
     def __lt__(self, other):
@@ -1105,15 +1110,14 @@ def _global_alternations(paradigms, **kwargs):
             filled with segmented patterns.
 
     Example:
-        >>> df = pd.DataFrame([["amEn", "amEn", "amEn", "amənõ", "amənE", "amEn"]],
-             columns=["prs.1.sg",  "prs.2.sg", "prs.3.sg", "prs.1.pl", "prs.2.pl","prs.3.pl"],
-             index=["amener"])
-        >>> df
+        >>> Inventory.initialize("tests/data/frenchipa.csv")
+        >>> df = pd.DataFrame([["amEn", "amEn", "amEn", "amənɔ̃", "amənE", "amEn"]],
+        ...     columns=["prs.1.sg",  "prs.2.sg", "prs.3.sg", "prs.1.pl", "prs.2.pl","prs.3.pl"],
+        ...     index=["amener"])
+        >>> df = df.applymap(Form)
+        >>> _global_alternations(df)
                prs.1.sg prs.2.sg prs.3.sg prs.1.pl prs.2.pl prs.3.pl
-        amener     amEn     amEn     amEn    amənõ    amənE     amEn
-        >>> find_global_alternations(df)
-               prs.1.sg prs.2.sg prs.3.sg prs.1.pl prs.2.pl prs.3.pl
-        amener      _E_      _E_      _E_    _ə_ɔ̃     _ə_E      _E_
+        amener      _E_      _E_      _E_    _Ø_ɔ̃     _Ø_E      _E_
 
     """
 
@@ -1122,7 +1126,7 @@ def _global_alternations(paradigms, **kwargs):
         for cell, forms in zip(cells, row):
             for form in forms.split(";"):
                 if pd.notnull(forms) and forms != "":
-                    yield cell, form
+                    yield cell, Form(form)
 
     def segment(forms, cells):
         newcells, formlist = zip(*row_as_list(cells, forms))
@@ -1158,8 +1162,8 @@ def find_endings(paradigms, *args, disable_tqdm=False, **kwargs):
 
     Example:
         >>> df = pd.DataFrame([["amEn", "amEn", "amEn", "amənõ", "amənE", "amEn"]],
-             columns=["prs.1.sg",  "prs.2.sg", "prs.3.sg", "prs.1.pl", "prs.2.pl","prs.3.pl"],
-             index=["amener"])
+        ...     columns=["prs.1.sg",  "prs.2.sg", "prs.3.sg", "prs.1.pl", "prs.2.pl","prs.3.pl"],
+        ...     index=["amener"])
         >>> df
                prs.1.sg prs.2.sg prs.3.sg prs.1.pl prs.2.pl prs.3.pl
         amener     amEn     amEn     amEn    amənõ    amənE     amEn

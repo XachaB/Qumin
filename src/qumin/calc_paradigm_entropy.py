@@ -12,6 +12,7 @@ from hydra.core.hydra_config import HydraConfig
 from .entropy.distribution import PatternDistribution, SplitPatternDistribution
 from .representations import segments, patterns, create_features
 from .representations.paradigms import Paradigms
+from .utils import get_cells
 
 log = logging.getLogger()
 
@@ -33,9 +34,7 @@ def H_command(cfg, md):
     if onePred:
         preds.pop(0)
 
-    cells = cfg.cells
-    if cells and len(cells) == 1:
-        raise ValueError("You can't provide only one cell.")
+    cells = get_cells(cfg.cells, cfg.pos, md.datasets[0])
 
     # Initialize segment inventory for phonological computations
     segments.Inventory.initialize(sounds_file_name)
@@ -43,7 +42,7 @@ def H_command(cfg, md):
     # Inflectional paradigms: rows are forms, with lexeme and cell..
     paradigms = Paradigms(md.datasets[0], defective=cfg.defective, overabundant=False,
                           merge_cols=cfg.entropy.merged,
-                          segcheck=True, cells=cells,
+                                 segcheck=True, cells=cells, pos=cfg.pos,
                           sample=cfg.sample,
                           most_freq=cfg.most_freq)
 

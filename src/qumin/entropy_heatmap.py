@@ -11,7 +11,9 @@ import numpy as np
 import seaborn as sns
 import logging
 
-log = logging.getLogger()
+# Prevent matplotlib font manager from spamming the log
+logging.getLogger('matplotlib.font_manager').disabled = True
+log = logging.getLogger("Qumin")
 
 
 def get_features_order(features_file, results, sort_order=False):

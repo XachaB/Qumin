@@ -10,6 +10,7 @@ import pandas as pd
 from .clustering import find_microclasses
 from .representations import patterns, segments
 from .representations.paradigms import Paradigms
+from .utils import get_cells
 
 log = logging.getLogger()
 
@@ -20,9 +21,7 @@ def pat_command(cfg, md):
     kind = cfg.pats.kind
     defective = cfg.defective
     overabundant = cfg.overabundant
-    cells = cfg.cells
-    if cells and len(cells) == 1:
-        raise ValueError("You can't provide only one cell.")
+    cells = get_cells(cfg.cells, cfg.pos, md.datasets[0])
 
     is_of_pattern_type = kind.startswith("patterns")
     segcheck = True
@@ -50,7 +49,7 @@ def pat_command(cfg, md):
 
     paradigms = Paradigms(md.datasets[0], defective=defective,
                           overabundant=overabundant, merge_cols=merge_cols,
-                          segcheck=segcheck, cells=cells,
+                                 segcheck=segcheck, cells=cells, pos=cfg.pos,
                           sample=cfg.sample,
                           most_freq=cfg.most_freq,
                           )
