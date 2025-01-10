@@ -9,8 +9,9 @@ dev version (forthcoming)
 - Add a `pos` keyword to filter paradigms on POS.
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Adds a Frequency class able to handle multiple paralex sources for frequencies.
-- Deprecations:
-    - Sound table "Seg." column not supported anymore.
+- Support removed for:
+    - "Seg." column in sound tables.
+    - All alternation algorithms except `phon` and `edits` (former `patternsPhonsim` and `patternsLevenshtein`).
 
 Version 2.0
 ~~~~~~~~~~~

@@ -41,11 +41,11 @@ def _all_min(iterable):
     return minimums
 
 
-def levenshtein_ins_cost(*_):
+def edits_ins_cost(*_):
     return 1
 
 
-def levenshtein_sub_cost(a, b):
+def edits_sub_cost(a, b):
     return int(a != b)
 
 
@@ -59,7 +59,7 @@ def align_multi(*strings, **kwargs):
         return [(elem,) for elem in strings[0]]
 
     kwargs["fillvalue"] = kwargs.get("fillvalue", "")
-    kwargs["insert_cost"] = levenshtein_ins_cost
+    kwargs["insert_cost"] = edits_ins_cost
     kwargs["sub_cost"] = multi_sub_cost
 
     def flatten_alignment(alignment):
