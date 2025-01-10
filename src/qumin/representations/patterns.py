@@ -13,6 +13,7 @@ from .generalize import generalize_patterns, incremental_generalize_patterns
 
 # External tools
 from os.path import commonprefix
+from pathlib import Path
 from itertools import groupby, zip_longest, combinations, product
 from collections import defaultdict
 from copy import deepcopy
@@ -799,7 +800,7 @@ class ParadigmPatterns(dict):
         for pair, patterns in self.pat_dict.items():
             pattern_list.update([repr(pat) for pat in patterns])
         pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
-        filename = md.register_file(f"patterns_map.csv")
+        filename = md.register_file("patterns_map.csv")
         s = pd.Series({n: pat for pat, n in pattern_map.items()}, name="patterns")
         s.to_csv(filename)
 
@@ -822,6 +823,7 @@ class ParadigmPatterns(dict):
             for pair in self.keys():
                 self.to_csv(md, pair, folder, kind,
                             pretty=True)
+        return md.prefix
 
     def to_csv(self, md, pair, folder, kind,
                pretty=False, only_id=False, pattern_map=None):
@@ -839,6 +841,94 @@ class ParadigmPatterns(dict):
             # Replace patterns by ids
             export.pattern = export.pattern.map(pattern_map)
         export.drop(["lexeme"], axis=1).to_csv(filename, sep=",", index=False)
+
+    def from_file(self, folder, *args, **kwargs):
+        """Read pattern data from a previous export.
+
+        Arguments:
+            folder (str): path to the folder
+
+        """
+        collection = defaultdict(lambda: defaultdict(str))
+        folder = Path(folder)
+        self.pat_dict = {}
+
+        # Read patterns map
+        patterns_map = pd.read_csv(folder / 'patterns_map.csv', index_col=0).patterns
+        # patterns_map = pd.Series(s.index.values, index=s)
+
+        # Parse patterns for each pair of cells
+        for path in (folder / "patterns").iterdir():
+            self.from_csv(path, patterns_map, collection, *args, **kwargs)
+
+        self.pat_dict = {column: list(collection[column].values()) for column in collection}
+
+        # Raise error if wrong parameters.
+        # return table
+
+    def from_csv(self, path, patterns_map, collection,
+                 paradigms, defective=True, overabundant=True):
+        """
+        Read a patterns dataframe for a specific pair of cells
+
+        Arguments:
+            paradigms (pandas.DataFrame): a paradigms dataframe, with form id's as index.
+            defective (bool): whether to consider defective lexemes.
+            overabundant (bool): whether to consider overabundance.
+            collection (defaultdict): a defaultdict to avoid recomputing
+                patterns from strings.
+        """
+
+        def read_pattern(string):
+            """
+            Reads patterns from string representations.
+            Arguments:
+                string (str): a string representation of a pattern.
+            """
+            if string and not pd.isnull(string):
+                if string in collection[cells]:
+                    result = collection[cells][string]
+                else:
+                    pattern = Pattern._from_str(cells, string)
+                    collection[cells][string] = pattern
+                    result = pattern
+                return result
+            if defective:
+                return None
+            else:
+                return np.nan
+
+        table = pd.read_csv(path, sep=",", dtype="str")
+
+        cells = tuple(path.name.split('.')[0].split('_')[1].split('-'))
+        for cell in cells:
+            if cell not in self.cells:
+                self.cells.append(cell)
+
+        # Restore phon_form based on paradigms and form_ids
+        table[['lexeme', 'form_x']] = pd.merge(table, paradigms, right_index=True,
+                                               left_on='form_x').iloc[:, [-3, -1]]
+        table['form_y'] = pd.merge(table, paradigms, right_index=True,
+                                   left_on='form_y').iloc[:, -1]
+
+        table.pattern = table.pattern.astype('int').map(patterns_map).apply(read_pattern)
+
+        if not defective:
+            table.dropna(axis=0, subset="pattern", inplace=True)
+
+        if overabundant:
+            raise NotImplementedError
+
+        if (
+                defective
+                and (paradigms.form == '').any()
+                and table.pattern.notna().all()
+                ):
+
+            raise ValueError("It looks like you ignored defective rows"
+                             "when computing patterns. Set defective=False.")
+
+        self[cells] = table
 
     def _generate_rules(self, row, pair, collection):
         """
@@ -1050,74 +1140,5 @@ def find_applicable(pat_table, pat_dict, disable_tqdm=False, **kwargs):
     pat_table.loc[has_pat, "applicable"] = pat_table.loc[has_pat, :]\
         .progress_apply(applicable, axis=1)
     return pat_table
-
-
-def from_csv(filename, paradigms, defective=True, overabundant=True):
-    """Read a Patterns Dataframe from a csv.
-
-    Arguments:
-        filename (str): path to the file
-        paradigms (pandas.DataFrame): a paradigms dataframe, with form id's as index.
-        defective (bool): whether to consider defective lexemes.
-        overabundant (bool): whether to consider overabundance.
-    """
-
-    # TODO: remove ?
-    # def format_header(item):
-    #     splitted = item.strip("'() ").split(",")
-    #     return splitted[0].strip("' "), splitted[1].strip("' ")
-
-    def read_pattern(row, collection):
-        """
-        Reads patterns from string representations.
-        Arguments:
-            row (pandas.Series): a pattern file row, containing
-                a string representation of a pattern and cell names.
-            collection (defaultdict): a defaultdict to avoid recomputing
-                patterns from strings.
-        """
-        cells = (row.cell_x, row.cell_y)
-        string = row.pattern
-        if string and not pd.isnull(string):
-            if string in collection[cells]:
-                result = collection[cells][string]
-            else:
-                pattern = Pattern._from_str(cells, string)
-                collection[cells][string] = pattern
-                result = pattern
-            return result
-        if defective:
-            return None
-        else:
-            return np.nan
-
-    collection = defaultdict(lambda: defaultdict(str))
-    table = pd.read_csv(filename, sep=",", header=0, dtype="str")
-
-    is_alt_str = table.pattern.map(lambda x: type(x) is str and "/" not in x).all()
-    if is_alt_str:
-        log.warning("These are not patterns but alternation strings")
-        return table, {}
-
-    # Restore phon_form based on paradigms and form_ids
-    table[['lexeme', 'cell_x', 'form_x']] = pd.merge(table, paradigms, right_index=True,
-                                                     left_on='form_x').iloc[:, -3:]
-    table[['cell_y', 'form_y']] = pd.merge(table, paradigms, right_index=True,
-                                           left_on='form_y').iloc[:, -2:]
-
-    # The paradigms table already dropped unnecessary cells.
-    # After the merge, NaN cells can be dropped also.
-    table.drop(table[table.cell_x.isna() | table.cell_y.isna()].index,
-               inplace=True)
-
-    table['pattern'] = table.apply(read_pattern, collection=collection, axis=1)
-
-    if not defective:
-        table.dropna(axis=0, subset="pattern", inplace=True)
-
-    if overabundant:
-        raise NotImplementedError
-    collection = {column: list(collection[column].values()) for column in collection}
-    return table, collection
 
 
