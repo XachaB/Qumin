@@ -732,17 +732,20 @@ class PatternCollection(tuple):
         return self.collection < other.collection
 
 
-def find_patterns(paradigms, method, **kwargs):
-    r"""Find Patterns in a DataFrame according to any general method.
+def find_patterns(paradigms, method="levenshtein", optim_mem=False, disable_tqdm=False, **kwargs):
+    """Find Patterns in a DataFrame.
 
     Methods can be:
         - levenshtein (dynamic alignment using levenshtein scores)
         - similarity (dynamic alignment using segment similarity scores)
 
+    Patterns are chosen according to their coverage and accuracy among competing patterns,
+    and they are merged as much as possible. Their alternation can be generalized.
+
     Arguments:
-        paradigms (:class:`pandas:pandas.DataFrame`):
-            paradigms (columns are cells, index are lemmas).
-        method (str): "suffix", "prefix", "baseline", "levenshtein" or "similarity"
+        paradigms (:class:`pandas:pandas.DataFrame`): paradigms (columns are cells, index are lemmas).
+        method (str): method for scoring best pairwise alignments. Can be "levenshtein" or "similarity".
+        disable_tqdm (bool): if true, do not show progressbar
 
     Returns:
         (tuple):
@@ -750,40 +753,18 @@ def find_patterns(paradigms, method, **kwargs):
             :class:`pandas:pandas.DataFrame`,
             pat_dict is a dict mapping a column name to a list of patterns.
     """
-    if method in ["levenshtein", "similarity"]:
-        return _with_dynamic_alignment(paradigms, scoring_method=method, **kwargs)
-    else:
-        raise NotImplementedError("Alignment method {} is not implemented, "
-                                  "choose from suffix, prefix or baseline.".format(method))
 
-
-def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, disable_tqdm=False, **kwargs):
-    """Find Patterns in a DataFrame with automatic alignment.
-
-    Patterns are chosen according to their coverage and accuracy among competing patterns,
-    and they are merged as much as possible. Their alternation can be generalized.
-
-    Arguments:
-        paradigms: a DataFrame.
-        scoring_method (str): method for scoring best pairwise alignments. Can be "levenshtein" or "similarity".
-        disable_tqdm (bool): if true, do not show progressbar
-
-    Returns:
-        a tuple of the DataFrame and a dict of pairs of cells
-        to the list of unique patterns used for that pair of cells.
-    """
-
-    if scoring_method == "levenshtein":
+    if method == "levenshtein":
         insert_cost = alignment.levenshtein_ins_cost
         sub_cost = alignment.levenshtein_sub_cost
-    elif scoring_method == "similarity":
+    elif method == "similarity":
         Inventory.init_dissimilarity_matrix(**kwargs)
         insert_cost = Inventory.insert_cost
         sub_cost = Inventory.sub_cost
     else:
         raise NotImplementedError("Alignment method {} is not implemented."
                                   "Call find_patterns(paradigms, method) "
-                                  "rather than this function.".format(scoring_method))
+                                  "rather than this function.".format(method))
 
     cols = paradigms.columns
     pairs = list(combinations(cols, 2))
