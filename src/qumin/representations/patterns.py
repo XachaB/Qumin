@@ -793,13 +793,23 @@ class ParadigmPatterns(dict):
 
     def export(self, md, kind, optim_mem=False):
         """ Export dataframes to a folder"""
-        # Save normal patterns
+
+        # Create pattern map
+        pattern_list = set()
+        for pair, patterns in self.pat_dict.items():
+            pattern_list.update([repr(pat) for pat in patterns])
+        pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
+        filename = md.register_file(f"patterns_map.csv")
+        s = pd.Series({n: pat for pat, n in pattern_map.items()}, name="patterns")
+        s.to_csv(filename)
+
+        # Save regular patterns
         folder = "patterns"
         md.register_folder(folder, description="Compact machine readable patterns.")
         log.info("Writing patterns (importable by other scripts) to %s", folder)
         for pair in self.keys():
             self.to_csv(md, pair, folder, kind, pretty=optim_mem,
-                        only_id=True)
+                        only_id=True, pattern_map=pattern_map)
 
         # Save human readable patterns
         if optim_mem:
@@ -813,7 +823,8 @@ class ParadigmPatterns(dict):
                 self.to_csv(md, pair, folder, kind,
                             pretty=True)
 
-    def to_csv(self, md, pair, folder, kind, pretty=False, only_id=False):
+    def to_csv(self, md, pair, folder, kind,
+               pretty=False, only_id=False, pattern_map=None):
         """Export a Patterns DataFrame to csv."""
         a, b = pair
         filename = md.register_file(f"{kind}_{a}-{b}.csv", folder=folder)
@@ -821,8 +832,12 @@ class ParadigmPatterns(dict):
         export = self[pair].copy()
         export.pattern = export.pattern.map(export_fun)
         if only_id:
+            # Replace forms by ids
             export[['form_x', 'form_y']] = \
                 export[['form_x', 'form_y']].map(lambda x: x.id)
+
+            # Replace patterns by ids
+            export.pattern = export.pattern.map(pattern_map)
         export.drop(["lexeme"], axis=1).to_csv(filename, sep=",", index=False)
 
     def _generate_rules(self, row, pair, collection):
