@@ -4,12 +4,10 @@ import json
 import logging
 import os
 import time
-from collections import defaultdict
 from pathlib import Path
 
 import hydra
 from frictionless import Package
-from tqdm import tqdm
 from paralex import read_table
 
 from .. import __version__

@@ -2,16 +2,17 @@
 # !/usr/bin/env python3
 
 import numpy as np
+import pandas as pd
 
 
-def find_microclasses(paradigms, freqs=None):
+def find_microclasses(paradigms, patterns, freqs=None):
     """Find microclasses in a paradigm (lines with identical rows).
 
     This is useful to identify an exemplar of each inflection microclass,
     and limit further computation to the collection of these exemplars.
 
     Arguments:
-        paradigms (pandas.DataFrame):
+        paradigparadigmsms (pandas.DataFrame):
             a dataframe containing inflectional paradigms.
             rows describe a pattern between forms from a given lexeme for a given cell.
         freqs (pandas.Series): a series of frequencies for each lemma
@@ -25,17 +26,9 @@ def find_microclasses(paradigms, freqs=None):
             {"a":["a","A","aa"], "b":["b","B","BBB"]}
 
     """
-
-    # Reformating to wide format required here.
-    data = paradigms.copy()
-    data['cells'] = list(zip(data.cell_x, data.cell_y))
-    data.drop(['cell_x', 'cell_y'], axis=1, inplace=True)
-    data.set_index(['cells', 'lexeme', 'form_x', 'form_y'], inplace=True)
-    data = data.groupby(['lexeme', 'cells'], observed=True)\
-        .pattern.apply(lambda x: tuple(sorted(set(x))))\
-        .unstack('cells')
-
-    grouped = data.fillna(0).groupby(list(data.columns))
+    lexemes = pd.Series(index=paradigms.data.lexeme.unique())
+    grouped = lexemes.groupby([df.set_index('lexeme').pattern.fillna(0).astype(str)
+                               for df in patterns.values()])
     mc = {}
 
     for name, group in grouped:
