@@ -13,7 +13,7 @@ The patterns can be further configured, modifying the following keys: ::
     most_freq: null           # (int) restrict to N most frequent items (use the lexeme "frequency" column)
     sample: null              # ( int) A number of lexemes to sample, for debug purposes
     pats:
-      kind: phon   # Options are (see docs): phon, edit
+      kind: phon   # Options are (see docs): phon, edits
       defective: False        # Whether to keep defective entries
       overabundant: False     # Whether to keep overabundant entries
       gap_proportion: .4      # Proportion of the median score used to set the gap score
@@ -30,7 +30,7 @@ Patterns kinds
 
 Qumin can compute various kinds of patterns that can be used for entropy calculations. They have alternations and generalized contexts:
 
-* ``edit``: Aligned with simple edit distance.
+* ``edits``: Aligned with simple edit distance.
 * ``phon``: Aligned with edit distances based on phonological similarity.
 
 It is recommended to use the default `phon` in most cases. To avoid relying on your phonological features files for alignment scores, use `edit`. Only these two are full patterns with generalization both in the context and alternation.

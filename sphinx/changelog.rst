@@ -11,7 +11,7 @@ dev version (forthcoming)
 - Adds a Frequency class able to handle multiple paralex sources for frequencies.
 - Support removed for:
     - "Seg." column in sound tables.
-    - All alternation algorithms except `phon` and `edit` (former `patternsPhonsim` and `patternsLevenshtein`).
+    - All alternation algorithms except `phon` and `edits` (former `patternsPhonsim` and `patternsLevenshtein`).
 
 Version 2.0
 ~~~~~~~~~~~

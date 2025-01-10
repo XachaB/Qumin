@@ -246,15 +246,9 @@ def eval_command(cfg, md):
                      "paradigms": paradigms_file_path,
                      "day_time": now}
 
-    kind_to_method = {
-        'edit': 'levenshtein',
-        'phon': 'similarity',
-    }
-
-    methods = [kind_to_method[k] for k in cfg.pats.kind]
     tasks = prepare_arguments(paradigms,
                               cfg.eval.iter,
-                              methods,
+                              cfg.pats.kind,
                               features)
 
     l = cfg.eval.iter * len(list(combinations(range(paradigms.shape[1]), 2)))

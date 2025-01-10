@@ -736,13 +736,13 @@ def find_patterns(paradigms, method, **kwargs):
     r"""Find Patterns in a DataFrame according to any general method.
 
     Methods can be:
-        - levenshtein (dynamic alignment using levenshtein scores)
-        - similarity (dynamic alignment using segment similarity scores)
+        - edits (dynamic alignment using levenshtein scores)
+        - phon (dynamic alignment using segment similarity scores)
 
     Arguments:
         paradigms (:class:`pandas:pandas.DataFrame`):
             paradigms (columns are cells, index are lemmas).
-        method (str): "suffix", "prefix", "baseline", "levenshtein" or "similarity"
+        method (str): "edits" or "phon"
 
     Returns:
         (tuple):
@@ -750,14 +750,14 @@ def find_patterns(paradigms, method, **kwargs):
             :class:`pandas:pandas.DataFrame`,
             pat_dict is a dict mapping a column name to a list of patterns.
     """
-    if method in ["levenshtein", "similarity"]:
+    if method in ["edits", "phon"]:
         return _with_dynamic_alignment(paradigms, scoring_method=method, **kwargs)
     else:
         raise NotImplementedError("Alignment method {} is not implemented, "
                                   "choose from suffix, prefix or baseline.".format(method))
 
 
-def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=False, disable_tqdm=False, **kwargs):
+def _with_dynamic_alignment(paradigms, scoring_method="edits", optim_mem=False, disable_tqdm=False, **kwargs):
     """Find Patterns in a DataFrame with automatic alignment.
 
     Patterns are chosen according to their coverage and accuracy among competing patterns,
@@ -765,7 +765,7 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
 
     Arguments:
         paradigms: a DataFrame.
-        scoring_method (str): method for scoring best pairwise alignments. Can be "levenshtein" or "similarity".
+        scoring_method (str): method for scoring best pairwise alignments. Can be "edits" or "phon".
         disable_tqdm (bool): if true, do not show progressbar
 
     Returns:
@@ -773,10 +773,10 @@ def _with_dynamic_alignment(paradigms, scoring_method="levenshtein", optim_mem=F
         to the list of unique patterns used for that pair of cells.
     """
 
-    if scoring_method == "levenshtein":
-        insert_cost = alignment.levenshtein_ins_cost
-        sub_cost = alignment.levenshtein_sub_cost
-    elif scoring_method == "similarity":
+    if scoring_method == "edits":
+        insert_cost = alignment.edits_ins_cost
+        sub_cost = alignment.edits_sub_cost
+    elif scoring_method == "phon":
         Inventory.init_dissimilarity_matrix(**kwargs)
         insert_cost = Inventory.insert_cost
         sub_cost = Inventory.sub_cost

@@ -27,10 +27,6 @@ def pat_command(cfg, md):
     sounds_file_name = md.get_table_path("sounds")
     segments.Inventory.initialize(sounds_file_name)
 
-    method = {
-              'phon': 'levenshtein',
-              'edit': 'similarity'}
-
     merge_cols = True
 
     paradigms = create_paradigms(md.datasets[0], defective=defective,
@@ -41,7 +37,7 @@ def pat_command(cfg, md):
                                  )
 
     log.info("Looking for patterns...")
-    patterns_df, dic = patterns.find_patterns(paradigms, method[kind],
+    patterns_df, dic = patterns.find_patterns(paradigms, kind,
                                               optim_mem=cfg.pats.optim_mem,
                                               gap_prop=cfg.pats.gap_proportion)
 
