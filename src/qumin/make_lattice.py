@@ -18,10 +18,9 @@ log = logging.getLogger()
 
 def lattice_command(cfg, md):
     r"""Infer Inflection classes as a lattice from alternation patterns."""
-    md.bipartite = type(cfg.patterns) is not str
 
     # Loading files and paths
-    patterns_file_path = cfg.patterns if md.bipartite else [cfg.patterns]
+    patterns_file_path = cfg.patterns
     comp = None
 
     if cfg.pats.ortho:
@@ -37,15 +36,6 @@ def lattice_command(cfg, md):
         log.info("Reading patterns...")
         pat_table, _ = patterns.from_csv(patterns_file_path[0])
         collections = True
-        if md.bipartite:
-            comp = "<comp>"
-            try:
-                pat_table2, _ = patterns.from_csv(patterns_file_path[1])
-                pat_table2.columns = [(comp + c1, c2) for (c1, c2) in pat_table2.columns]
-            except:
-                pat_table2 = pd.read_csv(patterns_file_path[1], index_col=0).fillna("")
-                pat_table2.columns = [comp + c for c in pat_table2.columns]
-            pat_table = pat_table.join(pat_table2)
 
     microclasses = find_microclasses(pat_table.map(str))
 
