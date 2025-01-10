@@ -12,7 +12,8 @@ dev version (forthcoming)
 - Removal:
     - Support for sound table "Seg." column.
     - Bipartite entropy computations
-
+    - All alternation algorithms except `phon` and `edits` (former `patternsPhonsim` and `patternsLevenshtein`).
+    
 Version 2.0
 ~~~~~~~~~~~
 
