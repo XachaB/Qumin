@@ -1096,49 +1096,43 @@ class ParadigmPatterns(dict):
                 self[pair].loc[~defective, 'pattern'] = Pattern.new_identity(pair)
                 self[pair].loc[defective, 'pattern'] = None
 
+    def find_applicable(self, disable_tqdm=False, **kwargs):
+        """Find all applicable rules for each form.
 
-def find_applicable(pat_table, pat_dict, disable_tqdm=False, **kwargs):
-    """Find all applicable rules for each form.
+        We name sets of applicable rules *classes*. *Classes* are oriented:
+        we produce two separate columns (a, b) and (b, a)
+        for each pair of columns (a, b) in the paradigm..
 
-    We name sets of applicable rules *classes*. *Classes* are oriented:
-    we produce two separate columns (a, b) and (b, a)
-    for each pair of columns (a, b) in the paradigm.
+        Arguments:
+            disable_tqdm (bool): if true, do not show progressbar
 
-    Arguments:
-        pat_table (:class:`pandas:pandas.DataFrame`):
-            patterns table, containing the forms and the cells.
-        pat_dict  (dict): a dict mapping a column name to a list of patterns.
-        disable_tqdm (bool): if true, do not show progressbar
+        Returns:
+            :class:`pandas:pandas.DataFrame`:
+                associating a lemma (index)
+                and an ordered pair of paradigm cells (columns)
+                to a tuple representing a class of applicable patterns.
+        """
 
-    Returns:
-        :class:`pandas:pandas.DataFrame`:
-            associating a lemma (index)
-            and an ordered pair of paradigm cells (columns)
-            to a tuple representing a class of applicable patterns.
-    """
+        def _iter_applicable_patterns(row, pair):
+            cell_x = pair[0]
+            pair = pair if pair in self.pat_dict else pair[::-1]
+            for pattern in self.pat_dict[pair]:
+                if pattern.applicable(row.form_x, cell_x):
+                    yield pattern
 
-    def _iter_applicable_patterns(row):
-        pair = (row.cell_x, row.cell_y)
-        if pair not in pat_dict:
-            pair = (row.cell_y, row.cell_x)
-        for pattern in pat_dict[pair]:
-            if pattern.applicable(row.form_x, row.cell_x):
-                yield pattern
+        def applicable(*args):
+            """Returns all applicable patterns to a single row"""
+            return tuple(_iter_applicable_patterns(*args))
 
-    def applicable(*args):
-        """Returns all applicable patterns to a single row"""
-        return tuple(_iter_applicable_patterns(*args))
+        # Adding oriented patterns
+        col_rename = {'form_x': 'form_y', 'form_y': 'form_x'}
+        to_add = {}
+        for key, value in self.items():
+            to_add[key[::-1]] = self[key].rename(columns=col_rename)
+        self.update(to_add)
 
-    # Making the table bidirectionnal
-    col_rename = {'cell_x': 'cell_y', 'cell_y': 'cell_x',
-                  'form_x': 'form_y', 'form_y': 'form_x'}
-    pat_table = pd.concat([pat_table, pat_table.rename(columns=col_rename)])
-
-    # Computing classes
-    tqdm.pandas(leave=False, disable=disable_tqdm)
-    has_pat = pat_table.pattern.notna()
-    pat_table.loc[has_pat, "applicable"] = pat_table.loc[has_pat, :]\
-        .progress_apply(applicable, axis=1)
-    return pat_table
-
-
+        # Computing classes
+        for pair, df in tqdm(self.items()):
+            has_pat = df.pattern.notna()
+            df.loc[has_pat, "applicable"] = df.loc[has_pat, :]\
+                .apply(applicable, args=[pair], axis=1)
