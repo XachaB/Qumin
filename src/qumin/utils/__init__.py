@@ -44,7 +44,7 @@ class Metadata():
         prefix (str) : normalized prefix for the output files
         arguments (dict): all arguments passed to the python script
         output (dict) : all output files produced by the script.
-        datasets (list): a list of (directory path, Package) tuples; each representing a dataset.
+        dataset (tuple): a (directory path, Package) tuple representing a dataset.
     """
 
     def __init__(self, cfg, filename):
@@ -61,14 +61,14 @@ class Metadata():
         # Make it robust to multiple
         if "data" in cfg:
             data = cfg.data
-            self.datasets = Package(data)
+            self.dataset = Package(data)
 
         # Additional CLI arguments
         self.arguments = dict(cfg)
         self.output = []
 
     def get_table_path(self, table_name):
-        dataset = self.datasets
+        dataset = self.dataset
         return Path(dataset.basepath) / dataset.get_resource(table_name).path
 
     def save_metadata(self):

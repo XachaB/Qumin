@@ -21,7 +21,7 @@ def pat_command(cfg, md):
     kind = cfg.pats.kind
     defective = cfg.defective
     overabundant = cfg.overabundant
-    cells = get_cells(cfg.cells, cfg.pos, md.datasets)
+    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
     segcheck = True
 
     # Initializing segments
@@ -30,16 +30,16 @@ def pat_command(cfg, md):
 
     merge_cols = True
 
-    paradigms = Paradigms(md.datasets, defective=defective,
+    paradigms = Paradigms(md.dataset, defective=defective,
                           overabundant=overabundant, merge_cols=merge_cols,
-                                 segcheck=segcheck, cells=cells, pos=cfg.pos,
+                          segcheck=segcheck, cells=cells, pos=cfg.pos,
                           sample=cfg.sample,
                           most_freq=cfg.most_freq,
                           )
 
     log.info("Looking for patterns...")
-    patterns_dfs, dic = patterns.find_patterns(paradigms, kind, optim_mem=cfg.pats.optim_mem,
-                                               gap_prop=cfg.pats.gap_proportion)
+    patterns_dfs, _ = patterns.find_patterns(paradigms, kind, optim_mem=cfg.pats.optim_mem,
+                                             gap_prop=cfg.pats.gap_proportion)
 
 
     # Concatenate the patterns as a dict. Cell names are turned into columns.

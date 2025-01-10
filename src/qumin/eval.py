@@ -179,7 +179,7 @@ def predict_two_directions(test_items, train_items, method, features=None):
 
 def prepare_data(cfg, md):
     """Create a multi-index paradigm table and if given a path, a features table."""
-    paradigms = Paradigms(md.datasets[0],
+    paradigms = Paradigms(md.dataset,
                           segcheck=True,
                           fillna=False,
                           merge_cols=cfg.pats.merged,

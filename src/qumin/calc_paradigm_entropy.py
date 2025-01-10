@@ -28,13 +28,13 @@ def H_command(cfg, md):
     if onePred:
         preds.pop(0)
 
-    cells = get_cells(cfg.cells, cfg.pos, md.datasets)
+    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
 
     # Initialize segment inventory for phonological computations
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
-    paradigms = Paradigms(md.datasets, defective=cfg.defective, overabundant=False,
+    paradigms = Paradigms(md.dataset, defective=cfg.defective, overabundant=False,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True, cells=cells, pos=cfg.pos,
                           sample=cfg.sample,
@@ -58,14 +58,12 @@ def H_command(cfg, md):
     else:
         features = None
 
-        # TODO
-        raise NotImplementedError
     log.info("Looking for classes of applicable patterns")
     pat_table = patterns.find_applicable(pat_table, pat_dic)
     log.debug("Patterns with classes:")
     log.debug(pat_table)
     distrib = PatternDistribution(pat_table,
-                                  "&".join([p.name for p in md.datasets]),
+                                  md.dataset,
                                   features=features)
 
     if onePred:
