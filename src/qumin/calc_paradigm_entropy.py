@@ -46,7 +46,8 @@ def H_command(cfg, md):
 
     # Raise error if wrong parameters.
     if cfg.defective and (paradigms.data.form == '').any() and pat_table.pattern.notna().all():
-        raise ValueError("It looks like you ignored defective rows when computing patterns. Set defective=False.")
+        raise ValueError("It looks like you ignored defective rows when computing patterns."
+                         "Set defective=False.")
 
     if verbose and len(pat_table.cell_x.unique()) > 10:
         log.warning("Using verbose mode is strongly "

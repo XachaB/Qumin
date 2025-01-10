@@ -249,7 +249,9 @@ class Paradigms(object):
         new = pd.merge(self.data.loc[self.data.cell == a],
                        self.data.loc[self.data.cell == b],
                        on="lexeme")
-        return new
+
+        return new[['lexeme', 'form_x', 'form_y']]
+
 
     def _update_cell(self):
         """

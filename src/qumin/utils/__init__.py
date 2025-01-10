@@ -85,21 +85,50 @@ class Metadata():
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(self.__dict__, f, ensure_ascii=False, indent=4, default=default_serializer)
 
-    def register_file(self, suffix, properties=None):
+    def register_file(self, suffix, properties=None, folder=None):
         """ Register a file to save. Returns a normalized name.
 
         Arguments:
             suffix (str): the suffix to append to the normalized prefix
             properties (dict): optional set of properties to keep along
+            folder (str): name of a registered subdirectory where the file should be saved.
 
         Returns:
             (str): the full registered path"""
 
         # Always check if the folder still exists.
-        filename = self.prefix + suffix
-        self.output.append({'filename': filename,
-                            'properties': properties})
-        return filename
+        if folder:
+            filename = Path(self.prefix) / folder / suffix
+            folder_mds = [entity for entity in self.output if entity.get('folder') == folder]
+            if len(folder_mds) == 0:
+                raise ValueError('This folder should first be registered')
+            else:
+                parent = folder_mds[0]['files']
+        else:
+            filename = Path(self.prefix) / suffix
+            parent = self.output
+
+        parent.append({'filename': str(filename),
+                       'properties': properties})
+        return str(filename)
+
+    def register_folder(self, name, description=None):
+        """ Register a folder of data. Returns a normalized name.
+
+        Arguments:
+            name (str): the name of the folder
+            description (str): a description of the content of the folder
+
+        Returns:
+            (str): the full registered path"""
+
+        # Always check if the folder still exists.
+        foldername = Path(self.prefix) / name
+        foldername.mkdir(parents=True, exist_ok=True)
+        self.output.append({'folder': name,
+                            'description': description,
+                            'files': []})
+        return str(foldername)
 
 
 def get_version():
@@ -111,6 +140,7 @@ def get_version():
         (str): svn/git version or ''.
      """
     return __version__
+
 
 def get_cells(cells, pos, package):
     """
