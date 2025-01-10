@@ -10,7 +10,8 @@ import logging
 from hydra.core.hydra_config import HydraConfig
 
 from .entropy.distribution import PatternDistribution
-from .representations import segments, patterns, create_features
+from .representations import segments, create_features
+from .representations.patterns import ParadigmPatterns
 from .representations.paradigms import Paradigms
 from .utils import get_cells
 
@@ -20,7 +21,7 @@ log = logging.getLogger()
 def H_command(cfg, md):
     r"""Compute entropies of flexional paradigms' distributions."""
     verbose = HydraConfig.get().verbose is not False
-    patterns_file_path = cfg.patterns
+    patterns_folder_path = cfg.patterns
     sounds_file_name = md.get_table_path("sounds")
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
@@ -40,15 +41,13 @@ def H_command(cfg, md):
                           sample=cfg.sample,
                           most_freq=cfg.most_freq)
 
-    pat_table, pat_dic = patterns.from_csv(patterns_file_path, paradigms.data,
-                                           defective=cfg.defective,
-                                           overabundant=False)
+    patterns = ParadigmPatterns()
+    patterns.from_file(patterns_folder_path,
+                       paradigms.data,
+                       defective=cfg.defective,
+                       overabundant=False)
 
-    # Raise error if wrong parameters.
-    if cfg.defective and (paradigms.data.form == '').any() and pat_table.pattern.notna().all():
-        raise ValueError("It looks like you ignored defective rows when computing patterns. Set defective=False.")
-
-    if verbose and len(pat_table.cell_x.unique()) > 10:
+    if verbose and len(patterns.keys()) > 45:
         log.warning("Using verbose mode is strongly "
                     "discouraged on large (>10 cells) datasets."
                     "You should probably stop this process now.")
@@ -59,7 +58,7 @@ def H_command(cfg, md):
         features = None
 
     log.info("Looking for classes of applicable patterns")
-    pat_table = patterns.find_applicable(pat_table, pat_dic)
+    pat_table = patterns.find_applicable()
     log.debug("Patterns with classes:")
     log.debug(pat_table)
     distrib = PatternDistribution(pat_table,
