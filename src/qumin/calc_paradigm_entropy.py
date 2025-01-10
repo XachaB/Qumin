@@ -57,12 +57,12 @@ def H_command(cfg, md):
     else:
         features = None
 
-    log.info("Looking for classes of applicable patterns")
-    pat_table = patterns.find_applicable()
-    log.debug("Patterns with classes:")
-    log.debug(pat_table)
-    distrib = PatternDistribution(pat_table,
-                                  md.dataset,
+    patterns.find_applicable()
+    # TODO shorten this debug
+    # log.debug("Patterns with classes:")
+    # log.debug(patterns)
+    distrib = PatternDistribution(patterns,
+                                  md.dataset.name,
                                   features=features)
 
     if onePred:

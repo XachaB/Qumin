@@ -230,7 +230,7 @@ class PatternDistribution(object):
         """
         Prepares the dataframe to store the results for an entropy computation
         """
-        rows = patterns.cell_x.unique()
+        rows = patterns.cells
 
         data = pd.DataFrame(index=rows,
                             columns=rows).reset_index(drop=False,
@@ -271,7 +271,7 @@ class PatternDistribution(object):
         patterns = self.patterns
         data = self.prepare_data(patterns, debug=debug)
 
-        def calc_condent(group, data):
+        def calc_condent(group, cells, data):
             """
             Computes the conditional entropy for a pair of cells.
 
@@ -281,8 +281,6 @@ class PatternDistribution(object):
                 data (pandas.DataFrame):
                     DataFrame to store computation results.
             """
-            cells = group.name
-
             # Defective rows can't be kept here.
             selector = group.pattern.notna()
 
@@ -300,15 +298,17 @@ class PatternDistribution(object):
             else:
                 data.loc[cells, "value"] = self.cond_entropy_log(group,
                                                                  classes,
+                                                                 cells,
                                                                  subset=selector)
 
-        patterns.groupby(['cell_x', 'cell_y'], observed=True).apply(calc_condent, data=data)
+        for pair, df in patterns.items():
+            calc_condent(df, pair, data)
         if self.data.empty:
             self.data = data.reset_index()
         else:
             self.data = pd.concat([self.data, data.reset_index()])
 
-    def cond_entropy_log(self, group, classes, subset=None):
+    def cond_entropy_log(self, group, classes, cells, subset=None):
         """Print a log of the probability distribution for one predictor.
 
         Writes down the distributions
@@ -327,7 +327,6 @@ class PatternDistribution(object):
                              ],
                              index=["example", 'subclass_size'])
 
-        cells = group.name
         log.debug("\n# Distribution of {}→{} \n".format(cells[0], cells[1]))
 
         A = group[subset]

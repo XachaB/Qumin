@@ -1112,6 +1112,7 @@ class ParadigmPatterns(dict):
                 and an ordered pair of paradigm cells (columns)
                 to a tuple representing a class of applicable patterns.
         """
+        log.info("Looking for classes of applicable patterns")
 
         def _iter_applicable_patterns(row, pair):
             cell_x = pair[0]
