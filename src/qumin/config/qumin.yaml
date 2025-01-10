@@ -35,7 +35,7 @@ most_freq: null       # restrict to N most frequent items (use the lexeme "frequ
 sample: null          # (int) A number of lexemes to sample, for debug purposes
 defective: False      # Whether to keep defective entries
 overabundant: False   # Whether to keep overabundant entries
-
+force: False          # Whether to overpass RAM usage security (2GB)
 
 lattice:
   shorten: False      # Drop redundant columns altogether.

@@ -166,3 +166,24 @@ def get_cells(cells, pos, package):
         else:
             log.warning('No cells table. The POS filtering will be applied to lexemes only')
             return None
+
+
+def memory_check(df, factor, force=False):
+    """
+    Checks memory usage for a dataframe and warn if it exceeds a certain limit.
+
+    Arguments:
+        df (`pandas.DataFrame`): dataframe to test
+        factor (int): multiplication factor for the test.
+        force (bool): whether to allow overpassing the limit. Defaults to False.
+    """
+    mem = df.memory_usage(deep=True, index=True).sum()/(1024**2) * factor
+    if mem > 2:
+        total = round(mem / 1024)
+        if not force:
+            raise Warning(f'The memory required might exceed {total} GB of RAM. '
+                          'If this is what you want, try again with force=true. '
+                          'You could also sample some lexemes or select some cells.')
+        else:
+            log.warning(f'The required memory might exceed {total} GB of RAM,'
+                        'but you passed force=true.')

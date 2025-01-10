@@ -39,13 +39,17 @@ def H_command(cfg, md):
                           merge_cols=cfg.entropy.merged,
                           segcheck=True, cells=cells, pos=cfg.pos,
                           sample=cfg.sample,
-                          most_freq=cfg.most_freq)
+                          most_freq=cfg.most_freq,
+                          force=cfg.force,
+                          )
 
     patterns = ParadigmPatterns()
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
                        defective=cfg.defective,
-                       overabundant=False)
+                       overabundant=False,
+                       force=cfg.force,
+                       )
 
     if verbose and len(patterns.keys()) > 45:
         log.warning("Using verbose mode is strongly "

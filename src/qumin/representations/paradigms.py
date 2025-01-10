@@ -10,6 +10,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 from .segments import Inventory, Form
+from ..utils import memory_check
+
 import logging
 import pandas as pd
 from pandas.api.types import union_categoricals
@@ -67,7 +69,7 @@ class Paradigms(object):
 
     def preprocess(self, fillna=True, segcheck=False,
                    defective=False, overabundant=False, merge_cols=False,
-                   cells=None, sample=None, most_freq=None, pos=None):
+                   cells=None, sample=None, most_freq=None, pos=None, **kwargs):
         """
         Preprocess a Paralex paradigms table to meet the requirements of Qumin:
             - Filter by POS and by cells
@@ -168,6 +170,7 @@ class Paradigms(object):
 
         # Save data
         log.debug(paradigms)
+        memory_check(paradigms, 10**10, **kwargs)
         self.data = paradigms
         self._update_cell()
 

@@ -5,6 +5,7 @@
 This module addresses the modeling of inflectional alternation patterns."""
 
 # Our modules
+from ..utils import memory_check
 from . import alignment
 from .segments import Inventory, Form
 from .contexts import Context
@@ -12,7 +13,6 @@ from .quantity import one, optional, some, kleenestar
 from .generalize import generalize_patterns, incremental_generalize_patterns
 
 # External tools
-from os.path import commonprefix
 from pathlib import Path
 from itertools import groupby, zip_longest, combinations, product
 from collections import defaultdict
@@ -842,7 +842,7 @@ class ParadigmPatterns(dict):
             export.pattern = export.pattern.map(pattern_map)
         export.drop(["lexeme"], axis=1).to_csv(filename, sep=",", index=False)
 
-    def from_file(self, folder, *args, **kwargs):
+    def from_file(self, folder, *args, force=False, **kwargs):
         """Read pattern data from a previous export.
 
         Arguments:
@@ -858,8 +858,14 @@ class ParadigmPatterns(dict):
         # patterns_map = pd.Series(s.index.values, index=s)
 
         # Parse patterns for each pair of cells
+        first = True
         for path in (folder / "patterns").iterdir():
             self.from_csv(path, patterns_map, collection, *args, **kwargs)
+            if first:
+                n_files = len(list(folder.iterdir()))
+                memory_check(list(self.values())[0], n_files, force=force)
+                first = False
+
 
         self.pat_dict = {column: list(collection[column].values()) for column in collection}
 
