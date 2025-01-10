@@ -247,11 +247,8 @@ def eval_command(cfg, md):
                      "day_time": now}
 
     kind_to_method = {
-        'patternsLevenshtein': 'levenshtein',
-        'patternsPhonsim': 'similarity',
-        'patternsSuffix': 'suffix',
-        'patternsPrefix': 'prefix',
-        'patternsBaseline': 'baseline'
+        'edit': 'levenshtein',
+        'phon': 'similarity',
     }
 
     methods = [kind_to_method[k] for k in cfg.pats.kind]
@@ -259,6 +256,7 @@ def eval_command(cfg, md):
                               cfg.eval.iter,
                               methods,
                               features)
+
     l = cfg.eval.iter * len(list(combinations(range(paradigms.shape[1]), 2)))
 
     if cfg.eval.workers == 1:

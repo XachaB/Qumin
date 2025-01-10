@@ -27,13 +27,9 @@ def pat_command(cfg, md):
     sounds_file_name = md.get_table_path("sounds")
     segments.Inventory.initialize(sounds_file_name)
 
-    method = {'globalAlt': 'global',
-              'localAlt': 'local',
-              'patternsLevenshtein': 'levenshtein',
-              'patternsPhonsim': 'similarity',
-              'patternsSuffix': 'suffix',
-              'patternsPrefix': 'prefix',
-              'patternsBaseline': 'baseline'}
+    method = {
+              'phon': 'levenshtein',
+              'edit': 'similarity'}
 
     merge_cols = True
 

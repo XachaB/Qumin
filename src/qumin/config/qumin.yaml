@@ -76,7 +76,7 @@ eval:
   workers: 1          # Number of threads for multithreading
 
 pats:
-  kind: patternsPhonsim   # Options are (see docs): patternsLevenshtein, patternsPhonsim
+  kind: phon   # Options are (see docs): phon, edit
   defective: False         # Whether to keep defective entries
   overabundant: False     # Whether to keep overabundant entries
   gap_proportion: .4      # Proportion of the median score used to set the gap score
