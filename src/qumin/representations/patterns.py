@@ -732,7 +732,7 @@ class PatternCollection(tuple):
         return self.collection < other.collection
 
 
-def find_patterns(paradigms, method="levenshtein", optim_mem=False, disable_tqdm=False, **kwargs):
+def find_patterns(paradigms, method="edits", optim_mem=False, disable_tqdm=False, **kwargs):
     """Find Patterns in a DataFrame.
 
     Methods can be:
@@ -744,7 +744,7 @@ def find_patterns(paradigms, method="levenshtein", optim_mem=False, disable_tqdm
 
     Arguments:
         paradigms (:class:`pandas:pandas.DataFrame`): paradigms (columns are cells, index are lemmas).
-        method (str): method for scoring best pairwise alignments. Can be "levenshtein" or "similarity".
+        method (str): method for scoring best pairwise alignments. Can be "edits" or "phon".
         disable_tqdm (bool): if true, do not show progressbar
 
     Returns:
@@ -754,10 +754,10 @@ def find_patterns(paradigms, method="levenshtein", optim_mem=False, disable_tqdm
             pat_dict is a dict mapping a column name to a list of patterns.
     """
 
-    if method == "levenshtein":
+    if method == "edits":
         insert_cost = alignment.edits_ins_cost
         sub_cost = alignment.edits_sub_cost
-    elif method == "similarity":
+    elif method == "phon":
         Inventory.init_dissimilarity_matrix(**kwargs)
         insert_cost = Inventory.insert_cost
         sub_cost = Inventory.sub_cost
