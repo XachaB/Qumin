@@ -139,11 +139,6 @@ The config file contains the following keys, which can be set through the comman
       merged: False       # Whether identical columns are merged in the input.
       stacked: False      # whether to stack results in long form
 
-For bipartite systems, it is possible to pass two values to both patterns and data, eg: ::
-
-    /$ qumin.H  patterns="[<patterns1.csv>,<patterns2.csv>]" data="[<dataset1.package.json>,<dataset2.package.json>]"
-
-
 Visualizing results
 ^^^^^^^^^^^^^^^^^^^
 

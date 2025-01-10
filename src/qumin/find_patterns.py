@@ -21,33 +21,16 @@ def pat_command(cfg, md):
     kind = cfg.pats.kind
     defective = cfg.defective
     overabundant = cfg.overabundant
-    cells = get_cells(cfg.cells, cfg.pos, md.datasets[0])
-
-    is_of_pattern_type = kind.startswith("patterns")
+    cells = get_cells(cfg.cells, cfg.pos, md.datasets)
     segcheck = True
 
     # Initializing segments
-    if not cfg.pats.ortho:
-        sounds_file_name = md.get_table_path("sounds")
-        segments.Inventory.initialize(sounds_file_name)
-    elif is_of_pattern_type:
-        raise ValueError("You can't find patterns on orthographic material, only alternations or endings.")
-    else:
-        segcheck = False
+    sounds_file_name = md.get_table_path("sounds")
+    segments.Inventory.initialize(sounds_file_name)
 
-    method = {'globalAlt': 'global',
-              'localAlt': 'local',
-              'patternsLevenshtein': 'levenshtein',
-              'patternsPhonsim': 'similarity',
-              'patternsSuffix': 'suffix',
-              'patternsPrefix': 'prefix',
-              'patternsBaseline': 'baseline'}
+    merge_cols = True
 
-    merge_cols = False
-    if is_of_pattern_type:
-        merge_cols = True
-
-    paradigms = Paradigms(md.datasets[0], defective=defective,
+    paradigms = Paradigms(md.datasets, defective=defective,
                           overabundant=overabundant, merge_cols=merge_cols,
                                  segcheck=segcheck, cells=cells, pos=cfg.pos,
                           sample=cfg.sample,
@@ -55,16 +38,9 @@ def pat_command(cfg, md):
                           )
 
     log.info("Looking for patterns...")
-    if kind.startswith("endings"):
-        patterns_df = patterns.find_endings(paradigms)
-        if kind.endswith("Pairs"):
-            patterns_df = patterns.make_pairs(patterns_df)
-            log.info(patterns_df)
-    elif is_of_pattern_type:
-        patterns_dfs, dic = patterns.find_patterns(paradigms, method[kind], optim_mem=cfg.pats.optim_mem,
-                                                   gap_prop=cfg.pats.gap_proportion)
-    else:
-        patterns_dfs = patterns.find_alternations(paradigms, method[kind])
+    patterns_dfs, dic = patterns.find_patterns(paradigms, kind, optim_mem=cfg.pats.optim_mem,
+                                               gap_prop=cfg.pats.gap_proportion)
+
 
     # Concatenate the patterns as a dict. Cell names are turned into columns.
     patterns_df = pd.concat([df for df in patterns_dfs.values()]).reset_index(drop=True)
@@ -92,17 +68,14 @@ def pat_command(cfg, md):
     patfilename = md.register_file(kind + ".csv",
                                    {'computation': cfg.pats.kind, 'content': 'patterns'})
     log.info("Writing patterns (importable by other scripts) to %s", patfilename)
-    if is_of_pattern_type:
-        if cfg.pats.optim_mem:
-            patterns.to_csv(patterns_df, patfilename, pretty=True, only_id=True)  # uses str because optim_mem already used repr
-            log.warning("Since you asked for args.optim_mem, I will not export the human_readable file ")
-        else:
-            patterns.to_csv(patterns_df, patfilename, pretty=False, only_id=True)  # uses repr
-            pathumanfilename = md.register_file("human_readable_" + kind + ".csv",
-                                                {'computation': cfg.pats.kind, 'content': 'patterns_human'})
-            log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
-            patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
+    if cfg.pats.optim_mem:
+        patterns.to_csv(patterns_df, patfilename, pretty=True, only_id=True)  # uses str because optim_mem already used repr
+        log.warning("Since you asked for args.optim_mem, I will not export the human_readable file.")
     else:
-        patterns_df.to_csv(patfilename, sep=",")
+        patterns.to_csv(patterns_df, patfilename, pretty=False, only_id=True)  # uses repr
+        pathumanfilename = md.register_file("human_readable_" + kind + ".csv",
+                                            {'computation': cfg.pats.kind, 'content': 'patterns_human'})
+        log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
+        patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
 
     return patfilename
