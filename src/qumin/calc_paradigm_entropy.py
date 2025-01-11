@@ -62,9 +62,8 @@ def H_command(cfg, md):
         features = None
 
     patterns.find_applicable()
-    # TODO shorten this debug
-    # log.debug("Patterns with classes:")
-    # log.debug(patterns)
+    patterns.info()
+
     distrib = PatternDistribution(patterns,
                                   md.dataset.name,
                                   features=features)

@@ -746,6 +746,14 @@ class ParadigmPatterns(dict):
         self.pat_dict = {}
         self.cells = []
 
+    def info(self):
+        log.debug('Patterns:')
+        log.debug(self.__repr__())
+        if len(self.keys()) > 0:
+            log.debug(list(self.values())[0].head())
+        else:
+            log.debug('Does not contain any dataframe')
+
     def find_patterns(self, paradigms, method="edits", disable_tqdm=False, *args, **kwargs):
         """Find Patterns in a DataFrame.
 
@@ -788,9 +796,8 @@ class ParadigmPatterns(dict):
 
     def __repr__(self):
         if len(self.cells) == 0:
-            return "Empty ParadigmPatterns"
-        return "Has patterns for the following pairs of cells: "\
-               f"{', '.join([f'{a}~{b}' for a, b in dict.keys(self)])}"
+            return "ParadigmPatterns(empty)"
+        return "ParadigmPatterns({', '.join([f'{a}~{b}' for a, b in dict.keys(self)])})"
 
     def export(self, md, kind, optim_mem=False):
         """ Export dataframes to a folder"""
