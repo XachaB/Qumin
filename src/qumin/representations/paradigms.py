@@ -170,7 +170,7 @@ class Paradigms(object):
 
         # Save data
         log.debug(paradigms)
-        memory_check(paradigms, 10**10, **kwargs)
+        memory_check(paradigms, 2, **kwargs)
         self.data = paradigms
         self._update_cell()
 
