@@ -4,12 +4,11 @@ import json
 import logging
 import os
 import time
-from collections import defaultdict
 from pathlib import Path
 
 import hydra
 from frictionless import Package
-from tqdm import tqdm
+from paralex import read_table
 
 from .. import __version__
 
@@ -43,7 +42,7 @@ class Metadata():
         prefix (str) : normalized prefix for the output files
         arguments (dict): all arguments passed to the python script
         output (dict) : all output files produced by the script.
-        datasets (list): a list of (directory path, Package) tuples; each representing a dataset.
+        dataset (tuple): a (directory path, Package) tuple representing a dataset.
     """
 
     def __init__(self, cfg, filename):
@@ -59,15 +58,15 @@ class Metadata():
 
         # Make it robust to multiple
         if "data" in cfg:
-            data = [cfg.data] if type(cfg.data) is str else cfg.data
-            self.datasets = [Package(path) for path in data]
+            data = cfg.data
+            self.dataset = Package(data)
 
         # Additional CLI arguments
         self.arguments = dict(cfg)
         self.output = []
 
-    def get_table_path(self, table_name, num=0):
-        dataset = self.datasets[num]
+    def get_table_path(self, table_name):
+        dataset = self.dataset
         return Path(dataset.basepath) / dataset.get_resource(table_name).path
 
     def save_metadata(self):
@@ -84,21 +83,50 @@ class Metadata():
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(self.__dict__, f, ensure_ascii=False, indent=4, default=default_serializer)
 
-    def register_file(self, suffix, properties=None):
+    def register_file(self, suffix, properties=None, folder=None):
         """ Register a file to save. Returns a normalized name.
 
         Arguments:
             suffix (str): the suffix to append to the normalized prefix
             properties (dict): optional set of properties to keep along
+            folder (str): name of a registered subdirectory where the file should be saved.
 
         Returns:
             (str): the full registered path"""
 
         # Always check if the folder still exists.
-        filename = self.prefix + suffix
-        self.output.append({'filename': filename,
-                            'properties': properties})
-        return filename
+        if folder:
+            filename = Path(self.prefix) / folder / suffix
+            folder_mds = [entity for entity in self.output if entity.get('folder') == folder]
+            if len(folder_mds) == 0:
+                raise ValueError('This folder should first be registered')
+            else:
+                parent = folder_mds[0]['files']
+        else:
+            filename = Path(self.prefix) / suffix
+            parent = self.output
+
+        parent.append({'filename': str(filename),
+                       'properties': properties})
+        return str(filename)
+
+    def register_folder(self, name, description=None):
+        """ Register a folder of data. Returns a normalized name.
+
+        Arguments:
+            name (str): the name of the folder
+            description (str): a description of the content of the folder
+
+        Returns:
+            (str): the full registered path"""
+
+        # Always check if the folder still exists.
+        foldername = Path(self.prefix) / name
+        foldername.mkdir(parents=True, exist_ok=True)
+        self.output.append({'folder': name,
+                            'description': description,
+                            'files': []})
+        return str(foldername)
 
 
 def get_version():
@@ -110,3 +138,52 @@ def get_version():
         (str): svn/git version or ''.
      """
     return __version__
+
+
+def get_cells(cells, pos, package):
+    """
+    Returns a list of usable cells based on CLI arguments.
+
+    Arguments:
+        cells (list): A list of cells
+        pos (str): A POS to consider
+    """
+    if cells and pos:
+        raise ValueError("You can't specify both cells and POS.")
+    elif cells:
+        if cells and len(cells) == 1:
+            raise ValueError("You can't provide only one cell.")
+        return cells
+    elif pos:
+        if 'cells' in package.resource_names:
+            table = read_table('cells', package)
+            if 'POS' not in table.columns:
+                log.warning('No POS column in the cells table. The POS filtering will be applied to lexemes only')
+            if isinstance(pos, str):
+                pos = [pos]
+            cells = table.loc[table['POS'].isin(pos), 'cell_id']
+            return cells
+        else:
+            log.warning('No cells table. The POS filtering will be applied to lexemes only')
+            return None
+
+
+def memory_check(df, factor, force=False):
+    """
+    Checks memory usage for a dataframe and warn if it exceeds a certain limit.
+
+    Arguments:
+        df (`pandas.DataFrame`): dataframe to test
+        factor (int): multiplication factor for the test.
+        force (bool): whether to allow overpassing the limit. Defaults to False.
+    """
+    mem = df.memory_usage(deep=True, index=True).sum()/(1024**2) * factor
+    if mem > 2:
+        total = round(mem / 1024)
+        if not force:
+            raise Warning(f'The memory required might exceed {total} GB of RAM. '
+                          'If this is what you want, try again with force=true. '
+                          'You could also sample some lexemes or select some cells.')
+        else:
+            log.warning(f'The required memory might exceed {total} GB of RAM,'
+                        'but you passed force=true.')

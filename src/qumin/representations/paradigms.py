@@ -10,15 +10,22 @@ from pathlib import Path
 from tqdm import tqdm
 
 from .segments import Inventory, Form
+from ..utils import memory_check
+
 import logging
 import pandas as pd
 from pandas.api.types import union_categoricals
+from paralex import read_table
 
 log = logging.getLogger()
 tqdm.pandas()
 
 
 class Paradigms(object):
+
+    """
+    Paradigms with methods to normalize them, merge and restore columns, etc.
+    """
 
     default_cols = ("lexeme", "cell", "phon_form")
     dropped = None
@@ -29,19 +36,14 @@ class Paradigms(object):
         """Read paradigms data, and prepare it according to a Segment class pool.
 
         Arguments:
-            dataset (str): paralex frictionless Package
+            dataset (`frictionless.Package`): paralex frictionless Package
                 All characters occuring in the paradigms except the first column
                 should be inventoried in this class.
-            verbose (bool): verbosity switch.
-            fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ? Otherwise they are filled with empty strings ("").
-            segcheck (bool): Defaults to False. Should I check that all the phonological segments in the table are defined in the segments table ?
-            defective (bool): Defaults to False. Should I keep rows with defective forms ?
-            overabundant (bool): Defaults to False. Should I keep rows with overabundant forms ?
-            merge_cols (bool): Defaults to False. Should I merge identical columns (fully syncretic) ?
-            cells (List[str]): List of cell names to consider. Defaults to all.
+            kwargs: additional arguments passed to :func:`Package.preprocess`
 
         Returns:
-            paradigms (:class:`pandas:pandas.DataFrame`): paradigms table (row are forms, lemmas, cells).
+            paradigms (:class:`pandas:pandas.DataFrame`): paradigms table
+                (rows contain forms, lemmas, cells).
         """
 
         # Reading the paradigms.
@@ -52,7 +54,7 @@ class Paradigms(object):
                                                                      'lexeme': 'category'}),
                                 keep_default_na=False,
                                 usecols=["form_id"] + list(self.default_cols))
-        self.reformat(**kwargs)
+        self.preprocess(**kwargs)
 
     def _get_unknown_segments(self, row, unknowns):
         """
@@ -65,22 +67,60 @@ class Paradigms(object):
             if char not in known_sounds:
                 unknowns[char].append(form + " " + cell)
 
-    def reformat(self, fillna=True, segcheck=False,
-                 defective=False, overabundant=False, merge_cols=False,
-                 cells=None, sample=None, most_freq=None):
+    def preprocess(self, fillna=True, segcheck=False,
+                   defective=False, overabundant=False, merge_cols=False,
+                   cells=None, sample=None, most_freq=None, pos=None, **kwargs):
         """
-        Reformat a Paralex paradigms table to meet the need of computations.
+        Preprocess a Paralex paradigms table to meet the requirements of Qumin:
+            - Filter by POS and by cells
+            - Filter by frequency, sample
+            - Filter overabundance and defectivity
+            - Merge identical columns
+            - Check segments and create Form() objects
+
+        Arguments:
+            fillna (bool): Defaults to True. Should #DEF# be replaced by np.NaN ?
+                Otherwise they are filled with empty strings ("").
+            segcheck (bool): Defaults to False. Should I check that all the phonological segments
+                in the table are defined in the segments table?
+            defective (bool): Defaults to False. Should I keep rows with defective forms?
+            overabundant (bool): Defaults to False. Should I keep rows with overabundant forms?
+            merge_cols (bool): Defaults to False. Should I merge identical columns
+                (fully syncretic)?
+            cells (List[str]): List of cell names to consider. Defaults to all.
+            pos (List[str]): List of parts of speech to consider. Defaults to all.
+            sample (int): Defaults to None. Should I randomly sample n lexemes (for debug purposes)?
+            most_freq (int): Defaults to None. Should I keep only the n most frequent lexemes?
         """
         lexemes, cell_col, form_col = self.default_cols
         paradigms = self.data
+
+        # POS filtering
+        if pos:
+            if 'lexemes' in self.dataset.resource_names:
+                table = read_table('lexemes', self.dataset)
+                if 'POS' not in table.columns:
+                    log.warning('No POS column in the lexemes table.')
+                else:
+                    if isinstance(pos, str):
+                        pos = [pos]
+                    paradigms = paradigms[paradigms['lexeme']
+                                          .map(table.set_index('lexeme_id').POS)
+                                          .isin(pos)]
+        else:
+            log.warning("No lexemes table. Can't filter based on POS.")
+
+        # Remove defectives
         if not defective:
             defective_lexemes = set(paradigms.loc[paradigms[form_col].isna(), lexemes].unique())
             paradigms.drop(paradigms[paradigms.loc[:, lexemes].isin(defective_lexemes)].index,
                            inplace=True)
 
+        # Remove overabundance
         if not overabundant:
             paradigms.drop_duplicates([lexemes, cell_col], inplace=True)
 
+        # Filter by frequency
         if most_freq:
             inflected = paradigms.loc[:, lexemes].unique()
             lexemes_file_name = \
@@ -93,15 +133,18 @@ class Paradigms(object):
             paradigms.drop(paradigms.loc[~paradigms.lexeme.isin(selected), :],
                            inplace=True)
 
+        # Sample a few lexemes
         if sample:
             paradigms = paradigms.sample(sample)
 
+        # Check long format conformity
         if not {lexemes, cell_col, form_col} < set(paradigms.columns):
             log.warning("Please use Paralex-style long-form table (http://www.paralex-standard.org).")
 
         self._drop_cells(paradigms, cells, 'cell')
         paradigms[form_col] = paradigms[form_col].fillna(value="")
 
+        # Check segment definitions
         if segcheck:
             log.info("Checking we have definitions for all the phonological segments in this data...")
             unknowns = defaultdict(list)
@@ -121,9 +164,13 @@ class Paradigms(object):
         paradigms.rename(columns={form_col: "form"}, inplace=True)
         paradigms.set_index('form_id', inplace=True)
 
+        # Merge identical columns
         if merge_cols:
             self.merge_duplicate_columns(sep="#")
+
+        # Save data
         log.debug(paradigms)
+        memory_check(paradigms, 2, **kwargs)
         self.data = paradigms
         self._update_cell()
 
@@ -152,7 +199,6 @@ class Paradigms(object):
         """Merge duplicate columns and return new DataFrame.
 
         Arguments:
-            df (:class:`pandas:pandas.DataFrame`): A dataframe
             sep (str): separator to use when joining columns names.
             keep_names (bool): Whether to keep the names of the original duplicated
                 columns by merging them onto the columns we keep.
@@ -179,14 +225,17 @@ class Paradigms(object):
 
     def unmerge_columns(self, sep="#"):
         """Unmerges columns that were previously merged with
-        `Paradigms.merge_duplicate_columns()`.
+        :func:`Paradigms.merge_duplicate_columns()`.
+
+        Arguments:
+            sep (str): separator to use when unmerging columns names.
         """
         names = {col: col.split(sep)[0] for col in self.data.cell.unique() if sep in col}
         self.data.cell = self.data.cell.cat.rename_categories(names)
         # Controlling for category conformity
         uc = union_categoricals([self.data.cell, self.dropped.cell])
-        self.data.cell = pd.Categorical(self.data.cell, categories=uc.categories )
-        self.dropped.cell = pd.Categorical(self.dropped.cell, categories=uc.categories )
+        self.data.cell = pd.Categorical(self.data.cell, categories=uc.categories)
+        self.dropped.cell = pd.Categorical(self.dropped.cell, categories=uc.categories)
         self.data = pd.concat([self.data, self.dropped])
         self.dropped = None
         self._update_cell()
@@ -195,11 +244,20 @@ class Paradigms(object):
         """
         Returns an oriented dataframe to store
         patterns for two cells.
+
+        Arguments:
+            a (str): cell A name
+            b (str): cell B name
         """
         new = pd.merge(self.data.loc[self.data.cell == a],
                        self.data.loc[self.data.cell == b],
                        on="lexeme")
-        return new
+
+        return new[['lexeme', 'form_x', 'form_y']]
+
 
     def _update_cell(self):
+        """
+        Updates the ``cells`` attribute based on the cells from the dataframe.
+        """
         self.cells = list(self.data.cell.unique())

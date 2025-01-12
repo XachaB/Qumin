@@ -1,5 +1,8 @@
 
-|tests| |DocStatus|_
+|PyPi|_ |tests| |DocStatus|_
+
+.. |PyPi| image:: https://img.shields.io/pypi/v/qumin
+.. _PyPi: https://pypi.org/project/qumin/
 
 .. |tests| image:: https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg
 
@@ -138,14 +141,6 @@ The config file contains the following keys, which can be set through the comman
 Advanced measures
 ~~~~~~~~~~~~~~~~~
 
-**Bipartite systems**
-
-For bipartite systems, it is possible to pass two values to both patterns and data, eg: ::
-
-    /$ qumin.H  patterns="[<patterns1.csv>,<patterns2.csv>]" data="[<dataset1.package.json>,<dataset2.package.json>]"
-
-**More options and measures**
-
 The default implementation for entropies does not handle overabundance and randomly drops overabundant rows. A new, slighltly slower, implementation can be used instead. This implementation also provides a measure of the *probability of success*, which does not always correlate with entropy measures for overabundant systems: ::
 
     /$ qumin action=H data=<dataset.package.json> overabundant=True
@@ -159,7 +154,6 @@ This implementation can also be used for non-overabundant systems, as it has som
         mapping: "norm"    # Provide a mapping from pattern frequencies to pattern probabilities.
                            # Possible values: "norm"(alized), "soft"(max), "uni"(form).
         beta: 5            # Value of the beta parameter for computations with func=soft.
-
 
 Visualizing results
 ^^^^^^^^^^^^^^^^^^^

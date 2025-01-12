@@ -11,7 +11,9 @@ import numpy as np
 import seaborn as sns
 import logging
 
-log = logging.getLogger()
+# Prevent matplotlib font manager from spamming the log
+logging.getLogger('matplotlib.font_manager').disabled = True
+log = logging.getLogger("Qumin")
 
 
 def get_features_order(features_file, results, sort_order=False):
@@ -208,7 +210,7 @@ def entropy_heatmap(results, md, cmap_name=False,
                               labelrotation=0)
 
     cg.set_axis_labels(x_var="Predicted", y_var="Predictor")
-    cg.fig.suptitle(f"Measured on the {md.datasets[0].name} dataset, version {md.datasets[0].version}")
+    cg.fig.suptitle(f"Measured on the {md.dataset.name} dataset, version {md.dataset.version}")
 
     cg.tight_layout()
 

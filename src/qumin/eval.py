@@ -179,7 +179,7 @@ def predict_two_directions(test_items, train_items, method, features=None):
 
 def prepare_data(cfg, md):
     """Create a multi-index paradigm table and if given a path, a features table."""
-    paradigms = Paradigms(md.datasets[0],
+    paradigms = Paradigms(md.dataset,
                           segcheck=True,
                           fillna=False,
                           merge_cols=cfg.pats.merged,
@@ -247,19 +247,11 @@ def eval_command(cfg, md):
                      "paradigms": paradigms_file_path,
                      "day_time": now}
 
-    kind_to_method = {
-        'patternsLevenshtein': 'levenshtein',
-        'patternsPhonsim': 'similarity',
-        'patternsSuffix': 'suffix',
-        'patternsPrefix': 'prefix',
-        'patternsBaseline': 'baseline'
-    }
-
-    methods = [kind_to_method[k] for k in cfg.pats.kind]
     tasks = prepare_arguments(paradigms,
                               cfg.eval.iter,
-                              methods,
+                              cfg.pats.kind,
                               features)
+
     l = cfg.eval.iter * len(list(combinations(range(paradigms.shape[1]), 2)))
 
     if cfg.eval.workers == 1:

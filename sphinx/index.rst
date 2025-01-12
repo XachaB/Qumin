@@ -1,3 +1,4 @@
+:hero: A python package for QUantitative Modelling of INflection
 
 .. include:: ../README.rst
 
@@ -14,4 +15,5 @@ Documentation index
    Alternation patterns <patterns>
    Publications <publications>
    Paralex datasets <http://www.paralex-standard.org>
+   Changelog <changelog>
    API <qumin>

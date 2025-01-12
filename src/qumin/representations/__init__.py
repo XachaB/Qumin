@@ -6,8 +6,8 @@ Utility functions for representations.
 """
 import logging
 import pandas as pd
-
-log = logging.getLogger()
+from paralex import read_table
+log = logging.getLogger("Qumin")
 
 
 def create_features(md, feature_cols):

@@ -28,10 +28,26 @@ qumin.representations.contexts module
    :undoc-members:
    :show-inheritance:
 
+qumin.representations.frequencies module
+----------------------------------------
+
+.. automodule:: qumin.representations.frequencies
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 qumin.representations.generalize module
 ---------------------------------------
 
 .. automodule:: qumin.representations.generalize
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qumin.representations.paradigms module
+-------------------------------------
+
+.. automodule:: qumin.representations.paradigms
    :members:
    :undoc-members:
    :show-inheritance:

@@ -29,12 +29,13 @@ disable_existing_loggers: false
 action: patterns      # Action, one of: patterns, H, lattice, eval, macroclasses, heatmap, ent_heatmap
 data: null            # path to paralex.package.json paradigms, segments
 cells: null           # List of cells to use (subset)
+pos: null             # List of parts of speech to use (subset)
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
 most_freq: null       # restrict to N most frequent items (use the lexeme "frequency" column)
 sample: null          # (int) A number of lexemes to sample, for debug purposes
 defective: False      # Whether to keep defective entries
 overabundant: False   # Whether to keep overabundant entries
-
+force: False          # Whether to overpass RAM usage security (2GB)
 
 lattice:
   shorten: False      # Drop redundant columns altogether.
@@ -62,8 +63,7 @@ heatmap:
   n_pairs: True            # Whether to display a heatmap of the number of pairs.
 
 entropy:
-  heatmap: True        # Whether to draw a heatmap.
-
+  heatmap: True       # Whether to draw a heatmap.
   n:                  # Compute entropy for prediction from with n predictors.
     - 1
   features: null      # Feature column in the Lexeme table.
@@ -87,9 +87,7 @@ eval:
   workers: 1          # Number of threads for multithreading
 
 pats:
-  kind: patternsPhonsim   # Options are (see docs): endings, endingsPairs, globalAlt, localAlt, endingsDisc,
-                          # patternsLevenshtein, patternsPhonsim, patternsSuffix, patternsPrefix, patternsBaseline
+  kind: phon   # Options are (see docs): phon, edits
   gap_proportion: .4      # Proportion of the median score used to set the gap score
   optim_mem: False        # Attempt to use a little bit less memory
   merged: False           # Whether to merge identical columns in the data
-  ortho: False            # Whether these are orthographic paradigms (only compatible with endings and alt)
