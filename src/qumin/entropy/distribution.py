@@ -8,14 +8,14 @@ Encloses distribution of patterns on paradigms.
 import logging
 from collections import Counter, defaultdict
 from functools import reduce
-from itertools import combinations, chain
+from itertools import combinations
 
 import pandas as pd
 from tqdm import tqdm
 
 from . import cond_entropy, entropy
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("Qumin")
 
 
 def value_norm(df):
