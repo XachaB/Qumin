@@ -131,7 +131,7 @@ class PatternDistribution(object):
         else:
             return group.applicable
 
-    def n_preds_entropy_matrix(self, n):
+    def n_preds_entropy_matrix(self, n, paradigms):
         r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies, and one with counts of lexemes.
 
         The result contains entropy :math:`H(c_{1}, ..., c_{n} \to c_{n+1} )`.
@@ -161,12 +161,19 @@ class PatternDistribution(object):
             log.info("Saving time by listing already known 0 entropies...")
             if n - 1 in self.data.loc[:, "n_preds"]:
                 df = self.get_results(measure="cond_entropy", n=n - 1).groupby("predicted")
+
                 if n - 1 == 1:
                     df = df.agg({"predictor": lambda ps: set(frozenset({pred}) for pred in ps)})
                 else:
                     df = df.agg({"predictor": lambda ps: set(frozenset(pred) for pred in ps)})
-                return df.to_dict(orient="index")
+                return df.predictor.to_dict()
             return None
+
+        def already_zero(predictors, out, zeros):
+            for preds_subset in combinations(predictors, n - 1):
+                if frozenset(preds_subset) in zeros[out]:
+                    return True
+            return False
 
         if n == 1:
             return self.one_pred_entropy()
@@ -175,71 +182,81 @@ class PatternDistribution(object):
 
         # For faster access
         patterns = self.patterns
-        classes = self.classes
-        columns = list(self.paradigms.columns)
-
-        def already_zero(predictors, out, zeros):
-            for preds_subset in combinations(predictors, n - 1):
-                if preds_subset in zeros[out]:
-                    return True
-            return False
-
+        cells = self.patterns.cells
         zeros = check_zeros(n)
+        data = self.prepare_data(n=n).reset_index(drop=False)
 
         pat_order = {}
         for a, b in patterns:
             pat_order[(a, b)] = (a, b)
             pat_order[(b, a)] = (a, b)
 
-        def calc_condent(predictors):
+        def calc_condent(x, paradigms):
             # combinations gives us all x, y unordered unique pair for all of
             # the n predictors.
+            predictors = x.predictor.split('&')
             pairs_of_predictors = list(combinations(predictors, 2))
-            known_patterns = patterns[pairs_of_predictors]
+            known_patterns = pd.concat([patterns[k]
+                                        .set_index('lexeme')
+                                        .pattern
+                                        for k in pairs_of_predictors],
+                                       axis=1)
             set_predictors = set(predictors)
-            predsselector = reduce(lambda x, y: x & y,
-                                   (self.hasforms[x] for x in predictors))
-            for out in (x for x in columns if x not in predictors):
-                selector = predsselector & self.hasforms[out]
+            predlexemes = known_patterns.notna().all(axis=1)
+            known_patterns = known_patterns.map(lambda x: (x,) if not isinstance(x, tuple) else x)\
+                                           .sum(axis=1)
+
+            for out in (x for x in cells if x not in predictors):
+
+                outlexemes = paradigms[(paradigms.cell == out) &
+                                       ~(paradigms.form.apply(lambda x: x.is_defective()))]
+                selector = predlexemes & predlexemes.index.isin(outlexemes.lexeme)
+                x.n_pairs = sum(selector)
+
                 if zeros is not None and already_zero(set_predictors, out, zeros):
-                    yield [predictors, out, 0, sum(selector)]
+                    x.value = 0
                 else:
-                    # Getting intersection of patterns events for each
+                    # Under the pattern column, getting intersection of patterns events for each
                     # predictor: x~z, y~z
-                    local_patterns = patterns[
-                        [pat_order[(pred, out)] for pred in predictors]]
-                    A = dfsum(local_patterns)
+                    # Under the applicable column, getting
+                    # - Known classes Class(x), Class(y)
+                    # - known patterns x~y
+                    # - plus all features
 
-                    # Known classes Class(x), Class(y) and known patterns x~y
-                    # plus all features
-                    known_classes = classes.loc[
-                        selector, [(pred, out) for pred in predictors]]
-                    known = known_classes.join(known_patterns[selector])
+                    pattern_pairs = [patterns[pat_order[(pred, out)]]
+                                     .set_index('lexeme')
+                                     [selector][['pattern', 'applicable']]
+                                     .map(lambda x: (x,) if not isinstance(x, tuple) else x)
+                                     for pred in predictors]
+                    pattern_pairs = reduce(lambda x, y: x+y, pattern_pairs)
+                    pattern_pairs.applicable += known_patterns[selector]
 
-                    B = self.add_features(dfsum(known))
+                    classes = self.add_features(pattern_pairs)
 
                     # Prediction of H(A|B)
-                    yield [predictors, out, "cond_entropy", cond_entropy(A, B, subset=selector),
-                           sum(selector), len(predictors), self.name]
+                    x.value = cond_entropy(pattern_pairs.pattern,
+                                           classes,
+                                           subset=selector)
+                return x
 
-        rows = chain(*[calc_condent(preds) for preds in combinations(columns, n)])
+        data = data.apply(calc_condent, args=[paradigms.data], axis=1)
+        self.data = pd.concat([self.data, data])
 
-        self.data = pd.concat([self.data, pd.DataFrame(rows, columns=self.data.columns)])
-
-    def prepare_data(self, patterns, debug=False):
+    def prepare_data(self, n=1, debug=False):
         """
         Prepares the dataframe to store the results for an entropy computation
         """
-        rows = patterns.cells
+        rows = self.patterns.cells
+        idx = ["&".join(x) for x in combinations(rows, n)]
 
-        data = pd.DataFrame(index=rows,
+        data = pd.DataFrame(index=idx,
                             columns=rows).reset_index(drop=False,
                                                       names="predictor").melt(id_vars="predictor",
                                                                               var_name="predicted",
                                                                               value_name="value")
         data = data[data.predictor != data.predicted]  # drop a -> a cases
         data.loc[:, "n_pairs"] = None
-        data.loc[:, "n_preds"] = 1
+        data.loc[:, "n_preds"] = n
         data.loc[:, "measure"] = "cond_entropy" if not debug else "cond_entropy_debug"
         data.loc[:, "dataset"] = self.name
         data.set_index(['predictor', 'predicted'], inplace=True)
@@ -269,7 +286,7 @@ class PatternDistribution(object):
 
         # For faster access
         patterns = self.patterns
-        data = self.prepare_data(patterns, debug=debug)
+        data = self.prepare_data(debug=debug)
 
         def calc_condent(group, cells, data):
             """

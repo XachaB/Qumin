@@ -76,13 +76,11 @@ def H_command(cfg, md):
             distrib.one_pred_entropy(debug=verbose)
 
     if preds:
-        # TODO
-        raise NotImplementedError
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
 
         for n in preds:
-            distrib.n_preds_entropy_matrix(n)
+            distrib.n_preds_entropy_matrix(n, paradigms)
             mean = distrib.get_results(n=n).loc[:, "value"].mean()
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
