@@ -51,7 +51,7 @@ def H_command(cfg, md):
                        force=cfg.force,
                        )
 
-    if verbose and len(patterns.keys()) > 45:
+    if verbose and len(patterns.cells) > 10:
         log.warning("Using verbose mode is strongly "
                     "discouraged on large (>10 cells) datasets."
                     "You should probably stop this process now.")
@@ -69,11 +69,11 @@ def H_command(cfg, md):
                                   features=features)
 
     if onePred:
+        if verbose:
+            distrib.one_pred_entropy(debug=verbose)
         distrib.one_pred_entropy()
         mean = distrib.get_results().loc[:, "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
-        if verbose:
-            distrib.one_pred_entropy(debug=verbose)
 
     if preds:
         if cfg.entropy.importFile:
