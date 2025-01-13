@@ -803,7 +803,7 @@ class ParadigmPatterns(dict):
     def __repr__(self):
         if len(self.cells) == 0:
             return "ParadigmPatterns(empty)"
-        return f"ParadigmPatterns({', '.join([a + "~´" + b for a, b in dict.keys(self)])})"
+        return f"ParadigmPatterns({', '.join([a + '~' + b for a, b in dict.keys(self)])})"
 
     def export(self, md, kind, optim_mem=False):
         """ Export dataframes to a folder"""
