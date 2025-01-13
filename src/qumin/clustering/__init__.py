@@ -12,7 +12,7 @@ def find_microclasses(paradigms, patterns, freqs=None):
     and limit further computation to the collection of these exemplars.
 
     Arguments:
-        paradigparadigmsms (pandas.DataFrame):
+        paradigs (pandas.DataFrame):
             a dataframe containing inflectional paradigms.
             rows describe a pattern between forms from a given lexeme for a given cell.
         freqs (pandas.Series): a series of frequencies for each lemma
