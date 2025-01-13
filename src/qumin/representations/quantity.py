@@ -71,6 +71,9 @@ class Quantity(object):
             cls._pool[(mini, maxi)] = obj
         return obj
 
+    def __getnewargs__(self):
+        return self.value
+
     def __init__(self, mini, maxi):
         """
         Arguments:
