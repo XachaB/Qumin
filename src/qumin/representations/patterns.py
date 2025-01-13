@@ -13,7 +13,9 @@ from .quantity import one, optional, some, kleenestar
 from .generalize import generalize_patterns, incremental_generalize_patterns
 
 # External tools
+from multiprocessing import Pool
 from pathlib import Path
+from math import comb
 from itertools import groupby, zip_longest, combinations, product
 from collections import defaultdict
 from copy import deepcopy
@@ -754,7 +756,7 @@ class ParadigmPatterns(dict):
         else:
             log.debug('Does not contain any dataframe')
 
-    def find_patterns(self, paradigms, method="edits", disable_tqdm=False, *args, **kwargs):
+    def find_patterns(self, paradigms, *args, method="edits", disable_tqdm=False, cpus=1, **kwargs):
         """Find Patterns in a DataFrame.
 
         Methods can be:
@@ -768,6 +770,7 @@ class ParadigmPatterns(dict):
             paradigms (:class:`pandas:pandas.DataFrame`): paradigms (columns are cells, index are lemmas).
             method (str): method for scoring best pairwise alignments. Can be "edits" or "phon".
             disable_tqdm (bool): if true, do not show progressbar
+            cpus (int): number of CPUs to use for parallelisation (defaults to 1)
 
         Returns:
             (tuple):
@@ -790,9 +793,12 @@ class ParadigmPatterns(dict):
         self.cells = list(paradigms.data.cell.unique())
 
         tqdm.pandas(leave=False, disable=disable_tqdm)
-        for pair in tqdm(combinations(self.cells, 2)):
-            value = self.find_patterns_in_col(pair, paradigms, *args, **kwargs)
-            dict.__setitem__(self, pair, value)
+
+        pool = Pool(cpus)  # Create a multiprocessing Pool
+        n_pairs = comb(len(self.cells), 2)
+        find_patterns_partial = lambda pair: self.find_patterns_in_col(pair, paradigms, *args, **kwargs)
+        self.update(tqdm(pool.imap_unordered(find_patterns_partial,
+                            combinations(self.cells, 2)), total=n_pairs))
 
     def __repr__(self):
         if len(self.cells) == 0:
@@ -1061,7 +1067,7 @@ class ParadigmPatterns(dict):
             df.pattern = df.pattern.apply(repr)
         else:
             self.pat_dict[(c1, c2)] = df['pattern'].unique()
-        return df
+        return (pair, df)
 
     def unmerge_columns(self, paradigms):
         """

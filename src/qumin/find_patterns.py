@@ -4,6 +4,7 @@
 
 Author: Sacha Beniamine.
 """
+from os import cpu_count
 import logging
 
 from .clustering import find_microclasses
@@ -30,9 +31,13 @@ def pat_command(cfg, md):
 
     merge_cols = True
 
-    paradigms = Paradigms(md.dataset, defective=defective,
-                          overabundant=overabundant, merge_cols=merge_cols,
-                          segcheck=segcheck, cells=cells, pos=cfg.pos,
+    paradigms = Paradigms(md.dataset,
+                          defective=defective,
+                          overabundant=overabundant,
+                          merge_cols=merge_cols,
+                          segcheck=segcheck,
+                          cells=cells,
+                          pos=cfg.pos,
                           sample=cfg.sample,
                           most_freq=cfg.most_freq,
                           force=cfg.force,
@@ -40,8 +45,12 @@ def pat_command(cfg, md):
 
     log.info("Looking for patterns...")
     patterns = ParadigmPatterns()
-    patterns.find_patterns(paradigms, method=kind, optim_mem=cfg.pats.optim_mem,
-                           gap_prop=cfg.pats.gap_proportion)
+
+    patterns.find_patterns(paradigms,
+                           method=kind,
+                           optim_mem=cfg.pats.optim_mem,
+                           gap_prop=cfg.pats.gap_proportion,
+                           cpus=cfg.cpus or min(1, cpu_count() - 2))
 
     # Concatenate the patterns as a dict. Cell names are turned into columns.
     # patterns_df = pd.concat([df for df in patterns_dfs.values()]).reset_index(drop=True)

@@ -36,6 +36,8 @@ sample: null          # (int) A number of lexemes to sample, for debug purposes
 defective: False      # Whether to keep defective entries
 overabundant: False   # Whether to keep overabundant entries
 force: False          # Whether to overpass RAM usage security (2GB)
+cpus: null            # Number of cpus to use for big computations
+                      # (defaults to the number of available cpus - 2).
 
 lattice:
   shorten: False      # Drop redundant columns altogether.
