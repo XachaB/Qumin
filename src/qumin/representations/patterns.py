@@ -4,26 +4,27 @@
 
 This module addresses the modeling of inflectional alternation patterns."""
 
-# Our modules
-from ..utils import memory_check
-from . import alignment
-from .segments import Inventory, Form
-from .contexts import Context
-from .quantity import one, optional, some, kleenestar
-from .generalize import generalize_patterns, incremental_generalize_patterns
-
+import logging
+import re
+from collections import defaultdict
+from copy import deepcopy
+from itertools import groupby, zip_longest, combinations, product
+from math import comb
 # External tools
 from multiprocessing import Pool
 from pathlib import Path
-from math import comb
-from itertools import groupby, zip_longest, combinations, product
-from collections import defaultdict
-from copy import deepcopy
+
 import numpy as np
 import pandas as pd
-import re
 from tqdm import tqdm
-import logging
+
+from . import alignment
+from .contexts import Context
+from .generalize import generalize_patterns, incremental_generalize_patterns
+from .quantity import one, optional, some, kleenestar
+from .segments import Inventory, Form
+# Our modules
+from ..utils import memory_check
 
 log = logging.getLogger("Qumin")
 
@@ -87,14 +88,34 @@ def _replace_alternation(m, r):
     def iter_replacements(m, r):
         g = m.groups("")
         for i in range(len(g)):
-            yield r[i](g[i].strip())
+            if r[i] is None:  # no replacement, identity function
+                yield g[i] + " "
+            elif type(r[i]) is str:  # replace by this string
+                yield r[i] + " "
+            else:  # apply a function
+                yield r[i](g[i].strip())
 
     return "".join(iter_replacements(m, r))
-
 
 def are_all_identical(iterable):
     """Test whether all elements in the iterable are identical."""
     return iterable and len(set(iterable)) == 1
+
+def make_transform_reg(sounds):
+    sounds = sorted(sounds)
+    return "(?:" + "|".join(x + " " for x in sounds) + ")"
+
+def make_transform_repl(a, b):
+    return lambda x: Inventory.get_from_transform(x, (a, b)) + " "
+
+
+def iter_alternation(alt):
+    for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)):
+        if is_transform:
+            for x in group:
+                yield is_transform, x
+        else:
+            yield is_transform, "".join(Inventory.regex(x) if x else "" for x in group)
 
 
 class NotApplicable(Exception):
@@ -102,40 +123,44 @@ class NotApplicable(Exception):
     pass
 
 
+
 class Pattern(object):
-    r"""Represent an alternation pattern and its context.
+    r"""Represent the alternation pattern between two forms.
 
-    The pattern can be defined over an arbitrary number of forms.
-    If there are only two forms, a :class:`BinaryPattern` will be created.
+    Applying the pattern to one of the original forms yields the second one.
 
-    cells (tuple): Cell labels.
+    As an example, we will use the following alternation
+    in a present verb of french:
 
-    Attributes:
-        alternation (dict[str, list[tuple]]):
-            Maps the cell's names to a list of tuples of alternating material.
-
-        context (tuple of str):
-            Sequence of (str, Quantifier) pairs or "{}" (stands for alternating material.)
-
-        score (float):
-            A score used to choose among patterns.
+    ========================== ========================== ==========================
+    cells                      Forms                      Transcription
+    ========================== ========================== ==========================
+    prs.1.sg ⇌ prs.2.pl        j'amène ⇌ vous amenez      amEn ⇌ amənE
+    ========================== ========================== ==========================
 
     Example:
         >>> Inventory.initialize("tests/data/frenchipa.csv")
-        >>> cells = ("prs.1.sg", "prs.1.pl","prs.2.pl")
-        >>> forms = (Form("amEn"), Form("amənɔ̃"), Form("amənE"))
+        >>> cells = ("prs.1.sg", "prs.2.pl")
+        >>> forms = (Form("amEn"), Form("amənE"))
         >>> p = Pattern(cells, forms, aligned=False)
+        >>> type(p)
+        <class 'qumin.representations.patterns.Pattern'>
         >>> p
-        E_ ⇌ Ø_ɔ̃ ⇌ Ø_E / am_n_ <0>
+        E_ ⇌ Ø_E / am_n_ <0>
+        >>> p.apply(Form("amEn"), cells)
+        Form(a m Ø n E )
     """
 
-    def __new__(cls, *args, **kwargs):
-        if len(args[0]) == 2:
-            return super(Pattern, cls).__new__(BinaryPattern)
-        else:
-            return super(Pattern, cls).__new__(cls)
+    def __lt__(self, other):
+        """Sort on lexicographic order.
 
-    def __init__(self, cells, forms, aligned=False, **kwargs):
+        There is no reason to sort patterns,
+        but Pandas wants to do it from time to time,
+        this is only implemented to avoid Pandas complaining.
+        """
+        return str(self) < str(other)
+
+    def __init__(self, cells, forms, aligned=False):
         """Constructor for Pattern.
 
         Arguments:
@@ -156,6 +181,9 @@ class Pattern(object):
         self._init_from_alignment(alignment_of_forms)
         self._repr = self._make_str_(features=False)
         self._feat_str = self._make_str_(features=True)
+        self._find_generalized_alt()
+
+
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -166,14 +194,15 @@ class Pattern(object):
         copy.score = self.score
         copy._repr = self._repr
         copy._feat_str = self._feat_str
-        copy._gen_alt = self._gen_alt
+        copy._gen_alt = deepcopy(self._gen_alt)
         return copy
+
 
     @classmethod
     def new_identity(cls, cells):
         """Create a new identity pattern for a given set of cells.
         """
-        p = cls(cells, [""] * len(cells), aligned=True)
+        p = cls(cells, ("", ""), aligned=True)
         p.context = Context([(Inventory._max, kleenestar)])
         p._repr = p._make_str_(features=False)
         p._feat_str = p._make_str_(features=True)
@@ -187,7 +216,6 @@ class Pattern(object):
             _ ⇌ E / abEs_ <0.5>
 
         Note: Phonemes in context classes are now separated by ","
-
 
         """
         quantities = {"": one, "?": optional, "+": some, "*": kleenestar}
@@ -407,51 +435,6 @@ class Pattern(object):
         self.alternation, self.context = alternation, Context(context)
 
 
-class BinaryPattern(Pattern):
-    r"""Represent the alternation pattern between two forms.
-
-    A BinaryPattern is a `Patterns.Pattern` over just two forms.
-    Applying the pattern to one of the original forms yields the second one.
-
-    As an example, we will use the following alternation
-    in a present verb of french:
-
-    ========================== ========================== ==========================
-    cells                      Forms                      Transcription
-    ========================== ========================== ==========================
-    prs.1.sg ⇌ prs.2.pl        j'amène ⇌ vous amenez      amEn ⇌ amənE
-    ========================== ========================== ==========================
-
-    Example:
-        >>> Inventory.initialize("tests/data/frenchipa.csv")
-        >>> cells = ("prs.1.sg", "prs.2.pl")
-        >>> forms = (Form("amEn"), Form("amənE"))
-        >>> p = Pattern(cells, forms, aligned=False)
-        >>> type(p)
-        <class 'qumin.representations.patterns.BinaryPattern'>
-        >>> p
-        E_ ⇌ Ø_E / am_n_ <0>
-        >>> p.apply(Form("amEn"), cells)
-        Form(a m Ø n E )
-    """
-
-    def __lt__(self, other):
-        """Sort on lexicographic order.
-
-        There is no reason to sort patterns,
-        but Pandas wants to do it from time to time,
-        this is only implemented to avoid Pandas complaining.
-        """
-        return str(self) < str(other)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._find_generalized_alt()
-
-    def __deepcopy__(self, memo):
-        copy = super().__deepcopy__(self)
-        copy._gen_alt = deepcopy(self._gen_alt)
-        return copy
 
     @property
     def _regex(self):
@@ -484,27 +467,6 @@ class BinaryPattern(Pattern):
         """
         c1, c2 = self.cells
 
-        def make_transform_reg(sounds):
-            sounds = sorted(sounds)
-            return "(?:" + "|".join(x + " " for x in sounds) + ")"
-
-        def make_transform_repl(a, b):
-            return lambda x: Inventory.get_from_transform(x, (a, b)) + " "
-
-        def make_sub_repl(chars):
-            return lambda x: chars
-
-        def identity(x):
-            return x + " "
-
-        def iter_alternation(alt):
-            for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)):
-                if is_transform:
-                    for x in group:
-                        yield is_transform, x
-                else:
-                    yield is_transform, "".join(Inventory.regex(x) if x else "" for x in group)
-
         # Build alternation as list of zipped segments / transformations
         alternances = []
         for left, right in zip(self.alternation[c1], self.alternation[c2]):
@@ -513,14 +475,13 @@ class BinaryPattern(Pattern):
 
         regex = {c1: "", c2: ""}
         repl = {c1: [], c2: []}
-        i = 0
 
-        for group in self.context:
+        for i, group in enumerate(self.context):
             c = group.to_str(mode=0).format("")
             regex[c1] += c
             regex[c2] += c
-            repl[c1].append(identity)
-            repl[c2].append(identity)
+            repl[c1].append(None)
+            repl[c2].append(None)
 
             if group.blank:
                 # alternation
@@ -536,14 +497,13 @@ class BinaryPattern(Pattern):
                         regex[c1] += "({})".format(make_transform_reg(chars_1))
                         regex[c2] += "({})".format(make_transform_reg(chars_2))
                     else:
-                        # Substitution replacement make_subl_repl with target segment as argument
-                        repl[c1].append(make_sub_repl(chars_1))
-                        repl[c2].append(make_sub_repl(chars_2))
+                        # Substitution replacement: pass directly the target segments
+                        repl[c1].append(chars_1)
+                        repl[c2].append(chars_2)
 
                         # Regex matches these segments as one group
                         regex[c1] += "({})".format(chars_1)
                         regex[c2] += "({})".format(chars_2)
-                i += 1
 
         self._saved_regex = {c: re.compile("^" + regex[c] + "$") for c in regex}
         self._saved_repl = repl
@@ -738,7 +698,6 @@ class PatternCollection(tuple):
 
 
 class ParadigmPatterns(dict):
-
     """
     This class stores alternation patterns computed for a paradigm.
     """
@@ -756,7 +715,7 @@ class ParadigmPatterns(dict):
         else:
             log.debug('Does not contain any dataframe')
 
-    def find_patterns(self, paradigms, *args, method="edits", disable_tqdm=False, cpus=1, **kwargs):
+    def find_patterns(self, paradigms, *args, method="edits", disable_tqdm=False, cpus=1, optim_mem=False, **kwargs):
         """Find Patterns in a DataFrame.
 
         Methods can be:
@@ -771,6 +730,7 @@ class ParadigmPatterns(dict):
             method (str): method for scoring best pairwise alignments. Can be "edits" or "phon".
             disable_tqdm (bool): if true, do not show progressbar
             cpus (int): number of CPUs to use for parallelisation (defaults to 1)
+            optim_mem (bool): whether to convert patterns to str to use less memory (defaults to False)
 
         Returns:
             (tuple):
@@ -791,14 +751,19 @@ class ParadigmPatterns(dict):
                                       "rather than this function.".format(method))
 
         self.cells = list(paradigms.data.cell.unique())
+        self.optim_mem = optim_mem
 
         tqdm.pandas(leave=False, disable=disable_tqdm)
+        logging.info(f"Using {cpus} threads for pattern inference.")
+        # Register empty dfs of patterns
+        # This is to avoid threads depending on a shared paradigms object !
+        for pair in combinations(self.cells, 2):
+            dict.__setitem__(self, pair, paradigms.get_empty_pattern_df(*pair))
 
-        pool = Pool(cpus)  # Create a multiprocessing Pool
-        n_pairs = comb(len(self.cells), 2)
-        find_patterns_partial = lambda pair: self.find_patterns_in_col(pair, paradigms, *args, **kwargs)
-        self.update(tqdm(pool.imap_unordered(find_patterns_partial,
-                            combinations(self.cells, 2)), total=n_pairs))
+        with Pool(cpus) as pool:  # Create a multiprocessing Pool
+            self.update(tqdm(pool.imap_unordered(self.find_cellpair_patterns,
+                                                 list(self)),  # list of dict keys = the pairs
+                             total=comb(len(self.cells), 2)))
 
     def __repr__(self):
         if len(self.cells) == 0:
@@ -879,7 +844,6 @@ class ParadigmPatterns(dict):
                 memory_check(list(self.values())[0], n_files, force=force)
                 first = False
 
-
         self.pat_dict = {column: list(collection[column].values()) for column in collection}
 
         # Raise error if wrong parameters.
@@ -942,8 +906,7 @@ class ParadigmPatterns(dict):
                 defective
                 and (paradigms.form == '').any()
                 and table.pattern.notna().all()
-                ):
-
+        ):
             raise ValueError("It looks like you ignored defective rows"
                              "when computing patterns. Set defective=False.")
 
@@ -985,13 +948,14 @@ class ParadigmPatterns(dict):
                         t = _get_pattern_matchtype(new_rule, pair[0], pair[1])
                         collection[alt][t].append(new_rule)
 
-    def find_patterns_in_col(self, pair, paradigms, optim_mem=False, **kwargs):
+    def find_cellpair_patterns(self, pair, **kwargs):
         """
         Finds patterns for a pair of cells and returns a Dataframe containing the patterns.
         """
 
-        def _score(p, df):
+        def _score(p):
             """Scores each pattern"""
+
             def test_all(row, p):
                 """Tests each pattern against each form"""
                 correct = 0
@@ -1002,12 +966,12 @@ class ParadigmPatterns(dict):
                     else:
                         B = p.apply(a, pair, raiseOnFail=False)
                         A = p.apply(b, pair[::-1], raiseOnFail=False)
-                        correct_one = (p.apply(a, pair, raiseOnFail=False) == b) and (
-                                p.apply(b, pair[::-1], raiseOnFail=False) == a)
-                        if correct_one:
+
+                        if (B == b) and (A == a):
                             correct += 1
                             p.lexemes.add((lex, a, b))
                 return correct
+
             counts = df.apply(test_all, axis=1, p=p)
             return counts.sum()
 
@@ -1016,7 +980,7 @@ class ParadigmPatterns(dict):
                 if (lex, a, b) in p.lexemes:
                     return p
 
-        df = paradigms.get_empty_pattern_df(*pair)
+        df = self[pair]  # Retrieve the empty df from inner dict
         collection = defaultdict(lambda: defaultdict(list))
         c1, c2 = pair
 
@@ -1050,7 +1014,7 @@ class ParadigmPatterns(dict):
             log.debug("Result:" + str(collection[alt]))
             # Score
             for p in collection[alt]:
-                p.score = _score(p, df)
+                p.score = _score(p)
                 sorted_collection.append(p)
 
         # Sort by score and choose best patterns
@@ -1063,7 +1027,7 @@ class ParadigmPatterns(dict):
             return None
 
         df['pattern'] = df.apply(_best_pattern, axis=1)
-        if optim_mem:
+        if self.optim_mem:
             df.pattern = df.pattern.apply(repr)
         else:
             self.pat_dict[(c1, c2)] = df['pattern'].unique()
@@ -1154,5 +1118,5 @@ class ParadigmPatterns(dict):
         # Computing classes
         for pair, df in tqdm(self.items()):
             has_pat = df.pattern.notna()
-            df.loc[has_pat, "applicable"] = df.loc[has_pat, :]\
+            df.loc[has_pat, "applicable"] = df.loc[has_pat, :] \
                 .apply(applicable, args=[pair], axis=1)
