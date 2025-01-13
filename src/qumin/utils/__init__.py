@@ -168,18 +168,19 @@ def get_cells(cells, pos, package):
             return None
 
 
-def memory_check(df, factor, force=False):
+def memory_check(df, factor, max_gb=2, force=False):
     """
     Checks memory usage for a dataframe and warn if it exceeds a certain limit.
 
     Arguments:
         df (`pandas.DataFrame`): dataframe to test
         factor (int): multiplication factor for the test.
+        max_gb (float): Threshold for memory warning.
         force (bool): whether to allow overpassing the limit. Defaults to False.
     """
     mem = df.memory_usage(deep=True, index=True).sum()/(1024**2) * factor
-    if mem > 2:
-        total = round(mem / 1024)
+    total = round(mem / 1024)
+    if total > max_gb:
         if not force:
             raise Warning(f'The memory required might exceed {total} GB of RAM. '
                           'If this is what you want, try again with force=true. '
