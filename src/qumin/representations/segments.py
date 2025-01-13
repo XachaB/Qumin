@@ -37,8 +37,8 @@ class Form(str):
     If a form is provided as defective, this information is still stored
     as a Form object with empty content. Defectiveness can be tested with:
 
-        Form('').is_defective()
-        >>> True
+        >>> Form('').is_defective()
+        True
 
     Sounds might be more than one character long.
     Forms are strings, they are segmented at the object creation.

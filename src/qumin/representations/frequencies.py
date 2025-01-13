@@ -188,10 +188,10 @@ class Frequencies(object):
             14    20.0
             18     NaN
             Name: value, dtype: float64
-            >>> f.get_absolute_freq(filters={'lexeme':'q'})
-            np.float64(nan)
-            >>> f.get_absolute_freq(filters={'cell':'third'}, mean=True, skipna=True)
-            np.float64(20.0)
+            >>> float(f.get_absolute_freq(filters={'lexeme':'q'}))
+            nan
+            >>> float(f.get_absolute_freq(filters={'cell':'third'}, mean=True, skipna=True))
+            20.0
             >>> f.get_absolute_freq(group_on=['lexeme'])
             lexeme
             k    193.0
