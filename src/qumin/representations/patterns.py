@@ -83,7 +83,7 @@ def _get_pattern_matchtype(p, c1, c2):
 
 
 def _replace_alternation(m, r):
-    """ Replace all matches in m using co-indexed functions in r."""
+    """ Replace all matches in m using information in r."""
 
     def iter_replacements(m, r):
         g = m.groups("")
@@ -113,9 +113,10 @@ def iter_alternation(alt):
     for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)):
         if is_transform:
             for x in group:
-                yield is_transform, x
+                yield is_transform, x, x
         else:
-            yield is_transform, "".join(Inventory.regex(x) if x else "" for x in group)
+            chars = list(group)
+            yield is_transform, "".join(Inventory.regex(x) if x else "" for x in chars), " ".join(chars)
 
 
 class NotApplicable(Exception):
@@ -148,7 +149,7 @@ class Pattern(object):
         >>> p
         E_ ⇌ Ø_E / am_n_ <0>
         >>> p.apply(Form("amEn"), cells)
-        Form(a m Ø n E )
+        Form(amØnE)
     """
 
     def __lt__(self, other):
@@ -464,6 +465,19 @@ class Pattern(object):
 
     def _create_regex(self):
         """Create regexes and replacement strings for this pattern.
+
+        Example:
+            >>> Inventory.initialize("tests/data/frenchipa.csv")
+            >>> cells = ("prs.1.sg", "prs.2.pl")
+            >>> forms = (Form("amEn"), Form("amənE"))
+            >>> p = Pattern(cells, forms, aligned=False)
+            >>> p
+            E_ ⇌ Ø_E / am_n_ <0>
+            >>> p._repl # Calls _create_regex if needed
+            {'prs.1.sg': [None, 'E', None, ''], 'prs.2.pl': [None, 'Ø', None, 'E']}
+            >>> p._regex # Calls _create_regex if needed
+            {'prs.1.sg': re.compile('^((?:a )(?:m ))((?:E ))((?:n ))()$'), 'prs.2.pl': re.compile('^((?:a )(?:m ))((?:Ø ))((?:n ))((?:E ))$')}
+
         """
         c1, c2 = self.cells
 
@@ -471,7 +485,9 @@ class Pattern(object):
         alternances = []
         for left, right in zip(self.alternation[c1], self.alternation[c2]):
             alternances.append(
-                list(zip_longest(iter_alternation(left), iter_alternation(right), fillvalue=(False, ""))))
+                list(zip_longest(iter_alternation(left),
+                                 iter_alternation(right),
+                                 fillvalue=(False, "", ""))))
 
         regex = {c1: "", c2: ""}
         repl = {c1: [], c2: []}
@@ -486,24 +502,24 @@ class Pattern(object):
             if group.blank:
                 # alternation
                 # We build one regex group for each continuous sequence of segments and each transformation
-                for (is_transform, chars_1), (is_transform, chars_2) in alternances[i]:
+                for (is_transform, regchars_1, chars_1), (is_transform, regchars_2, chars_2) in alternances[i]:
                     # Replacements
                     if is_transform:
                         # Transformation replacement make_transform_repl with two segments in argument
-                        repl[c1].append(make_transform_repl(chars_2, chars_1))
-                        repl[c2].append(make_transform_repl(chars_1, chars_2))
+                        repl[c1].append(make_transform_repl(regchars_2, regchars_1))
+                        repl[c2].append(make_transform_repl(regchars_1, regchars_2))
 
                         # Regex matches these segments as one group
-                        regex[c1] += "({})".format(make_transform_reg(chars_1))
-                        regex[c2] += "({})".format(make_transform_reg(chars_2))
+                        regex[c1] += "({})".format(make_transform_reg(regchars_1))
+                        regex[c2] += "({})".format(make_transform_reg(regchars_2))
                     else:
                         # Substitution replacement: pass directly the target segments
                         repl[c1].append(chars_1)
                         repl[c2].append(chars_2)
 
                         # Regex matches these segments as one group
-                        regex[c1] += "({})".format(chars_1)
-                        regex[c2] += "({})".format(chars_2)
+                        regex[c1] += "({})".format(regchars_1)
+                        regex[c2] += "({})".format(regchars_2)
 
         self._saved_regex = {c: re.compile("^" + regex[c] + "$") for c in regex}
         self._saved_repl = repl
