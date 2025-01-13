@@ -63,11 +63,18 @@ class Form(str):
         self.id = form_id
         return self
 
+    def __getnewargs__(self):
+        return ("".join(self.tokens), self.id)
+
     @classmethod
     def from_segmented_str(cls, segmented):
-        stripped = segmented.strip(" ")
-        self = cls.__new__(cls, stripped + " ")
-        self.tokens = stripped.split()
+        if segmented == "":
+            self = str.__new__(cls, "")
+            self.tokens = []
+        else:
+            stripped = segmented.strip(" ")
+            self = cls.__new__(cls, stripped + " ")
+            self.tokens = stripped.split()
         return self
 
     def is_defective(self):
