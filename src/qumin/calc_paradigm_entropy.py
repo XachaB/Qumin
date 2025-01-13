@@ -23,6 +23,7 @@ def H_command(cfg, md):
     verbose = HydraConfig.get().verbose is not False
     patterns_folder_path = cfg.patterns
     sounds_file_name = md.get_table_path("sounds")
+    defective = cfg.pats.defective
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
     onePred = preds[0] == 1
@@ -35,7 +36,7 @@ def H_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
-    paradigms = Paradigms(md.dataset, defective=cfg.defective, overabundant=False,
+    paradigms = Paradigms(md.dataset, defective=defective, overabundant=False,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True, cells=cells, pos=cfg.pos,
                           sample=cfg.sample,
@@ -46,7 +47,7 @@ def H_command(cfg, md):
     patterns = ParadigmPatterns()
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
-                       defective=cfg.defective,
+                       defective=defective,
                        overabundant=False,
                        force=cfg.force,
                        )
