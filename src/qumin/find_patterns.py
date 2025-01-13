@@ -20,8 +20,8 @@ def pat_command(cfg, md):
     r"""Find pairwise alternation patterns from paradigms."""
     # Loading files and paths
     kind = cfg.pats.kind
-    defective = cfg.defective
-    overabundant = cfg.overabundant
+    defective = cfg.pats.defective
+    overabundant = cfg.pats.overabundant
     cells = get_cells(cfg.cells, cfg.pos, md.dataset)
     segcheck = True
 

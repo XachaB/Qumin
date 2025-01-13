@@ -33,8 +33,6 @@ pos: null             # List of parts of speech to use (subset)
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
 most_freq: null       # restrict to N most frequent items (use the lexeme "frequency" column)
 sample: null          # (int) A number of lexemes to sample, for debug purposes
-defective: False      # Whether to keep defective entries
-overabundant: False   # Whether to keep overabundant entries
 force: False          # Whether to overpass RAM usage security (2GB)
 cpus: null            # Number of cpus to use for big computations
                       # (defaults to the number of available cpus - 2).
@@ -80,7 +78,9 @@ eval:
   workers: 1          # Number of threads for multithreading
 
 pats:
-  kind: phon   # Options are (see docs): phon, edits
+  kind: phon              # Options are (see docs): phon, edits
+  defective: False        # Whether to keep defective entries
+  overabundant: False     # Whether to keep overabundant entries
   gap_proportion: .4      # Proportion of the median score used to set the gap score
   optim_mem: False        # Attempt to use a little bit less memory
   merged: False           # Whether to merge identical columns in the data
