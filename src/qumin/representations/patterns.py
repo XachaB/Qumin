@@ -125,14 +125,34 @@ def are_all_identical(iterable):
     return iterable and len(set(iterable)) == 1
 
 
-def iter_alternation(alt):
-    for is_transform, group in groupby(alt, lambda x: not Inventory.is_leaf(x)):
-        if is_transform:
-            for x in group:
-                yield is_transform, x, x
+def _iter_alternation(alt):
+    """ Group alternations into sequences of segments or phonological transfomations.
+
+    An alternation part is a sequence of strings or frozenset. Each string represents either:
+    - A segment
+    - A frozenset representing a class of segment (which forms part of a phonological transformation)
+
+    This iterates by grouping contiguous segments together, and classes of segments separately.
+
+    Example:
+        >>> Inventory.initialize("tests/data/frenchipa.csv")
+        >>> alt_members = _iter_alternation(['a', 'b', 'a', frozenset(('e', 'u'))])
+        >>> list(alt_members) == [(True, ['a', 'b', 'a']), (False, frozenset({'e', 'u'}))]
+        True
+
+    Args:
+        alt (iterable of str or frozenset): An alternation part.
+
+    Yields:
+        Iterator of pairs of is_segment, then either a sequence of segments or a frozenset.
+
+    """
+    for is_segment, group in groupby(alt, lambda x: Inventory.is_leaf(x)):
+        if is_segment:
+            yield is_segment, list(group)
         else:
-            chars = list(group)
-            yield is_transform, "".join(Inventory.regex(x) if x else "" for x in chars), " ".join(chars)
+            for x in group:
+                yield is_segment, x
 
 
 class NotApplicable(Exception):
@@ -501,8 +521,8 @@ class Pattern(object):
         alternances = []
         for left, right in zip(self.alternation[c1], self.alternation[c2]):
             alternances.append(
-                list(zip_longest(iter_alternation(left),
-                                 iter_alternation(right),
+                list(zip_longest(_iter_alternation(left),
+                                 _iter_alternation(right),
                                  fillvalue=(False, "", ""))))
 
         regex = {c1: "", c2: ""}
@@ -518,9 +538,20 @@ class Pattern(object):
             if group.blank:
                 # alternation
                 # We build one regex group for each continuous sequence of segments and each transformation
-                for (is_transform, regchars_1, chars_1), (is_transform, regchars_2, chars_2) in alternances[i]:
+                for (is_segments, chars_1), (_, chars_2) in alternances[i]:
                     # Replacements
-                    if is_transform:
+                    regchars_1 = "".join(Inventory.regex(x) if x else "" for x in chars_1),
+                    regchars_2 = "".join(Inventory.regex(x) if x else "" for x in chars_2),
+                    if is_segments:
+                        # Substitution replacement: pass directly the target segments
+                        # (this is a string; or None if no replacement)
+                        repl[c1].append(" ".join(chars_1))
+                        repl[c2].append(" ".join(chars_2))
+
+                        # Regex matches these segments as one
+                        regex[c1] += "({})".format(regchars_1)
+                        regex[c2] += "({})".format(regchars_2)
+                    else:
                         # Transformation replacement (this is a tuple)
                         repl[c1].append((regchars_2, regchars_1))
                         repl[c2].append((regchars_1, regchars_2))
@@ -528,15 +559,6 @@ class Pattern(object):
                         # Regex matches these segments as one group
                         regex[c1] += "({})".format(_regex_or(regchars_1))
                         regex[c2] += "({})".format(_regex_or(regchars_2))
-                    else:
-                        # Substitution replacement: pass directly the target segments
-                        # (this is a string; or None if no replacement)
-                        repl[c1].append(chars_1)
-                        repl[c2].append(chars_2)
-
-                        # Regex matches these segments as one
-                        regex[c1] += "({})".format(regchars_1)
-                        regex[c2] += "({})".format(regchars_2)
 
         self._saved_regex = {c: re.compile("^" + regex[c] + "$") for c in regex}
         self._saved_repl = repl
