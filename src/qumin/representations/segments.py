@@ -5,15 +5,17 @@
 This module addresses the modelisation of phonological segments.
 """
 
-import pandas as pd
-import numpy as np
-from itertools import combinations
 import functools
+import logging
 import re
+from itertools import combinations
+
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 from ..lattice.lattice import table_to_context
-import logging
+
 log = logging.getLogger("Qumin")
 
 inventory = None
@@ -30,6 +32,10 @@ _to_short_feature = {'anterior': 'ant', 'approximant': 'appr', 'back': 'back', '
                      'abrupt': 'abrupt', 'checked': 'check', 'grave': 'grave', 'acute': 'acute', 'medial': 'med',
                      'flat': 'flat', 'sharp': 'sharp', 'trill': 'tril', 'labiodental': 'labdent'}
 _short_features = [y for _, y in _to_short_feature.items()]
+
+
+def _regex_or(sounds, sep=" "):
+    return "(?:" + "|".join(x + sep for x in sorted(sounds)) + ")"
 
 
 class Form(str):
@@ -81,7 +87,8 @@ class Form(str):
         return self == ''
 
     def __repr__(self):
-        return f"Form({self if self != '' else '#DEF#'}, id='{self.id}')" if hasattr(self, "id") and self.id else f"Form({self})"
+        return f"Form({self if self != '' else '#DEF#'}, id='{self.id}')" if hasattr(self,
+                                                                                     "id") and self.id else f"Form({self})"
 
     def __str__(self):
         return "".join([x.strip() for x in self.tokens]) if self else '#DEF#'
@@ -149,8 +156,8 @@ class Inventory(object):
         """
         id = frozenset(extent) if len(extent) > 1 else extent[0]
         ordered = sorted(extent)
-        cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
-        cls._regexes_end[id] = "(?:" + "|".join(ordered) + ")"
+        cls._regexes[id] = _regex_or(ordered, sep=" ")
+        cls._regexes_end[id] = _regex_or(ordered, sep="")
         if len(extent) == 1:
             cls._pretty_str[id] = id
         else:
@@ -173,7 +180,7 @@ class Inventory(object):
         """
         if end:
             return cls._regexes_end[sound]
-        return  cls._regexes[sound]
+        return cls._regexes[sound]
 
     @classmethod
     def pretty_str(cls, sound, **kwargs):
@@ -622,7 +629,7 @@ def normalize(ipa, features):
         except ValueError:
             if seg_features.shape[0] > 1:
                 raise ValueError("You have multiple definitions for {}\n{}".format(segment,
-                                                                                  seg_features))
+                                                                                   seg_features))
 
     ipa["Normalized"] = ""
 

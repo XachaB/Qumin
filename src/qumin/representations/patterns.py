@@ -22,7 +22,7 @@ from . import alignment
 from .contexts import Context
 from .generalize import generalize_patterns, incremental_generalize_patterns
 from .quantity import one, optional, some, kleenestar
-from .segments import Inventory, Form
+from .segments import Inventory, Form, _regex_or
 # Our modules
 from ..utils import memory_check
 
@@ -92,21 +92,13 @@ def _replace_alternation(m, r):
                 yield g[i] + " "
             elif type(r[i]) is str:  # replace by this string
                 yield r[i] + " "
-            else:  # apply a function
-                yield r[i](g[i].strip())
-
+            elif type(r[i]) is tuple:  # apply a transformation
+                yield Inventory.get_from_transform(g[i], r[i]) + " "
     return "".join(iter_replacements(m, r))
 
 def are_all_identical(iterable):
     """Test whether all elements in the iterable are identical."""
     return iterable and len(set(iterable)) == 1
-
-def make_transform_reg(sounds):
-    sounds = sorted(sounds)
-    return "(?:" + "|".join(x + " " for x in sounds) + ")"
-
-def make_transform_repl(a, b):
-    return lambda x: Inventory.get_from_transform(x, (a, b)) + " "
 
 
 def iter_alternation(alt):
@@ -505,19 +497,20 @@ class Pattern(object):
                 for (is_transform, regchars_1, chars_1), (is_transform, regchars_2, chars_2) in alternances[i]:
                     # Replacements
                     if is_transform:
-                        # Transformation replacement make_transform_repl with two segments in argument
-                        repl[c1].append(make_transform_repl(regchars_2, regchars_1))
-                        repl[c2].append(make_transform_repl(regchars_1, regchars_2))
+                        # Transformation replacement (this is a tuple)
+                        repl[c1].append((regchars_2, regchars_1))
+                        repl[c2].append((regchars_1, regchars_2))
 
                         # Regex matches these segments as one group
-                        regex[c1] += "({})".format(make_transform_reg(regchars_1))
-                        regex[c2] += "({})".format(make_transform_reg(regchars_2))
+                        regex[c1] += "({})".format(_regex_or(regchars_1))
+                        regex[c2] += "({})".format(_regex_or(regchars_2))
                     else:
                         # Substitution replacement: pass directly the target segments
+                        # (this is a string; or None if no replacement)
                         repl[c1].append(chars_1)
                         repl[c2].append(chars_2)
 
-                        # Regex matches these segments as one group
+                        # Regex matches these segments as one
                         regex[c1] += "({})".format(regchars_1)
                         regex[c2] += "({})".format(regchars_2)
 
