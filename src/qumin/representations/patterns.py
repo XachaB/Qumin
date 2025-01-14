@@ -798,6 +798,10 @@ class ParadigmPatterns(dict):
                                                  list(self)),  # list of dict keys = the pairs
                              total=comb(len(self.cells), 2)))
 
+        # Update pat dict now: TODO: do we really still need this or could we deduce it quickly only when needed ?
+        for pair in self:
+            self.pat_dict[pair] = self[pair]['pattern'].unique()
+
     def __repr__(self):
         if len(self.cells) == 0:
             return "ParadigmPatterns(empty)"
@@ -1061,9 +1065,8 @@ class ParadigmPatterns(dict):
 
         df['pattern'] = df.apply(_best_pattern, axis=1)
         if self.optim_mem:
+            logging.info("OPTIM MEM IS TRUE")
             df.pattern = df.pattern.apply(repr)
-        else:
-            self.pat_dict[(c1, c2)] = df['pattern'].unique()
         return (pair, df)
 
     def unmerge_columns(self, paradigms):
