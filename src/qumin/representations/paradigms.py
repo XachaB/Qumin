@@ -8,8 +8,10 @@ Paradigms class to represent paralex paradigms.
 from collections import defaultdict
 from pathlib import Path
 from tqdm import tqdm
+import random
 
 from .segments import Inventory, Form
+from .frequencies import Frequencies
 from ..utils import memory_check
 
 import logging
@@ -48,6 +50,7 @@ class Paradigms(object):
 
         # Reading the paradigms.
         self.dataset = dataset
+        self.frequencies = Frequencies(dataset)
         data_file_name = Path(dataset.basepath) / dataset.get_resource("forms").path
         self.data = pd.read_csv(data_file_name, na_values=["#DEF#"],
                                 dtype=defaultdict(lambda: 'string', {'cell': 'category',
@@ -89,26 +92,24 @@ class Paradigms(object):
                 (fully syncretic)?
             cells (List[str]): List of cell names to consider. Defaults to all.
             pos (List[str]): List of parts of speech to consider. Defaults to all.
-            sample (int): Defaults to None. Should I randomly sample n lexemes (for debug purposes)?
+            sample (int): Defaults to None. Should I randomly sample n lexemes
+                (for debug purposes)?
             most_freq (int): Defaults to None. Should I keep only the n most frequent lexemes?
         """
         lexemes, cell_col, form_col = self.default_cols
         paradigms = self.data
 
+        # Check long format conformity
+        if not {lexemes, cell_col, form_col} < set(paradigms.columns):
+            log.warning("Please use Paralex-style long-form table "
+                        "(http://www.paralex-standard.org).")
+
         # POS filtering
         if pos:
-            if 'lexemes' in self.dataset.resource_names:
-                table = read_table('lexemes', self.dataset)
-                if 'POS' not in table.columns:
-                    log.warning('No POS column in the lexemes table.')
-                else:
-                    if isinstance(pos, str):
-                        pos = [pos]
-                    paradigms = paradigms[paradigms['lexeme']
-                                          .map(table.set_index('lexeme_id').POS)
-                                          .isin(pos)]
-        else:
-            log.warning("No lexemes table. Can't filter based on POS.")
+            self._filter_pos(paradigms, pos)
+
+        if cells is not None:
+            self._drop_cells(paradigms, cells, cell_col)
 
         # Remove defectives
         if not defective:
@@ -120,33 +121,16 @@ class Paradigms(object):
         if not overabundant:
             paradigms.drop_duplicates([lexemes, cell_col], inplace=True)
 
-        # Filter by frequency
-        if most_freq:
-            inflected = paradigms.loc[:, lexemes].unique()
-            lexemes_file_name = \
-                Path(self.dataset.basepath) / self.dataset.get_resource("lexemes").path
-            lexemes_df = pd.read_csv(lexemes_file_name, usecols=["lexeme_id", "frequency"])
-            # Restrict to lexemes we have kept, if we dropped defectives
-            lexemes_df = lexemes_df[lexemes_df.lexeme_id.isin(inflected)]
-            selected = set(lexemes_df.sort_values("frequency", ascending=False)
-                           .iloc[:most_freq, :].loc[:, "lexeme_id"].to_list())
-            paradigms.drop(paradigms.loc[~paradigms.lexeme.isin(selected), :],
-                           inplace=True)
-
-        # Sample a few lexemes
+        # Sample lexemes
         if sample:
-            paradigms = paradigms.sample(sample)
+            self._sample_paradigms(paradigms, n=sample, most_freq=most_freq, lexeme_col=lexemes)
 
-        # Check long format conformity
-        if not {lexemes, cell_col, form_col} < set(paradigms.columns):
-            log.warning("Please use Paralex-style long-form table (http://www.paralex-standard.org).")
-
-        self._drop_cells(paradigms, cells, 'cell')
         paradigms[form_col] = paradigms[form_col].fillna(value="")
 
         # Check segment definitions
         if segcheck:
-            log.info("Checking we have definitions for all the phonological segments in this data...")
+            log.info("Checking we have definitions for all "
+                     "the phonological segments in this data...")
             unknowns = defaultdict(list)
             paradigms[[cell_col, form_col]].progress_apply(self._get_unknown_segments,
                                                            unknowns=unknowns, axis=1)
@@ -174,6 +158,62 @@ class Paradigms(object):
         self.data = paradigms
         self._update_cell()
 
+    def _filter_pos(self, paradigms, pos):
+        """
+        Keeps only lexemes with required POS.
+
+        Arguments:
+            paradigms (pandas.DataFrame): The dataframe to sample.
+            n (str or List(str)): the POS to keep.
+        """
+        if 'lexemes' in self.dataset.resource_names:
+            table = read_table('lexemes', self.dataset)
+            if 'POS' not in table.columns:
+                log.warning('No POS column in the lexemes table.')
+            else:
+                if isinstance(pos, str):
+                    pos = [pos]
+                paradigms.drop(paradigms[~paradigms['lexeme']
+                                         .map(table.set_index('lexeme_id').POS)
+                                         .isin(pos)].index,
+                               inplace=True)
+        else:
+            log.warning("No lexemes table. Can't filter based on POS.")
+
+    def _sample_paradigms(self, paradigms, n, most_freq, lexeme_col="lexeme"):
+        """
+        Samples the paradigms to keep only some lexemes.
+
+        Arguments:
+            paradigms (pandas.DataFrame): The dataframe to sample.
+            n (int): the number of lexemes to keep
+            most_freq (bool): whether to sample of frequency or not.
+            lexeme_col (str): The name of the lexemes column.
+        """
+        # By frequency, if possible
+        if most_freq and self.frequencies.has_frequencies('lexemes'):
+            lex_freq = self.frequencies.lexemes
+            # Restrict to lexemes we have kept, if we dropped defectives
+            inflected = paradigms.loc[:, lexeme_col].unique()
+            selected = lex_freq[lex_freq.index.isin(inflected)]\
+                .sort_values("value", ascending=False)\
+                .iloc[:n, :].index.to_list()
+        else:
+            # Random sampling
+            if most_freq:
+                log.warning("You requested frequency sampling but no frequencies "
+                            "were available for the lexemes. Falling back to random "
+                            "sampling. You could set most_freq=False.")
+            population = list(paradigms.lexeme.unique())
+            if n > len(population):
+                log.warning(f"You requested more lexemes than I can offer (sample={n})."
+                            f"Using all available lexemes ({len(population)})")
+                selected = population
+            else:
+                selected = random.sample(population, n)
+        paradigms.drop(paradigms.loc[~paradigms.lexeme.isin(selected), :].index,
+                       inplace=True)
+
     def _drop_cells(self, paradigms, cells, column):
         """ Drops cells from a table.
         Performs security check before dropping.
@@ -185,15 +225,15 @@ class Paradigms(object):
         """
 
         col_cells = paradigms[column].unique()
-        if cells is not None:
-            unknown_cells = set(cells) - set(col_cells)
-            if unknown_cells:
-                raise ValueError(f"You specified some cells which aren't in the paradigm : {' '.join(unknown_cells)}")
-            to_drop = set(col_cells) - set(cells)
-            if len(to_drop) > 0:
-                log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
-            paradigms.drop(paradigms[paradigms[column].isin(to_drop)].index,
-                           inplace=True)
+        unknown_cells = set(cells) - set(col_cells)
+        if unknown_cells:
+            raise ValueError("You specified some cells which aren't "
+                             f"in the paradigm : {' '.join(unknown_cells)}")
+        to_drop = set(col_cells) - set(cells)
+        if len(to_drop) > 0:
+            log.info(f"Dropping rows with following cell values: {', '.join(sorted(to_drop))}")
+        paradigms.drop(paradigms[paradigms[column].isin(to_drop)].index,
+                       inplace=True)
 
     def merge_duplicate_columns(self, sep="#", keep_names=True):
         """Merge duplicate columns and return new DataFrame.
@@ -254,7 +294,6 @@ class Paradigms(object):
                        on="lexeme")
 
         return new[['lexeme', 'form_x', 'form_y']]
-
 
     def _update_cell(self):
         """
