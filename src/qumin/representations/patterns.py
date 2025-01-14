@@ -214,6 +214,31 @@ class Pattern(object):
             cells (Iterable): Cells labels (str), in the same order.
             forms (Iterable): Forms (str) to be segmented.
             aligned (bool): whether forms are already aligned. Otherwise, left alignment will be performed.
+
+        Example:
+            >>> Inventory.initialize("tests/data/frenchipa.csv")
+            >>> cells = ("prs.1.sg", "prs.2.pl")
+            >>> forms = (Form("amEn"), Form("amənE"))
+            >>> p = Pattern(cells, forms, aligned=False)
+            >>> p
+            E_ ⇌ Ø_E / am_n_ <0>
+            >>> p.score # is zero at initialization
+            0
+            >>> p.lexemes # is empty at initialization
+            set()
+            >>> p.alternation
+            {'prs.1.sg': [('E',), ('',)], 'prs.2.pl': [('Ø',), ('E',)]}
+            >>> p.context # this is a Context
+            ((?:a )(?:m )){}((?:n )){}
+            >>> p.cells
+            ('prs.1.sg', 'prs.2.pl')
+            >>> p._repr
+            'E_ ⇌ Ø_E / am_n_'
+            >>> p._feat_str
+            'E_ ⇌ Ø_E / am_n_'
+            >>> p._gen_alt == {'prs.1.sg': ((frozenset({'ɑ̃', 'ɛ̃', 'i', 'j', 'E'}),), ('',)),
+            ...                'prs.2.pl': ((frozenset({'ɥ', 'ɔ̃', 'y', 'Ø', 'œ̃'}),), ('E',))}
+            True
         """
         self.score = 0
         self.lexemes = set()
