@@ -194,6 +194,16 @@ class Pattern(object):
         There is no reason to sort patterns,
         but Pandas wants to do it from time to time,
         this is only implemented to avoid Pandas complaining.
+
+        Example:
+            >>> Inventory.initialize("tests/data/frenchipa.csv")
+            >>> cells = ("prs.1.sg", "prs.2.pl")
+            >>> forms = (Form("amEn"), Form("amənE"))
+            >>> forms2 = (Form("bEn"), Form("bənE"))
+            >>> p1 = Pattern(cells, forms, aligned=False)
+            >>> p2 = Pattern(cells, forms2, aligned=False)
+            >>> p1 < p2
+            True
         """
         return str(self) < str(other)
 
