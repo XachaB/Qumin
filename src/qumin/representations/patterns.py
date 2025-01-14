@@ -114,11 +114,13 @@ def _replace_alternation(matchgroups, replacements):
             t = type(repl)
             if repl is None:  # no change
                 yield chars
-            elif t is str: # change by substitution
+            elif t is str:  # change by substitution
                 yield repl
-            elif t is tuple: # change by phonological func
+            elif t is tuple:  # change by phonological func
                 yield Inventory.get_from_transform(chars, repl)
+
     return " ".join(iter_replacements()) + " "
+
 
 def are_all_identical(iterable):
     """Test whether all elements in the iterable are identical."""
@@ -158,7 +160,6 @@ def _iter_alternation(alt):
 class NotApplicable(Exception):
     """Raised when a :class:`Pattern` can't be applied to a form."""
     pass
-
 
 
 class Pattern(object):
@@ -255,9 +256,8 @@ class Pattern(object):
         self._feat_str = self._make_str_(features=True)
         self._find_generalized_alt()
 
-
-
     def __deepcopy__(self, memo):
+        """ Deep copy of this pattern."""
         cls = self.__class__
         copy = cls.__new__(cls, self.cells)
         copy.context = deepcopy(self.context)
@@ -269,10 +269,23 @@ class Pattern(object):
         copy._gen_alt = deepcopy(self._gen_alt)
         return copy
 
-
     @classmethod
     def new_identity(cls, cells):
-        """Create a new identity pattern for a given set of cells.
+        """ Identity pattern factory.
+
+        The alternation is empty, and the context is a sequence of any number of allowed segments.
+
+        Args:
+            cells: Pair of cell for this pattern.
+
+        Returns:
+            Pattern: a new identity pattern.
+
+        Example:
+
+            >>> Inventory.initialize("tests/data/frenchipa.csv")
+            >>> print(Pattern.new_identity(('A','B')))
+             ⇌  / X*
         """
         p = cls(cells, ("", ""), aligned=True)
         p.context = Context([(Inventory._max, kleenestar)])
@@ -505,8 +518,6 @@ class Pattern(object):
         context = [(x, one) if x != "{}" else "{}" for x in context]
 
         self.alternation, self.context = alternation, Context(context)
-
-
 
     @property
     def _regex(self):
