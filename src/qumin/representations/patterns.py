@@ -295,13 +295,33 @@ class Pattern(object):
 
     @classmethod
     def _from_str(cls, cells, string):
-        """Parse a repr str to a pattern.
+        """ Parse an exported pattern.
 
-        Str patterns look like:
-            _ ⇌ E / abEs_ <0.5>
+        To be parsed back, patterns need to be exported by `repr()`, not `str()`.
 
         Note: Phonemes in context classes are now separated by ","
 
+        Args:
+            cells (tuple of str): Cells labels (str).
+            string (str): pattern given as a string.
+
+        Returns:
+            Pattern: a parsed Pattern object.
+
+        Example:
+            >>> Inventory.initialize("tests/data/frenchipa.csv")
+            >>> p = Pattern._from_str(('A', 'B'), "ɥ ⇌ yj / {E,O,a,b,d,f,g,i,j,k,l,m,n,p,s,t,u,v,w,y,z,Ø,ŋ,œ̃,ɑ̃,ɔ̃,ɛ̃,ɥ,ɲ,ʁ,ʃ,ʒ}*{b,d,f,g,k,l,m,n,p,s,t,v,z,ŋ,ɲ,ʁ,ʃ,ʒ}_E <58>")
+            >>> type(p) is Pattern
+            True
+            >>> str(p)
+            'ɥ ⇌ yj / X*C_E'
+            >>> p
+            ɥ ⇌ yj / {E,O,a,b,d,f,g,i,j,k,l,m,n,p,s,t,u,v,w,y,z,Ø,ŋ,œ̃,ɑ̃,ɔ̃,ɛ̃,ɥ,ɲ,ʁ,ʃ,ʒ}*{b,d,f,g,k,l,m,n,p,s,t,v,z,ŋ,ɲ,ʁ,ʃ,ʒ}_E <58.0>
+            >>> p = Pattern._from_str(('A','B'), "E_ ⇌ Ø_E / am_n_ <0>")
+            >>> type(p) is Pattern
+            True
+            >>> p
+            E_ ⇌ Ø_E / am_n_ <0.0>
         """
         quantities = {"": one, "?": optional, "+": some, "*": kleenestar}
 
@@ -309,16 +329,13 @@ class Pattern(object):
                              key=len, reverse=True)
 
         seg = r"(?:{})".format("|".join(simple_segs))
-        classes = r"[\[{{](?:{sounds}|\-|,)+[}}\]]".format(sounds="|".join(simple_segs))
+        classes = r"(?:\{[^\}]+\})"
 
         def is_class(s):
-            return s is not None and (len(s) > 3 or "-" in s or "," in s) and \
-                ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}"))
+            return s is not None and ("," in s) and (s[0], s[-1]) == ("{", "}")
 
         def get_class(s):
-            separator = "," if "," in s else "-"
-            segments = s[1:-1].split(separator)
-            return frozenset(segments)
+            return frozenset(s[1:-1].split(","))
 
         def parse_alternation(string, cells):
             regex = r"({classes}|{seg})".format(seg=seg, classes=classes)
@@ -374,12 +391,10 @@ class Pattern(object):
 
         def parse_context(string):
             regex = r"({classes}|{seg}|_)([+*?]?)".format(seg=seg, classes=classes)
-
             for s, q in re.findall(regex, string):
                 if (s, q) == ("_", ""):
                     yield "{}"
-                elif (len(s) > 2 or "-" in s or "," in s) and \
-                        ((s[0], s[-1]) == ("[", "]") or (s[0], s[-1]) == ("{", "}")):
+                elif is_class(s):
                     yield get_class(s), quantities[q]
                 else:
                     yield s, quantities[q]
@@ -569,7 +584,7 @@ class Pattern(object):
             alternances.append(
                 list(zip_longest(_iter_alternation(left),
                                  _iter_alternation(right),
-                                 fillvalue=(False, "", ""))))
+                                 fillvalue=(False, ""))))
 
         regex = {c1: "", c2: ""}
         repl = {c1: [], c2: []}
