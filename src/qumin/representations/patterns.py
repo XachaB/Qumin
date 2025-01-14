@@ -179,7 +179,7 @@ class Pattern(object):
     Example:
         >>> Inventory.initialize("tests/data/frenchipa.csv")
         >>> cells = ("prs.1.sg", "prs.2.pl")
-        >>> forms = (Form("amEn"), Form("amənE"))
+        >>> forms = (Form("amEn"), Form("amØnE"))
         >>> p = Pattern(cells, forms, aligned=False)
         >>> type(p)
         <class 'qumin.representations.patterns.Pattern'>
@@ -419,13 +419,37 @@ class Pattern(object):
         return new
 
     def __eq__(self, other):
-        return str(self) == str(other)
+        """ Pattern equality: we simply check that they are both Pattern and their full string representation is identical
+
+        Example:
+            >>> Inventory.initialize("tests/data/frenchipa.csv")
+            >>> p1 = Pattern._from_str(("A", "B"), "E_ ⇌ Ø_E / am_n_ <0>")
+            >>> p2 = Pattern(('A','B'), (Form("amEn"), Form("amənE")), aligned=False)
+            >>> p1 == p2
+            True
+            >>> p1 == "E_ ⇌ Ø_E / am_n_ <0>"
+            False
+
+        Args:
+            other (Pattern): another Pattern
+
+        Returns:
+            Whether the two patterns are identical
+        """
+        return type(self) is Pattern and type(other) is Pattern and str(self) == str(other)
 
     def __hash__(self):
         return hash(str(self))
 
     def __repr__(self):
-        """Return a repr string, for ex: _ ⇌ E / abEs_ <0.5>."""
+        """Return a repr string, for ex: _ ⇌ E / abEs_ <0.5>.
+
+        repr() provides an exportable string, which:
+        - Lists all sound classes exhaustively
+        - Comprises also the score
+
+        This makes it possible to instantiate back a pattern.
+        """
         try:
             return '{content} <{score}>'.format(content=self._repr, score=self.score)
         except AttributeError:
@@ -433,6 +457,12 @@ class Pattern(object):
             return '{content} <{score}>'.format(content=self._repr, score=self.score)
 
     def __str__(self):
+        """ Return a str representation, for ex: _ ⇌ E / X+_
+
+        str() provides a human readable string which:
+        - Represents sounds classes in shorthand
+        - Does not include the score
+        """
         try:
             return self._feat_str
         except AttributeError:
@@ -440,11 +470,18 @@ class Pattern(object):
             return self._feat_str
 
     def is_identity(self):
+        """ Checks whether this pattern is an identity pattern.
+
+        Example:
+            >>> Inventory.initialize("tests/data/frenchipa.csv")
+            >>> p = Pattern.new_identity(("A", "B"))
+            >>> p.is_identity()
+            True
+        """
         return all(self.alternation[x] == [()] for x in self.cells)
 
     def _make_str_(self, features=True, reverse=False):
-        """Return a string verbosely representing the segmentation.
-
+        """ Generic string builder used to construct representations.
         """
         alternation = list(self._iter_alt(features=features))
         if reverse:
@@ -456,17 +493,31 @@ class Pattern(object):
 
         return alternation + " / " + context
 
-    def alternation_list(self, exhaustive_blanks=True, use_gen=False, filler="_"):
-        """Return a list of the alternating material, where the context is replaced by a filler.
+    def to_alt(self, exhaustive_blanks=True, use_gen=False, **kwargs):
+        """ Build a string representing the alternation
+
+        Example:
+            >>> Inventory.initialize("tests/data/frenchipa.csv")
+            >>> cells = ("prs.1.sg", "prs.2.pl")
+            >>> forms = (Form("amEn"), Form("amənE"))
+            >>> p = Pattern(cells, forms, aligned=False)
+            >>> p.alternation
+            {'prs.1.sg': [('E',), ('',)], 'prs.2.pl': [('Ø',), ('E',)]}
+            >>> p.to_alt()
+            '_E_ ⇌ _Ø_E'
+            >>> p.to_alt(exhaustive_blanks=False)
+            'E_ ⇌ Ø_E'
+            >>> p.to_alt(use_gen=True)
+            '_[-arro]_ ⇌ _[+arro]_E'
 
         Arguments:
             exhaustive_blanks (bool): Whether initial and final contexts should be marked by a filler.
-            use_gen (bool): Whether the alternation should be the generalized one.
-            filler (str): Alternative filler used to join alternation members.
+            use_gen (bool): Whether the alternation should use phonological generalizations (when available).
 
         Returns:
-            a list of str of alternating material, where the context is replaced by a filler.
+            A string representing the alternation, with contexts positions replaced by the filler "_".
         """
+        filler = "_"
 
         def add_ellipsis(alt, initial, final):
             if alt == [""]:
@@ -489,11 +540,7 @@ class Pattern(object):
             self._repr = self._make_str_(features=False)
             self._feat_str = self._make_str_(features=True)
 
-        return result
-
-    def to_alt(self, exhaustive_blanks=True, use_gen=False, **kwargs):
-        """Join the alternating material obtained with alternation_list() in a str."""
-        return " ⇌ ".join(self.alternation_list(exhaustive_blanks=exhaustive_blanks, use_gen=use_gen, **kwargs))
+        return " ⇌ ".join(result)
 
     def _iter_alt(self, **kwargs):
         """Generator of formatted alternating material for each cell."""
@@ -600,9 +647,6 @@ class Pattern(object):
                 # alternation
                 # We build one regex group for each continuous sequence of segments and each transformation
                 for (is_segments, chars_1), (_, chars_2) in alternances[i]:
-                    # Replacements
-                    regchars_1 = "".join(Inventory.regex(x) if x else "" for x in chars_1),
-                    regchars_2 = "".join(Inventory.regex(x) if x else "" for x in chars_2),
                     if is_segments:
                         # Substitution replacement: pass directly the target segments
                         # (this is a string; or None if no replacement)
@@ -610,22 +654,22 @@ class Pattern(object):
                         repl[c2].append(" ".join(chars_2))
 
                         # Regex matches these segments as one
-                        regex[c1] += "({})".format(regchars_1)
-                        regex[c2] += "({})".format(regchars_2)
+                        regex[c1] += "({})".format("".join(Inventory.regex(x) if x else "" for x in chars_1))
+                        regex[c2] += "({})".format("".join(Inventory.regex(x) if x else "" for x in chars_2))
                     else:
                         # Transformation replacement (this is a tuple)
-                        repl[c1].append((regchars_2, regchars_1))
-                        repl[c2].append((regchars_1, regchars_2))
+                        repl[c1].append((chars_2, chars_1))
+                        repl[c2].append((chars_1, chars_2))
 
                         # Regex matches these segments as one group
-                        regex[c1] += "({})".format(_regex_or(regchars_1))
-                        regex[c2] += "({})".format(_regex_or(regchars_2))
+                        regex[c1] += "({})".format(_regex_or(chars_1))
+                        regex[c2] += "({})".format(_regex_or(chars_2))
 
         self._saved_regex = {c: re.compile("^" + regex[c] + "$") for c in regex}
         self._saved_repl = repl
 
     def _find_generalized_alt(self):
-        """See if the alternation can be expressed in a more general way using features."""
+        """See if the alternation can generalized using phonological operations."""
         c1, c2 = self.cells
         this_alt = {c1: [], c2: []}
         gen_any = False
