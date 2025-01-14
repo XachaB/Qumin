@@ -82,19 +82,43 @@ def _get_pattern_matchtype(p, c1, c2):
     return tuple(type_names[tuple(x)] for x in match_type1), tuple(type_names[tuple(x)] for x in match_type2)
 
 
-def _replace_alternation(m, r):
-    """ Replace all matches in m using information in r."""
+def _replace_alternation(matchgroups, replacements):
+    """ Replace all matches in matching groups using replacements.
 
-    def iter_replacements(m, r):
-        g = m.groups("")
-        for i in range(len(g)):
-            if r[i] is None:  # no replacement, identity function
-                yield g[i] + " "
-            elif type(r[i]) is str:  # replace by this string
-                yield r[i] + " "
-            elif type(r[i]) is tuple:  # apply a transformation
-                yield Inventory.get_from_transform(g[i], r[i]) + " "
-    return "".join(iter_replacements(m, r))
+    Args:
+        matches (iterable of str): an iterable of input sequences which match the rule (should cover the entire form)
+        replacements (iterable of str|None|tuple): an iterable of replacements.
+            Replacements can be:
+                - A tuple symbolizing a bijective phonological function
+                - None if no replacement is to be made (copy matched characters)
+                - characters by which to replace the match
+    Returns:
+        a space separated string
+
+    Examples:
+        In this example,
+        - the first match, "t a " is copied as is,
+        - the second match, "t " is transformed by consonant voicing
+        - the third match, "a " is replaced by "i"
+
+        >>> Inventory.initialize("tests/data/frenchipa.csv")
+        >>> matches = ("t a ",  "t ",                   "a ")
+        >>> repl    = (None,    (set("ptk"),set("bdg")), "i")
+        >>> _replace_alternation(matches, repl)
+        't a d i '
+    """
+
+    def iter_replacements():
+        for chars, repl in zip(matchgroups, replacements):
+            chars = chars.strip()
+            t = type(repl)
+            if repl is None:  # no change
+                yield chars
+            elif t is str: # change by substitution
+                yield repl
+            elif t is tuple: # change by phonological func
+                yield Inventory.get_from_transform(chars, repl)
+    return " ".join(iter_replacements()) + " "
 
 def are_all_identical(iterable):
     """Test whether all elements in the iterable are identical."""
@@ -582,7 +606,7 @@ class Pattern(object):
         """
         from_cell, to_cell = names if names else self.cells
         reg = self._regex[from_cell]
-        string, nb_subs = reg.subn(lambda x: _replace_alternation(x, self._repl[to_cell]), form)
+        string, nb_subs = reg.subn(lambda x: _replace_alternation(x.groups(""), self._repl[to_cell]), form)
         if nb_subs == 0 and (not self.applicable(form, from_cell)):
             if raiseOnFail:
                 raise NotApplicable("The context {} from the pattern {} and cells {} -> {}"
