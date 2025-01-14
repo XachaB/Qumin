@@ -648,8 +648,8 @@ class Pattern(object):
                 # We build one regex group for each continuous sequence of segments and each transformation
                 for (is_segments, chars_1), (_, chars_2) in alternances[i]:
                     # Replacements
-                    regchars_1 = "".join(Inventory.regex(x) if x else "" for x in chars_1),
-                    regchars_2 = "".join(Inventory.regex(x) if x else "" for x in chars_2),
+                    regchars_1 = "".join(Inventory.regex(x) if x else "" for x in chars_1)
+                    regchars_2 = "".join(Inventory.regex(x) if x else "" for x in chars_2)
                     if is_segments:
                         # Substitution replacement: pass directly the target segments
                         # (this is a string; or None if no replacement)
