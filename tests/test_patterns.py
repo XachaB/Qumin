@@ -77,6 +77,7 @@ class PatternsTestCase(unittest.TestCase):
                                        "ˈa,ˈaj,ˈaw,ˈe,ˈew,ˈi,ˈiw,ˈo,ˈoj,ˈu,ˈuj,ˈõ,ˈõj,ˈ"
                                        "ĩ,ˈũ,ˈɐ,ˈɐj,ˈɐ̃,ˈɐ̃j,ˈɐ̃w,ˈɔ,ˈɔj,ˈɛ,ˈẽ,ẽ}+_u_ "
                                        "<2154.0>")
+        print(p._regex)
         self.assertTrue(p.apply("ɐ k ˈɐ m u ", ("b", "a"),
                                 "ɐ k ɐ m ˈɐ m u ʃ "))
 

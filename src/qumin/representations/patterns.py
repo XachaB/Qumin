@@ -647,9 +647,6 @@ class Pattern(object):
                 # alternation
                 # We build one regex group for each continuous sequence of segments and each transformation
                 for (is_segments, chars_1), (_, chars_2) in alternances[i]:
-                    # Replacements
-                    regchars_1 = "".join(Inventory.regex(x) if x else "" for x in chars_1)
-                    regchars_2 = "".join(Inventory.regex(x) if x else "" for x in chars_2)
                     if is_segments:
                         # Substitution replacement: pass directly the target segments
                         # (this is a string; or None if no replacement)
@@ -657,22 +654,22 @@ class Pattern(object):
                         repl[c2].append(" ".join(chars_2))
 
                         # Regex matches these segments as one
-                        regex[c1] += "({})".format(regchars_1)
-                        regex[c2] += "({})".format(regchars_2)
+                        regex[c1] += "({})".format("".join(Inventory.regex(x) if x else "" for x in chars_1))
+                        regex[c2] += "({})".format("".join(Inventory.regex(x) if x else "" for x in chars_2))
                     else:
                         # Transformation replacement (this is a tuple)
-                        repl[c1].append((regchars_2, regchars_1))
-                        repl[c2].append((regchars_1, regchars_2))
+                        repl[c1].append((chars_2, chars_1))
+                        repl[c2].append((chars_1, chars_2))
 
                         # Regex matches these segments as one group
-                        regex[c1] += "({})".format(_regex_or(regchars_1))
-                        regex[c2] += "({})".format(_regex_or(regchars_2))
+                        regex[c1] += "({})".format(_regex_or(chars_1))
+                        regex[c2] += "({})".format(_regex_or(chars_2))
 
         self._saved_regex = {c: re.compile("^" + regex[c] + "$") for c in regex}
         self._saved_repl = repl
 
     def _find_generalized_alt(self):
-        """See if the alternation can be expressed in a more general way using features."""
+        """See if the alternation can generalized using phonological operations."""
         c1, c2 = self.cells
         this_alt = {c1: [], c2: []}
         gen_any = False
