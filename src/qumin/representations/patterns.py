@@ -1228,7 +1228,7 @@ class ParadigmPatterns(dict):
 
         def applicable(form):
             """ Return a tuple of all applicable patterns for a given form"""
-            return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
+            return tuple((p for p in available_patterns if p is not None and p.applicable(form, cell_x)))
 
         has_pat = df['pattern'].notna()
         return (pair, df.loc[has_pat, "form_x"].apply(applicable))
