@@ -69,7 +69,7 @@ class ICLattice(object):
     This is a wrapper around (:class:`concepts.Context`).
     """
 
-    def __init__(self, patterns, leaves, annotate=None, comp_prefix=None, aoc=False,
+    def __init__(self, incidence_table, leaves, annotate=None, comp_prefix=None, aoc=False,
                  **kwargs):
         """
         Arguments:
@@ -82,7 +82,6 @@ class ICLattice(object):
         """
 
         self.comp = comp_prefix  # whether there are two sets of properties.
-        incidence_table = patterns.incidence_table()
         self.context = Context.fromstring(incidence_table.to_csv(), frmat='csv')
         self.lattice = self.context.lattice
         if annotate:

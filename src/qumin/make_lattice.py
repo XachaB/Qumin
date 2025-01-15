@@ -59,11 +59,9 @@ def lattice_command(cfg, md):
 
     microclasses = find_microclasses(paradigms, patterns)
 
-    # Builde a wide df of patterns
-
-
     log.info("Building the lattice...")
-    lattice = ICLattice(patterns, microclasses,
+    incidence_table = patterns.incidence_table()
+    lattice = ICLattice(incidence_table, microclasses,
                         aoc=cfg.lattice.aoc,
                         keep_names=(not cfg.lattice.shorten))
 
