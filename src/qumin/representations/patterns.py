@@ -1240,7 +1240,7 @@ class ParadigmPatterns(dict):
         """
         return self[pair]['pattern'].unique()
 
-    def find_applicable(self,  cpus=1, **kwargs):
+    def find_applicable(self, cpus=1, **kwargs):
         """Find all applicable rules for each form.
 
         We name sets of applicable rules *classes*. *Classes* are oriented:
@@ -1270,8 +1270,11 @@ class ParadigmPatterns(dict):
                 df = self[pair]
                 df.loc[res.index, "applicable"] = res
 
-    def incidence_table(self):
+    def incidence_table(self, microclasses):
         """ Create a Context from a dataframe of properties.
+
+        Arguments:
+                microclasses (iterable): microclass exemplars
 
         Returns:
             pd.DataFrame: a wide dataframe representing an incidence matrix
@@ -1279,6 +1282,8 @@ class ParadigmPatterns(dict):
         incidence_table = defaultdict(dict)
         for pair in self:
             df = self[pair]
+            # Limit to microclasses
+            df = df[df.lexeme.isin(microclasses)]
             header = "⇌".join(pair)
             for i, row in df.iterrows():
                 pair_has_pattern = f"{header}=<{row.pattern}>"
