@@ -60,7 +60,7 @@ def hierarchical_clustering(patterns, paradigms, Clusters, **kwargs):
     # Clustering
     microclasses = find_microclasses(paradigms, patterns)
 
-    clusters = Clusters(microclasses, paradigms=patterns, **kwargs)
+    clusters = Clusters(microclasses, patterns, **kwargs)
     while len(clusters.nodes) > 1:
         log.info("number of classes = %s", len(clusters.nodes))
         possible_merges = clusters.find_ordered_merges()

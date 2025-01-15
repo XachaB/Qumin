@@ -1017,7 +1017,8 @@ class ParadigmPatterns(dict):
 
         table = pd.read_csv(path, sep=",", dtype="str")
 
-        cells = tuple(path.name.split('.')[0].split('_')[1].split('-'))
+        reg = re.compile(r"[^_]+_(.+)-(.+)")
+        cells = tuple(reg.match(path.name).groups())
         for cell in cells:
             if cell not in self.cells:
                 self.cells.append(cell)

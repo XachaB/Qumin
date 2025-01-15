@@ -4,12 +4,14 @@
 
 Author: Sacha Beniamine
 """
-import numpy as np
+import logging
 from collections import defaultdict, Counter
 from itertools import combinations
-from .node import Node
+
+import numpy as np
 from tqdm import tqdm
-import logging
+
+from .node import Node
 
 log = logging.getLogger()
 
@@ -62,13 +64,14 @@ class Cluster(object):
         self.totalsize = size
         self.R = 0
         self.C = weighted_log(self.size, self.totalsize)
-        exemplar = self.labels[0]
+        exemplar = next(iter(self.labels))
 
         for pair in patterns:
-            pattern = patterns[pair].loc[exemplar,:]
-            self[pair][pattern] = self.size
-            self[pair].length = 1
-            self.R += sum(weighted_log(self[pair][p], self.size) for p in self[pair])
+            df = patterns[pair]
+            for pattern in df.loc[df.lexeme == exemplar, "pattern"]: # might be multiple patterns if overabundance
+                self[pair][pattern] = self.size
+                self[pair].length = 1
+                self.R += sum(weighted_log(self[pair][p], self.size) for p in self[pair])
 
     def __copy(self):
         new = Cluster()
