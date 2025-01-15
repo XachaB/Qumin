@@ -483,7 +483,7 @@ class Pattern(object):
     def _make_str_(self, features=True, reverse=False):
         """ Generic string builder used to construct representations.
         """
-        alternation = list(self._iter_alt(features=features))
+        alternation = self._format_alt(features=features)
         if reverse:
             alternation = " ⇌ ".join("_".join(alt) for alt in alternation[::-1])
         else:
@@ -533,7 +533,7 @@ class Pattern(object):
             tmp_alt = self.alternation
             self.alternation = self._gen_alt
 
-        result = [add_ellipsis(alt, initial, final) for alt in self._iter_alt()]
+        result = [add_ellipsis(alt, initial, final) for alt in self._format_alt()]
 
         if use_gen and self._gen_alt:
             self.alternation = tmp_alt
@@ -669,7 +669,7 @@ class Pattern(object):
         self._saved_repl = repl
 
     def _find_generalized_alt(self):
-        """See if the alternation can generalized using phonological operations."""
+        """See if the alternation can be generalized using phonological operations."""
         c1, c2 = self.cells
         this_alt = {c1: [], c2: []}
         gen_any = False
@@ -792,8 +792,8 @@ class Pattern(object):
         maxi_seg = Inventory._max
         return all([x in [(maxi_seg, kleenestar), "{}"] for x in self.context])
 
-    def _iter_alt(self, features=True):
-        """Generator of formatted alternating material for each cell."""
+    def _format_alt(self, features=True):
+        """Get formatted alternating material for each cell."""
 
         def format_as_chars(left, right):
             return ("{{{}}}".format(",".join(sorted(left))),
@@ -831,30 +831,7 @@ class Pattern(object):
                     formatted_right += r
             c1_alt.append(formatted_left)
             c2_alt.append(formatted_right)
-        yield c1_alt
-        yield c2_alt
-
-
-class PatternCollection(tuple):
-    """Represent a set of patterns."""
-
-    def __init__(self, items):
-        self.collection = tuple(sorted(set(items)))
-
-    def __str__(self):
-        return ";".join(str(p) for p in self.collection)
-
-    def __repr__(self):
-        return ";".join(repr(p) for p in self.collection)
-
-    def __eq__(self, other):
-        return str(self) == str(other)
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def __lt__(self, other):
-        return self.collection < other.collection
+        return c1_alt, c2_alt
 
 
 class ParadigmPatterns(dict):
