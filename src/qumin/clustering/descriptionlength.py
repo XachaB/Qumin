@@ -18,7 +18,7 @@ class Cluster(object):
     """A single cluster in MDL clustering.
 
     A Cluster is iterable. Itering on a cluster is itering on its patterns.
-    Cluster can be merged or separated by adding or substracting them.
+    Clusters can be merged or separated by adding or substracting them.
 
     Attributes:
         patterns (:class:`collections.defaultdict`): For each pair of cell in the paradigms under consideration,
@@ -48,26 +48,27 @@ class Cluster(object):
         self.labels = set(args)
         self.size = self.R = self.C = self.totalsize = 0
 
-    def init_from_paradigm(self, class_size, paradigms, size):
+    def init_from_paradigm(self, class_size, patterns, size):
         """Populate fields according to a paradigm column.
 
         This assumes an initialization with only one microclass.
 
         Arguments:
             class_size (int): the size of the microclass
-            paradigms (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
+            patterns (patterns.ParadigmPatterns): patterns
             size (int): total size
         """
         self.size = class_size
         self.totalsize = size
         self.R = 0
         self.C = weighted_log(self.size, self.totalsize)
+        exemplar = self.labels[0]
 
-        for cell in paradigms.index:
-            pattern = paradigms[cell]
-            self[cell][pattern] = self.size
-            self[cell].length = 1
-            self.R += sum(weighted_log(self[cell][p], self.size) for p in self[cell])
+        for pair in patterns:
+            pattern = patterns[pair].loc[exemplar,:]
+            self[pair][pattern] = self.size
+            self[pair].length = 1
+            self.R += sum(weighted_log(self[pair][p], self.size) for p in self[pair])
 
     def __copy(self):
         new = Cluster()
@@ -158,12 +159,12 @@ class BUDLClustersBuilder(object):
 
     attr = "DL"
 
-    def __init__(self, microclasses, paradigms, **kwargs):
+    def __init__(self, microclasses, patterns, **kwargs):
         """Constructor.
 
         Arguments:
             microclasses (dict[str, list]): mapping of microclasses exemplars to microclasses inventories.
-            paradigms (:class:`pandas:pandas.DataFrame`): a dataframe of patterns.
+            patterns (patterns.ParadigmPatterns): patterns
             kwargs : keyword arguments to be used as configuration.
         """
         self.preferences = kwargs
@@ -174,7 +175,7 @@ class BUDLClustersBuilder(object):
             self.microclasses}
 
         self.P = self.M = self.C = self.R = self.DL = 0
-        self.initialize_clusters(paradigms)
+        self.initialize_clusters(patterns)
         self.initialize_patterns()
         self.compute_DL(M=True)
         current_partition = " - ".join(", ".join(c) for c in self.clusters)
@@ -182,13 +183,12 @@ class BUDLClustersBuilder(object):
         log.debug(" ".join([current_partition, ":\t", "\t".join(
             (str(self.M), str(self.C), str(self.P), str(self.R), str(self.DL)))]))
 
-    def initialize_clusters(self, paradigms):
+    def initialize_clusters(self, patterns):
         self.clusters = {}
         classes_size = {m: 1 for m in self.microclasses}
         self.size = sum(classes_size.values())
 
         for microclass in self.microclasses:
-            patterns = paradigms.loc[microclass, :]
             cluster = Cluster(microclass)
             cluster.init_from_paradigm(classes_size[microclass], patterns, self.size)
             self.clusters[frozenset([microclass])] = cluster

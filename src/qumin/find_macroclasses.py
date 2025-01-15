@@ -17,8 +17,11 @@ except ImportError:
     matplotlib = None
     plt = None
 
-from .representations import segments, patterns
+from .representations import segments
+from .representations.paradigms import Paradigms
+from .representations.patterns import ParadigmPatterns
 from .clustering import algorithms, descriptionlength, find_min_attribute
+from .utils import get_cells
 import pandas as pd
 import logging
 
@@ -28,21 +31,39 @@ log = logging.getLogger()
 def macroclasses_command(cfg, md):
     r"""Cluster lexemes in macroclasses according to alternation patterns."""
     # Loading files and paths
-    data_file_path = cfg.patterns
+    patterns_folder_path = cfg.patterns
+    defective = cfg.pats.defective
+    overabundant = cfg.pats.overabundant
+    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
 
     # Initializing segments
+    sounds_file_name = md.get_table_path("sounds")
+    segments.Inventory.initialize(sounds_file_name)
 
-    if cfg.pats.ortho:
-        pat_table = pd.read_csv(data_file_path, index_col=0)
-    else:
-        sounds_file_name = md.get_table_path("sounds")
-        segments.Inventory.initialize(sounds_file_name)
-        pat_table, pat_dic = patterns.from_csv(data_file_path, defective=False, overabundant=False)
-        pat_table = pat_table.map(str)
+    # Loading paradigms
+    paradigms = Paradigms(md.dataset, defective=defective, overabundant=overabundant,
+                          merge_cols=cfg.entropy.merged,
+                          segcheck=True, cells=cells, pos=cfg.pos,
+                          sample=cfg.sample,
+                          most_freq=cfg.most_freq,
+                          force=cfg.force,
+                          )
+
+    # Loading Patterns
+    patterns = ParadigmPatterns()
+    patterns.from_file(patterns_folder_path,
+                       paradigms.data,
+                       defective=defective,
+                       overabundant=False,
+                       force=cfg.force,
+                       )
+
+    for pair in patterns:
+        patterns[pair].loc[:, "pattern"] = patterns[pair].loc[:, "pattern"].map(str)
 
     preferences = {"md": md}
 
-    node = algorithms.hierarchical_clustering(pat_table, descriptionlength.BUDLClustersBuilder, **preferences)
+    node = algorithms.hierarchical_clustering(patterns, paradigms, descriptionlength.BUDLClustersBuilder, **preferences)
 
     DL = "Min :" + str(find_min_attribute(node, "DL"))
     experiment_id = " ".join(["Bottom-up DL clustering on ", DL])
