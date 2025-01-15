@@ -835,28 +835,6 @@ class Pattern(object):
         yield c2_alt
 
 
-class PatternCollection(tuple):
-    """Represent a set of patterns."""
-
-    def __init__(self, items):
-        self.collection = tuple(sorted(set(items)))
-
-    def __str__(self):
-        return ";".join(str(p) for p in self.collection)
-
-    def __repr__(self):
-        return ";".join(repr(p) for p in self.collection)
-
-    def __eq__(self, other):
-        return str(self) == str(other)
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def __lt__(self, other):
-        return self.collection < other.collection
-
-
 class ParadigmPatterns(dict):
     """
     This class stores alternation patterns computed for a paradigm.
