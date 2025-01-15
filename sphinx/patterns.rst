@@ -10,8 +10,10 @@ The patterns can be further configured, modifying the following keys: ::
     cells: null               # List of cells to use (subset)
     pos: null                 # List of parts of speech to use (subset)
     patterns: null            # path to pre-computed patterns. If null, will compute patterns.
-    most_freq: null           # (int) restrict to N most frequent items (use the lexeme "frequency" column)
-    sample: null              # ( int) A number of lexemes to sample, for debug purposes
+    sample: null              # (int) A number of lexemes to sample, for debug purposes.
+                              # Samples by frequency if possible, otherwise randomly.
+    force_random: False       # Whether to force random sampling.
+    seed: 1                   # Random seed for reproducible random effects.
     pats:
       kind: phon   # Options are (see docs): phon, edits
       defective: False        # Whether to keep defective entries

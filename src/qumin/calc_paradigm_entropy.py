@@ -45,7 +45,7 @@ def H_command(cfg, md):
                           pos=cfg.pos,
                           force=cfg.force,
                           sample=cfg.sample,
-                          sample_kws=dict(most_freq=cfg.most_freq,
+                          sample_kws=dict(force_random=cfg.force_random,
                                           seed=cfg.seed),
                           )
     patterns = ParadigmPatterns()

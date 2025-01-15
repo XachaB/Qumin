@@ -9,7 +9,6 @@ from collections import defaultdict
 from pathlib import Path
 from tqdm import tqdm
 import random
-import numpy as np
 
 from .segments import Inventory, Form
 from .frequencies import Frequencies
@@ -73,7 +72,7 @@ class Paradigms(object):
 
     def preprocess(self, fillna=True, segcheck=False,
                    defective=False, overabundant=False, merge_cols=False,
-                   cells=None, sample=None, sample_kws=dict(), pos=None, **kwargs):
+                   cells=None, sample=None, sample_kws=None, pos=None, **kwargs):
         """
         Preprocess a Paralex paradigms table to meet the requirements of Qumin:
             - Filter by POS and by cells
@@ -95,7 +94,7 @@ class Paradigms(object):
             pos (List[str]): List of parts of speech to consider. Defaults to all.
             sample (int): Defaults to None. Should I sample n lexemes
                 (for debug purposes)?
-            sample_kws (dict): Keywords passed to :func:`_sample_paradigms`.
+            sample_kws (dict): Dict of keywords passed to :func:`_sample_paradigms`.
         """
         lexemes, cell_col, form_col = self.default_cols
         paradigms = self.data
@@ -124,6 +123,7 @@ class Paradigms(object):
 
         # Sample lexemes
         if sample:
+            sample_kws = {} if sample_kws is None else sample_kws
             self._sample_paradigms(paradigms, lexeme_col=lexemes, n=sample, **sample_kws)
 
         paradigms[form_col] = paradigms[form_col].fillna(value="")
@@ -181,19 +181,19 @@ class Paradigms(object):
         else:
             log.warning("No lexemes table. Can't filter based on POS.")
 
-    def _sample_paradigms(self, paradigms, n, most_freq=True, lexeme_col="lexeme", seed=1):
+    def _sample_paradigms(self, paradigms, n, force_random=False, lexeme_col="lexeme", seed=1):
         """
         Samples the paradigms to keep only some lexemes.
 
         Arguments:
             paradigms (pandas.DataFrame): The dataframe to sample.
             n (int): The number of lexemes to sample.
-            most_freq (bool): Whether to sample based on frequency or not.
+            force_random (bool): Whether to force random sampling.
             lexeme_col (str): The name of the lexemes column.
             seed (int): Random seed to use. Ensures reproducibility between scripts.
         """
         # By frequency, if possible
-        if most_freq and self.frequencies.has_frequencies('lexemes'):
+        if not force_random and self.frequencies.has_frequencies('lexemes'):
             lex_freq = self.frequencies.lexemes
             # Restrict to lexemes we have kept, if we dropped defectives
             inflected = paradigms.loc[:, lexeme_col].unique()
@@ -202,10 +202,10 @@ class Paradigms(object):
                 .iloc[:n, :].index.to_list()
         else:
             # Random sampling
-            if most_freq:
+            if not force_random:
                 log.warning("You requested frequency sampling but no frequencies "
                             "were available for the lexemes. Falling back to random "
-                            "sampling. You could set most_freq=False.")
+                            "sampling. You could set force_random=True.")
             population = list(paradigms.lexeme.unique())
             if n > len(population):
                 log.warning(f"You requested more lexemes than I can offer (sample={n})."

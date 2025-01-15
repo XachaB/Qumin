@@ -31,10 +31,11 @@ data: null            # path to paralex.package.json paradigms, segments
 cells: null           # List of cells to use (subset)
 pos: null             # List of parts of speech to use (subset)
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
-sample: null          # (int) A number of lexemes to sample, for debug purposes
-most_freq: True       # Whether to sample on frequency (if available) or randomly.
-force: False          # Whether to overpass RAM usage security (2GB)
+sample: null          # (int) A number of lexemes to sample, for debug purposes.
+                      # Samples by frequency if possible, otherwise randomly.
+force_random: False   # Whether to force random sampling.
 seed: 1               # Random seed for reproducible random effects.
+force: False          # Whether to overpass RAM usage security (2GB)
 cpus: null            # Number of cpus to use for big computations
                       # (defaults to the number of available cpus - 2).
 
