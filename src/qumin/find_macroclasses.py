@@ -17,13 +17,13 @@ except ImportError:
     matplotlib = None
     plt = None
 
+import logging
+
+from .clustering import algorithms, descriptionlength, find_min_attribute
 from .representations import segments
 from .representations.paradigms import Paradigms
 from .representations.patterns import ParadigmPatterns
-from .clustering import algorithms, descriptionlength, find_min_attribute
 from .utils import get_cells
-import pandas as pd
-import logging
 
 log = logging.getLogger()
 
@@ -47,6 +47,8 @@ def macroclasses_command(cfg, md):
                           sample=cfg.sample,
                           most_freq=cfg.most_freq,
                           force=cfg.force,
+                          sample_kws=dict(force_random=cfg.force_random,
+                                          seed=cfg.seed)
                           )
 
     # Loading Patterns

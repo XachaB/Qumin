@@ -34,12 +34,17 @@ def lattice_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Loading paradigms
-    paradigms = Paradigms(md.dataset, defective=defective, overabundant=overabundant,
+    paradigms = Paradigms(md.dataset,
+                          defective=defective,
+                          overabundant=overabundant,
                           merge_cols=cfg.entropy.merged,
-                          segcheck=True, cells=cells, pos=cfg.pos,
-                          sample=cfg.sample,
-                          most_freq=cfg.most_freq,
+                          segcheck=True,
+                          cells=cells,
+                          pos=cfg.pos,
                           force=cfg.force,
+                          sample=cfg.sample,
+                          sample_kws=dict(force_random=cfg.force_random,
+                                          seed=cfg.seed),
                           )
 
     # Loading Patterns
@@ -60,7 +65,7 @@ def lattice_command(cfg, md):
 
 
     log.info("Building the lattice...")
-    lattice = ICLattice(wide_patterns_df, microclasses,
+    lattice = ICLattice(patterns, microclasses,
                         overabundant=overabundant,
                         comp_prefix=comp,
                         aoc=cfg.lattice.aoc,
