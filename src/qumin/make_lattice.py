@@ -56,8 +56,11 @@ def lattice_command(cfg, md):
 
     microclasses = find_microclasses(paradigms, patterns)
 
+    # Builde a wide df of patterns
+
+
     log.info("Building the lattice...")
-    lattice = ICLattice(patterns, microclasses,
+    lattice = ICLattice(wide_patterns_df, microclasses,
                         overabundant=overabundant,
                         comp_prefix=comp,
                         aoc=cfg.lattice.aoc,
