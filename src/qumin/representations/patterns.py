@@ -1266,7 +1266,7 @@ class ParadigmPatterns(dict):
         self.update(to_add)
 
         log.info("total cpus: " + str(cpus))
-        # Compute
+
         with Pool(cpus) as pool:  # Create a multiprocessing Pool
 
             for pair, res in tqdm(pool.imap_unordered(self.find_cellpair_applicable, self), total=len(self)):

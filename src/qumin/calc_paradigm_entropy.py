@@ -62,7 +62,7 @@ def H_command(cfg, md):
     else:
         features = None
 
-    patterns.find_applicable()
+    patterns.find_applicable(cpus=cfg.cpus)
     patterns.info()
 
     distrib = PatternDistribution(patterns,
