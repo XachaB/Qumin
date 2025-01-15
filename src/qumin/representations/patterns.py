@@ -1240,15 +1240,12 @@ class ParadigmPatterns(dict):
         """
         return self[pair]['pattern'].unique()
 
-    def find_applicable(self, disable_tqdm=False, cpus=1, **kwargs):
+    def find_applicable(self,  cpus=1, **kwargs):
         """Find all applicable rules for each form.
 
         We name sets of applicable rules *classes*. *Classes* are oriented:
         we produce two separate columns (a, b) and (b, a)
         for each pair of columns (a, b) in the paradigm..
-
-        Arguments:
-            disable_tqdm (bool): if true, do not show progressbar
 
         Returns:
             :class:`pandas:pandas.DataFrame`:
