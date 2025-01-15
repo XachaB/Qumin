@@ -17,6 +17,8 @@ def parse_lattice(nodes):
             node.children = [nodes[i][0] for i in children]
     return nodes[-1][0]
 
+def to_incidence(data):
+    return pd.get_dummies(data).applymap(lambda x: "X" if x else "")
 
 class AOCTestCase(unittest.TestCase):
 
@@ -76,7 +78,7 @@ class AOCTestCase(unittest.TestCase):
                              [2, 1, 1],
                              [1, 2, 2],
                              ], index=self.idx[:4], columns=self.cols[:3]).map(str)
-        l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
+        l = ICLattice(to_incidence(data), {f: (f,) for f in data.index}, aoc=True)
 
         self.conformity_check(l)
         expected = parse_lattice([(Node(('1',)), []),  # 0
@@ -89,6 +91,7 @@ class AOCTestCase(unittest.TestCase):
                                   (Node(('1', '2', '3')), [4, 1]),  # 7
                                   (Node(('1', '2', '3', '4')), [7, 6]),  # 8
                                   ])
+
 
         self.assertEqual(l.nodes, expected)
 
@@ -120,7 +123,7 @@ class AOCTestCase(unittest.TestCase):
                              [1, 1, 2],
                              [2, 1, 2]
                              ], index=self.idx[:4], columns=self.cols[:3]).map(str)
-        l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
+        l = ICLattice(to_incidence(data), {f: (f,) for f in data.index}, aoc=True)
 
         self.conformity_check(l)
 
@@ -146,7 +149,7 @@ class AOCTestCase(unittest.TestCase):
                              [2, 3, 2, 1, 4, 1],
                              [3, 3, 1, 4, 5, 2]
                              ], index=self.idx[:6], columns=self.cols[:6]).map(str)
-        l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
+        l = ICLattice(to_incidence(data), {f: (f,) for f in data.index}, aoc=True)
 
         self.conformity_check(l)
 
@@ -183,7 +186,7 @@ class AOCTestCase(unittest.TestCase):
                             index=['l1', 'l2', 'l3', 'l4', 'l5', 'l6'],
                             columns=['A', 'B', 'C', 'D', 'E', 'F'])
 
-        l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
+        l = ICLattice(to_incidence(data), {f: (f,) for f in data.index}, aoc=True)
         self.conformity_check(l)
 
     def test_hierarchical_constraint(self):
@@ -195,7 +198,7 @@ class AOCTestCase(unittest.TestCase):
                             index=['l1', 'l2', 'l3', 'l4', 'l5'],
                             columns=['A', 'B', 'C', 'D', 'E', ])
 
-        l = ICLattice(data, {f: (f,) for f in data.index}, aoc=True)
+        l = ICLattice(to_incidence(data), {f: (f,) for f in data.index}, aoc=True)
         self.conformity_check(l)
 
     def test_on_random_lattices(self):
@@ -213,5 +216,5 @@ class AOCTestCase(unittest.TestCase):
             columns = [id_str(i, 4, "f").upper() for i in range(shape[1])]
             data = pd.DataFrame(values, index=indexes, columns=columns).map(str)
             data = data.drop_duplicates()
-            l = ICLattice(data, {f: (f,) for f in indexes}, aoc=True)
+            l = ICLattice(to_incidence(data), {f: (f,) for f in indexes}, aoc=True)
             self.conformity_check(l)
