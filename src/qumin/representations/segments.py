@@ -9,12 +9,10 @@ import functools
 import logging
 import re
 from itertools import combinations
-
+from concepts import Context
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
-from ..lattice.lattice import table_to_context
 
 log = logging.getLogger("Qumin")
 
@@ -33,6 +31,35 @@ _to_short_feature = {'anterior': 'ant', 'approximant': 'appr', 'back': 'back', '
                      'flat': 'flat', 'sharp': 'sharp', 'trill': 'tril', 'labiodental': 'labdent'}
 _short_features = [y for _, y in _to_short_feature.items()]
 
+
+def sound_lattice_context(dataframe):
+    """ Create a Context from a dataframe of properties.
+
+    Args:
+        dataframe (:class:`pandas:pandas.DataFrame`): A dataframe of sound / features incidence.
+            -1 means unapplicable
+            1 means +feature
+            0 means -feature
+
+    Returns:
+        concepts.Context: the created Context
+    """
+
+    def feature_formatter(columns):
+        signs = ["-", "+"]
+        for c in columns:
+            key, val = c.split("=")
+            i = int(float(val))
+            if i < 2:
+                yield signs[int(float(val))] + key.replace(" ", "_")
+            else:
+                yield c
+
+    dataframe = dataframe.map(lambda x: None if x == "-1" else x)
+    dummies = pd.get_dummies(dataframe, prefix_sep="=")
+    dummies = dummies.map(lambda x: "X" if x == 1 else "")
+    dummies.columns = feature_formatter(dummies.columns)
+    return Context.fromstring(dummies.to_csv(), frmat='csv')
 
 def _regex_or(sounds, sep=" "):
     return "(?:" + "|".join(x + sep for x in sorted(sounds)) + ")"
@@ -345,24 +372,13 @@ class Inventory(object):
 
         log.debug("Normalization map: %s", cls._normalization)
 
-        def feature_formatter(columns):
-            signs = ["-", "+"]
-            for c in columns:
-                key, val = c.split("=")
-                i = int(float(val))
-                if i < 2:
-                    yield signs[int(float(val))] + key.replace(" ", "_")
-                else:
-                    yield c
-
         table = table.map(lambda x: str(x))
 
-        context = table_to_context(table, na_value="-1", col_formatter=feature_formatter)
+        context = sound_lattice_context(table)
         cls._lattice = context.lattice
 
         if shorthands is not None:
-            shorthand_context = table_to_context(shorthands, na_value="-1",
-                                                 col_formatter=feature_formatter)
+            shorthand_context = sound_lattice_context(shorthands)
 
             stack = shorthands.index.tolist()
             shorthands = {}
