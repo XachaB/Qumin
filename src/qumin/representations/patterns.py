@@ -841,7 +841,6 @@ class ParadigmPatterns(dict):
 
     def __init__(self, *args, **kwargs):
         self.update(*args, **kwargs)
-        self.pat_dict = {}
         self.cells = []
 
     def info(self):
@@ -862,18 +861,17 @@ class ParadigmPatterns(dict):
         Patterns are chosen according to their coverage and accuracy among competing patterns,
         and they are merged as much as possible. Their alternation can be generalized.
 
+        This method updates the internal dict and does not return anything.
+
+        The internal dict is of shape dict of tuples to pd.DataFrame,
+        where the tuples are pairs of cells and the dataframes hold patterns for pairs of cells.
+
         Arguments:
             paradigms (:class:`pandas:pandas.DataFrame`): paradigms (columns are cells, index are lemmas).
             method (str): method for scoring best pairwise alignments. Can be "edits" or "phon".
             disable_tqdm (bool): if true, do not show progressbar
             cpus (int): number of CPUs to use for parallelisation (defaults to 1)
             optim_mem (bool): whether to convert patterns to str to use less memory (defaults to False)
-
-        Returns:
-            (tuple):
-                **patterns,pattern_dict**. Patterns is the created
-                :class:`pandas:pandas.DataFrame`,
-                pat_dict is a dict mapping a column name to a list of patterns.
         """
         if method == "edits":
             self.insert_cost = alignment.edits_ins_cost
@@ -902,9 +900,6 @@ class ParadigmPatterns(dict):
                                                  list(self)),  # list of dict keys = the pairs
                              total=comb(len(self.cells), 2)))
 
-        # Update pat dict now: TODO: do we really still need this or could we deduce it quickly only when needed ?
-        for pair in self:
-            self.pat_dict[pair] = self[pair]['pattern'].unique()
 
     def __repr__(self):
         if len(self.cells) == 0:
@@ -916,7 +911,8 @@ class ParadigmPatterns(dict):
 
         # Create pattern map
         pattern_list = set()
-        for pair, patterns in self.pat_dict.items():
+        for pair in self:
+            patterns = self.unique_patterns(pair)
             pattern_list.update([repr(pat) for pat in patterns])
         pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
         filename = md.register_file("patterns_map.csv")
@@ -970,7 +966,6 @@ class ParadigmPatterns(dict):
         """
         collection = defaultdict(lambda: defaultdict(str))
         folder = Path(folder)
-        self.pat_dict = {}
 
         # Read patterns map
         patterns_map = pd.read_csv(folder / 'patterns_map.csv', index_col=0).patterns
@@ -984,8 +979,6 @@ class ParadigmPatterns(dict):
                 n_files = len(list(folder.iterdir()))
                 memory_check(list(self.values())[0], n_files, force=force)
                 first = False
-
-        self.pat_dict = {column: list(collection[column].values()) for column in collection}
 
         # Raise error if wrong parameters.
         # return table
@@ -1219,7 +1212,39 @@ class ParadigmPatterns(dict):
                 self[pair].loc[~defective, 'pattern'] = Pattern.new_identity(pair)
                 self[pair].loc[defective, 'pattern'] = None
 
-    def find_applicable(self, disable_tqdm=False, **kwargs):
+    def find_cellpair_applicable(self, pair):
+        """ Find applicable patterns for a single cell pair.
+
+        Args:
+            pair (tuple of str): pair of cells
+
+        Returns:
+            Dataframe of applicable patterns.
+        """
+
+        def _iter_applicable_patterns(row, pair):
+            cell_x = pair[0]
+            for pattern in available_patterns:
+                if pattern.applicable(row.form_x, cell_x):
+                    yield pattern
+
+        def applicable(*args):
+            """Returns all applicable patterns to a single row"""
+            return tuple(_iter_applicable_patterns(*args))
+
+        available_patterns = self.unique_patterns(pair)
+        df = self[pair]
+        has_pat = df.pattern.notna()
+        return df.loc[has_pat,:].apply(applicable, axis=1)
+
+    def unique_patterns(self, pair):
+        """ Get a unique sequence of available patterns for a pair of cells.
+
+        Note: this replaces the old `pat_dict` !
+        """
+        return self[pair]['pattern'].unique()
+
+    def find_applicable(self, disable_tqdm=False, cpus=1, **kwargs):
         """Find all applicable rules for each form.
 
         We name sets of applicable rules *classes*. *Classes* are oriented:
@@ -1237,17 +1262,6 @@ class ParadigmPatterns(dict):
         """
         log.info("Looking for classes of applicable patterns")
 
-        def _iter_applicable_patterns(row, pair):
-            cell_x = pair[0]
-            pair = pair if pair in self.pat_dict else pair[::-1]
-            for pattern in self.pat_dict[pair]:
-                if pattern.applicable(row.form_x, cell_x):
-                    yield pattern
-
-        def applicable(*args):
-            """Returns all applicable patterns to a single row"""
-            return tuple(_iter_applicable_patterns(*args))
-
         # Adding oriented patterns
         col_rename = {'form_x': 'form_y', 'form_y': 'form_x'}
         to_add = {}
@@ -1255,8 +1269,15 @@ class ParadigmPatterns(dict):
             to_add[key[::-1]] = self[key].rename(columns=col_rename)
         self.update(to_add)
 
-        # Computing classes
-        for pair, df in tqdm(self.items()):
-            has_pat = df.pattern.notna()
-            df.loc[has_pat, "applicable"] = df.loc[has_pat, :] \
-                .apply(applicable, args=[pair], axis=1)
+        # Compute
+        with Pool(cpus) as pool:  # Create a multiprocessing Pool
+            applicables = tqdm(pool.imap_unordered(self.find_cellpair_applicable,
+                                                 list(self)),  # list of dict keys = the pairs
+                             total=comb(len(self.cells), 2))
+
+        # Update self
+        for pair, res in applicables:
+            df = self[pair]
+            df.loc[res.index, "applicable"] = res
+
+
