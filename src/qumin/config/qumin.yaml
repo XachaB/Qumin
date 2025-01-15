@@ -34,6 +34,7 @@ patterns: null        # path to pre-computed patterns. If null, will compute pat
 sample: null          # (int) A number of lexemes to sample, for debug purposes
 most_freq: True       # Whether to sample on frequency (if available) or randomly.
 force: False          # Whether to overpass RAM usage security (2GB)
+seed: 1               # Random seed for reproducible random effects.
 cpus: null            # Number of cpus to use for big computations
                       # (defaults to the number of available cpus - 2).
 
