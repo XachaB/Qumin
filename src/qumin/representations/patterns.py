@@ -1269,3 +1269,18 @@ class ParadigmPatterns(dict):
             for pair, res in tqdm(pool.imap_unordered(self.find_cellpair_applicable, self), total=len(self)):
                 df = self[pair]
                 df.loc[res.index, "applicable"] = res
+
+    def incidence_table(self):
+        """ Create a Context from a dataframe of properties.
+
+        Returns:
+            pd.DataFrame: a wide dataframe representing an incidence matrix
+        """
+        incidence_table = defaultdict(dict)
+        for pair in self:
+            df = self[pair]
+            header = "⇌".join(pair)
+            for i, row in df.iterrows():
+                pair_has_pattern = f"{header}=<{row.pattern}>"
+                incidence_table[pair_has_pattern][row.lexeme] = "X"
+        return pd.DataFrame(incidence_table).fillna("")

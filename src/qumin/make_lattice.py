@@ -21,8 +21,6 @@ log = logging.getLogger()
 
 def lattice_command(cfg, md):
     r"""Infer Inflection classes as a lattice from alternation patterns."""
-    comp = None
-
     # Loading files and paths
     patterns_folder_path = cfg.patterns
     defective = cfg.pats.defective
@@ -66,8 +64,6 @@ def lattice_command(cfg, md):
 
     log.info("Building the lattice...")
     lattice = ICLattice(patterns, microclasses,
-                        overabundant=overabundant,
-                        comp_prefix=comp,
                         aoc=cfg.lattice.aoc,
                         keep_names=(not cfg.lattice.shorten))
 

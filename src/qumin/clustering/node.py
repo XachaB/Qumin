@@ -204,7 +204,8 @@ class Node(object):
                 if i != j:
                     a1 = ancestors[tuple(leaf.labels)]
                     a2 = ancestors[tuple(leaf2.labels)]
-                    jaccard = len(a1 & a2) / len(a1 | a2)
+                    united = a1 | a2
+                    jaccard = len(a1 & a2) / len(united) if united else 0
                     similarities[i, j] = similarities[j, i] = jaccard
 
         paths = {i: [i] for i in range(li)}
