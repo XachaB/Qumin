@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 
 from qumin.clustering.node import Node
-from qumin.lattice.lattice import ICLattice, to_dummies_overabundant
-from . import TestCaseWithPandas
+from qumin.lattice.lattice import ICLattice
 
 
 def parse_lattice(nodes):
@@ -216,32 +215,3 @@ class AOCTestCase(unittest.TestCase):
             data = data.drop_duplicates()
             l = ICLattice(data, {f: (f,) for f in indexes}, aoc=True)
             self.conformity_check(l)
-
-
-class TestFuncs(TestCaseWithPandas):
-    def test_to_dummies_overabundant(self):
-        df = pd.DataFrame([['e', 'f', 'f', 'd', 'c'],
-                           ['d;e', 'd', 'a', 'a', 'a'],
-                           ['e', 'e', 'c', 'e;a', 'e'],
-                           ['a', 'd', 'f', 'f', 'd;c'],
-                           ['e', 'a', 'a', 'b', 'b']],
-                          columns=['TB', 'LX', 'AW', 'UA', 'VN'],
-                          index=['jgl', 'woq', 'rfo', 'tfp', 'box'])
-        dummies = to_dummies_overabundant(df)
-        expected = pd.DataFrame([['X', 'X', 'X', 'X', 'X', '', '', '', '',
-                                  '', '', '', '', '', '', '', '', '', '', ''],
-                                 ['X', '', '', '', '', 'X', 'X', 'X', 'X',
-                                  'X', '', '', '', '', '', '', '', '', '', ''],
-                                 ['X', '', '', '', '', '', '', '', 'X', '',
-                                  'X', 'X', 'X', 'X', '', '', '', '', '', ''],
-                                 ['', '', 'X', '', 'X', '', 'X', '', '', '',
-                                  '', '', '', '', 'X', 'X', 'X', '', '', ''],
-                                 ['X', '', '', '', '', '', '', 'X', '', '',
-                                  '', '', '', '', '', '', '', 'X', 'X', 'X']],
-                                columns=['TB=e', 'LX=f', 'AW=f', 'UA=d', 'VN=c', 'TB=d',
-                                         'LX=d', 'AW=a', 'UA=a', 'VN=a', 'LX=e', 'AW=c',
-                                         'UA=e', 'VN=e', 'TB=a', 'UA=f', 'VN=d', 'LX=a',
-                                         'UA=b', 'VN=b'],
-                                index=['jgl', 'woq', 'rfo', 'tfp', 'box'],
-                                )
-        self.assertEqual(dummies, expected)
