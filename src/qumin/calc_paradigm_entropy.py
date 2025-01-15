@@ -36,14 +36,18 @@ def H_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
-    paradigms = Paradigms(md.dataset, defective=defective, overabundant=False,
+    paradigms = Paradigms(md.dataset,
+                          defective=defective,
+                          overabundant=False,
                           merge_cols=cfg.entropy.merged,
-                          segcheck=True, cells=cells, pos=cfg.pos,
-                          sample=cfg.sample,
-                          most_freq=cfg.most_freq,
+                          segcheck=True,
+                          cells=cells,
+                          pos=cfg.pos,
                           force=cfg.force,
+                          sample=cfg.sample,
+                          sample_kws=dict(force_random=cfg.force_random,
+                                          seed=cfg.seed),
                           )
-
     patterns = ParadigmPatterns()
     patterns.from_file(patterns_folder_path,
                        paradigms.data,

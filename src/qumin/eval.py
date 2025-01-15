@@ -186,7 +186,7 @@ def prepare_data(cfg, md):
                           overabundant=cfg.pats.overabundant,
                           defective=cfg.pats.defective,
                           sample=cfg.sample,
-                          most_freq=cfg.most_freq
+                          force_random=cfg.force_random
                           )
     indexes = paradigms.index
     features = None

@@ -38,9 +38,10 @@ def pat_command(cfg, md):
                           segcheck=segcheck,
                           cells=cells,
                           pos=cfg.pos,
-                          sample=cfg.sample,
-                          most_freq=cfg.most_freq,
                           force=cfg.force,
+                          sample=cfg.sample,
+                          sample_kws=dict(force_random=cfg.force_random,
+                                          seed=cfg.seed),
                           )
 
     log.info("Looking for patterns...")

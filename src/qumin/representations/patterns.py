@@ -1038,7 +1038,7 @@ class ParadigmPatterns(dict):
 
         if (
                 defective
-                and (paradigms.form == '').any()
+                and (paradigms[paradigms.cell.isin(cells)].form == '').any()
                 and table.pattern.notna().all()
         ):
             raise ValueError("It looks like you ignored defective rows"
