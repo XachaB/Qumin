@@ -900,7 +900,6 @@ class ParadigmPatterns(dict):
                                                  list(self)),  # list of dict keys = the pairs
                              total=comb(len(self.cells), 2)))
 
-
     def __repr__(self):
         if len(self.cells) == 0:
             return "ParadigmPatterns(empty)"
@@ -1223,20 +1222,16 @@ class ParadigmPatterns(dict):
             Dataframe of applicable patterns.
         """
 
-        def _iter_applicable_patterns(row, pair):
-            cell_x = pair[0]
-            for pattern in available_patterns:
-                if pattern.applicable(row.form_x, cell_x):
-                    yield pattern
-
-        def applicable(*args):
-            """Returns all applicable patterns to a single row"""
-            return tuple(_iter_applicable_patterns(*args))
-
-        available_patterns = self.unique_patterns(pair)
         df = self[pair]
-        has_pat = df.pattern.notna()
-        return df.loc[has_pat,:].apply(applicable, axis=1)
+        available_patterns = self.unique_patterns(pair)
+        cell_x = pair[0]
+
+        def applicable(form):
+            """ Return a tuple of all applicable patterns for a given form"""
+            return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
+
+        has_pat = df['pattern'].notna()
+        return (pair, df.loc[has_pat, "form_x"].apply(applicable))
 
     def unique_patterns(self, pair):
         """ Get a unique sequence of available patterns for a pair of cells.
@@ -1270,15 +1265,10 @@ class ParadigmPatterns(dict):
             to_add[key[::-1]] = self[key].rename(columns=col_rename)
         self.update(to_add)
 
+        log.info("total cpus: " + str(cpus))
         # Compute
         with Pool(cpus) as pool:  # Create a multiprocessing Pool
-            applicables = tqdm(pool.imap_unordered(self.find_cellpair_applicable,
-                                                 list(self)),  # list of dict keys = the pairs
-                             total=comb(len(self.cells), 2))
 
-        # Update self
-        for pair, res in applicables:
-            df = self[pair]
-            df.loc[res.index, "applicable"] = res
-
-
+            for pair, res in tqdm(pool.imap_unordered(self.find_cellpair_applicable, self), total=len(self)):
+                df = self[pair]
+                df.loc[res.index, "applicable"] = res
