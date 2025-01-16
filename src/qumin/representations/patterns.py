@@ -989,9 +989,6 @@ class ParadigmPatterns(dict):
                 memory_check(list(self.values())[0], n_files, force=force)
                 first = False
 
-        # Raise error if wrong parameters.
-        # return table
-
     def from_csv(self, path, patterns_map, collection,
                  paradigms, defective=True, overabundant=True):
         """
@@ -1043,8 +1040,11 @@ class ParadigmPatterns(dict):
         if not defective:
             table.dropna(axis=0, subset="pattern", inplace=True)
 
-        if overabundant:
-            raise NotImplementedError
+        if not overabundant:
+            dupl = table.duplicated('lexeme')
+            if dupl.any():
+                raise ValueError("Overabundant is false, but some rows are duplicated."
+                                 f"Recompute patterns:\n{table[dupl].head()}.")
 
         if (
                 defective
@@ -1176,6 +1176,10 @@ class ParadigmPatterns(dict):
         return (pair, df)
 
     def unmerge_columns(self, paradigms):
+    # if not overabundant:
+    #     dupl = table.duplicated(['cell_x', 'cell_y', 'lexeme'])
+    #     if dupl.any():
+    #         raise ValueError(f"Overabundant is false, but some rows are duplicated. Recompute patterns:\n{table[dupl].head()}.")
         """
         Recreates merged columnss
 

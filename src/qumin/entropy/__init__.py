@@ -2,6 +2,7 @@
 # !/usr/bin/python3
 
 import numpy as np
+from scipy import special as sp
 
 
 def P(x, subset=None):
@@ -52,6 +53,38 @@ def cond_entropy(A, B, **kwargs):
         H(A|B)
     """
     return entropy(P(A + B, **kwargs)) - entropy(P(B, **kwargs))
+
+
+def cond_entropy_OA(group, mapping="norm", debug=False, cat_success=True, beta=5):
+    """
+    Computes entropy for overabundant distributions.
+    """
+    # Here we can apply various functions to map weights to probabilities (softmax, etc).
+    func = {
+        "norm": lambda x: x / x.sum(),          # Normalize weights.
+        "uni": lambda x: 1 / x.shape[0],           # Use a bare Uniform distribution.
+        "soft": lambda x: sp.softmax(x*beta)    # Use a softmax function
+            }[mapping]
+
+    # We apply this normalizing function to the overall frequency of the pattern.
+    pat_freq = group.groupby('pattern').w.sum() / group.w.sum()
+    pat_proba = pat_freq.copy()
+    pat_proba.loc[:] = func(pat_freq)
+
+    # Different ways of measuring success.
+    if cat_success:
+        fact = (group.w_y != 0) * group.w_x
+    else:
+        fact = group.w
+
+    # Returning results.
+    results = [0 + entropy(pat_proba),  # Entropy "0+" to ensure positive values.
+               (group.pattern.map(pat_proba)*fact).sum() / group.w.sum(),  # Accuracy
+               group.w.sum()]
+
+    if debug:
+        results.extend([pat_freq, pat_proba])
+    return results
 
 
 def entropy(A):

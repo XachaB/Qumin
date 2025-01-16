@@ -38,7 +38,7 @@ def H_command(cfg, md):
     # Inflectional paradigms: rows are forms, with lexeme and cell..
     paradigms = Paradigms(md.dataset,
                           defective=defective,
-                          overabundant=False,
+                          overabundant=cfg.overabundant,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
                           cells=cells,
@@ -52,7 +52,7 @@ def H_command(cfg, md):
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
                        defective=defective,
-                       overabundant=False,
+                       overabundant=cfg.overabundant,
                        force=cfg.force,
                        )
 
@@ -75,12 +75,20 @@ def H_command(cfg, md):
 
     if onePred:
         if verbose:
-            distrib.one_pred_entropy(debug=verbose)
-        distrib.one_pred_entropy()
-        mean = distrib.get_results().loc[:, "value"].mean()
-        log.info("Mean H(c1 -> c2) = %s ", mean)
-
+            distrib.one_pred_entropy(overabundant=cfg.overabundant,
+                                     debug=verbose,
+                                     **cfg.entropy.extra)
+        distrib.one_pred_entropy(overabundant=cfg.overabundant,
+                                 **cfg.entropy.extra)
+        measures = ['cond_entropy', 'accuracy'] if cfg.overabundant else ['cond_entropy']
+        mean = distrib.get_results(measure=measures)\
+            .loc[:, ["value", "measure"]].groupby('measure').mean()
+        if verbose:
+            distrib.sanity_check()
+        log.info(f"Mean metrics:\n{mean.to_markdown()}")
     if preds:
+        if cfg.overabundant:
+            raise NotImplementedError
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
         for n in preds:

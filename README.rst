@@ -103,7 +103,7 @@ A few more parameters can be changed: ::
 
 
 Paradigm entropy
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 An early version of this software was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_, and a more recent one in `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
 
@@ -126,7 +126,6 @@ Predicting with known lexeme-wise features (such as gender or inflection class) 
     /$ qumin.H  feature=inflection_class patterns=<patterns.csv> data=<dataset.package.json>
     /$ qumin.H  feature="[inflection_class,gender]" patterns=<patterns.csv> data=<dataset.package.json>
 
-
 The config file contains the following keys, which can be set through the command line: ::
 
     patterns: null        # pre-computed patterns
@@ -138,6 +137,23 @@ The config file contains the following keys, which can be set through the comman
       importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
       merged: False       # Whether identical columns are merged in the input.
       stacked: False      # whether to stack results in long form
+
+Advanced measures
+~~~~~~~~~~~~~~~~~
+
+The default implementation for entropies does not handle overabundance and randomly drops overabundant rows. A new, slighltly slower, implementation can be used instead. This implementation also provides a measure of the *probability of success*, which does not always correlate with entropy measures for overabundant systems: ::
+
+    /$ qumin action=H data=<dataset.package.json> overabundant=True
+
+This implementation can also be used for non-overabundant systems, as it has some additional features which are not available in the legacy strategy: ::
+
+    entropy:
+      extra:               # These options are only available in overabundant mode.
+        cat_success: True  # Consider a target form as correct (=1) if its probability > 0.
+                           # If False, its probability of being correct = its frequency.
+        mapping: "norm"    # Provide a mapping from pattern frequencies to pattern probabilities.
+                           # Possible values: "norm"(alized), "soft"(max), "uni"(form).
+        beta: 5            # Value of the beta parameter for computations with func=soft.
 
 Visualizing results
 ^^^^^^^^^^^^^^^^^^^
