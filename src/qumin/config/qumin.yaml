@@ -75,12 +75,15 @@ entropy:
                       # with n-1 predictors, allows for acceleration on nPreds entropy computation.
   merged: False       # Whether identical columns are merged in the input.
   stacked: False      # whether to stack results in long form
-  extra:               # These options are only available in overabundant mode.
-    cat_success: True  # Consider a form as correct (=1) if its probability > 0.
-                       # If False, its probability of being correct = its frequency.
-    mapping: "norm"    # Provide a mapping from pattern frequencies to pattern probabilities.
-                       # Possible values: "norm"(alized), "soft"(max), "uni"(form).
-    beta: 5            # Value of the beta parameter for computations with func=soft.
+  use_extra: False      # Enables advanced computations, including probability of success, etc.
+  extra:                # These settings are only available with use_extra.
+    weight_token: False # Whether to compute patterns and weight metrics with the token frequency
+                        # Or the type frequency. Defaults to type frequency.
+    cat_success: True   # Consider a form as correct (=1) if its probability > 0.
+                        # If False, its probability of being correct = its frequency.
+    mapping: "norm"     # Provide a mapping from pattern frequencies to pattern probabilities.
+                        # Possible values: "norm"(alized), "soft"(max), "uni"(form).
+    beta: 5             # Value of the beta parameter for computations with mapping=soft.
 
 
 

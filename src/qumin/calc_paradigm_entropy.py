@@ -21,10 +21,9 @@ log = logging.getLogger()
 def H_command(cfg, md):
     r"""Compute entropies of flexional paradigms' distributions."""
     verbose = HydraConfig.get().verbose is not False
+    use_extra = cfg.entropy.use_extra
     patterns_folder_path = cfg.patterns
     sounds_file_name = md.get_table_path("sounds")
-    defective = cfg.pats.defective
-
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
     onePred = preds[0] == 1
     if onePred:
@@ -37,8 +36,8 @@ def H_command(cfg, md):
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
     paradigms = Paradigms(md.dataset,
-                          defective=defective,
-                          overabundant=cfg.overabundant,
+                          defective=cfg.pats.defective,
+                          overabundant=cfg.pats.overabundant,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
                           cells=cells,
@@ -51,8 +50,8 @@ def H_command(cfg, md):
     patterns = ParadigmPatterns()
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
-                       defective=defective,
-                       overabundant=cfg.overabundant,
+                       defective=cfg.pats.defective,
+                       overabundant=cfg.pats.overabundant,
                        force=cfg.force,
                        )
 
@@ -70,24 +69,24 @@ def H_command(cfg, md):
     patterns.info()
 
     distrib = PatternDistribution(patterns,
-                                  md.dataset.name,
+                                  md.dataset,
                                   features=features)
 
     if onePred:
         if verbose:
-            distrib.one_pred_entropy(overabundant=cfg.overabundant,
+            distrib.one_pred_entropy(use_extra=use_extra,
                                      debug=verbose,
                                      **cfg.entropy.extra)
-        distrib.one_pred_entropy(overabundant=cfg.overabundant,
+        distrib.one_pred_entropy(use_extra=use_extra,
                                  **cfg.entropy.extra)
-        measures = ['cond_entropy', 'accuracy'] if cfg.overabundant else ['cond_entropy']
+        measures = ['cond_entropy', 'accuracy'] if use_extra else ['cond_entropy']
         mean = distrib.get_results(measure=measures)\
             .loc[:, ["value", "measure"]].groupby('measure').mean()
         if verbose:
             distrib.sanity_check()
         log.info(f"Mean metrics:\n{mean.to_markdown()}")
     if preds:
-        if cfg.overabundant:
+        if use_extra:
             raise NotImplementedError
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)

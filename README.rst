@@ -141,19 +141,25 @@ The config file contains the following keys, which can be set through the comman
 Advanced measures
 ~~~~~~~~~~~~~~~~~
 
-The default implementation for entropies does not handle overabundance and randomly drops overabundant rows. A new, slighltly slower, implementation can be used instead. This implementation also provides a measure of the *probability of success*, which does not always correlate with entropy measures for overabundant systems: ::
+The default settings will run the legacy entropy computation. A new implementation offers a set of additional options, which can be enabled with ``entropy.use_extra=True``. This option is incompatible with n-ary entropies and includes:
 
-    /$ qumin action=H data=<dataset.package.json> overabundant=True
+* Running computations on overabundant paradigms in general.
+* Computing a *probability of success*, which is also compatible with overabundance and does not always correlate with the entropy.
+
+The following runs an extended computation and allows overabundant patterns: ::
+
+    /$ qumin action=H data=<dataset.package.json> entropy.use_extra=True pats.overabundant=True
 
 This implementation can also be used for non-overabundant systems, as it has some additional features which are not available in the legacy strategy: ::
 
     entropy:
-      extra:               # These options are only available in overabundant mode.
-        cat_success: True  # Consider a target form as correct (=1) if its probability > 0.
-                           # If False, its probability of being correct = its frequency.
-        mapping: "norm"    # Provide a mapping from pattern frequencies to pattern probabilities.
-                           # Possible values: "norm"(alized), "soft"(max), "uni"(form).
-        beta: 5            # Value of the beta parameter for computations with func=soft.
+        use_extra: False     # Enables advanced computations, including probability of success, etc.
+        extra:               # These settings are only available with use_extra.
+            cat_success: True  # Consider a form as correct (=1) if its probability > 0.
+                            # If False, its probability of being correct = its frequency.
+            mapping: "norm"    # Provide a mapping from pattern frequencies to pattern probabilities.
+                            # Possible values: "norm"(alized), "soft"(max), "uni"(form).
+            beta: 5            # Value of the beta parameter for computations with mapping=soft.
 
 Visualizing results
 ^^^^^^^^^^^^^^^^^^^

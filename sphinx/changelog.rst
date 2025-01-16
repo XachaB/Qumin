@@ -9,6 +9,7 @@ dev version (forthcoming)
 - Add a `pos` keyword to filter paradigms on POS.
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Adds a Frequency class able to handle multiple paralex sources for frequencies.
+- Adds new options for entropy computations, which work with overabundant settings: compute a probability of success, weight with tokens partly or completely, etc.
 - Switch patterns management to long format everywhere
 - Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
 - Change management of sampling: `most_freq=False` replaced by `force_random=True`.
