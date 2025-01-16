@@ -83,14 +83,12 @@ def H_command(cfg, md):
     if preds:
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
-
         for n in preds:
-            distrib.n_preds_entropy_matrix(n, paradigms)
+            if verbose:
+                distrib.n_preds_entropy(n, paradigms, debug=verbose)
+            distrib.n_preds_entropy(n, paradigms)
             mean = distrib.get_results(n=n).loc[:, "value"].mean()
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
-
-            if verbose:
-                distrib.n_preds_distrib_log(n)
 
     ent_file = md.register_file('entropies.csv',
                                 {'computation': 'entropies',
