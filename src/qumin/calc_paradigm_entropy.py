@@ -70,14 +70,14 @@ def H_command(cfg, md):
     patterns.info()
 
     distrib = PatternDistribution(patterns,
-                                  md.dataset.name,
+                                  md.dataset,
                                   features=features)
 
     if onePred:
         if verbose:
             distrib.one_pred_entropy(debug=verbose)
         distrib.one_pred_entropy()
-        mean = distrib.get_results().loc[:, "value"].mean()
+        mean = distrib.get_mean(weighting=cfg.entropy.weighting)
         log.info("Mean H(c1 -> c2) = %s ", mean)
 
     if preds:
@@ -87,7 +87,7 @@ def H_command(cfg, md):
             if verbose:
                 distrib.n_preds_entropy(n, paradigms, debug=verbose)
             distrib.n_preds_entropy(n, paradigms)
-            mean = distrib.get_results(n=n).loc[:, "value"].mean()
+            mean = distrib.get_mean(n=n, weighting=cfg.entropy.weighting)
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
     ent_file = md.register_file('entropies.csv',
@@ -95,6 +95,6 @@ def H_command(cfg, md):
                                  'content': 'results'})
 
     log.info("Writing to: {}".format(ent_file))
-    distrib.export_file(ent_file)
+    distrib.export_file(ent_file, weighting=cfg.entropy.weighting)
 
     return ent_file

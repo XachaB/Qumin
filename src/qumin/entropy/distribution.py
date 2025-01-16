@@ -8,7 +8,8 @@ Encloses distribution of patterns on paradigms.
 import logging
 from collections import Counter, defaultdict
 from functools import reduce
-from itertools import combinations
+from itertools import combinations, permutations
+from ..representations.frequencies import Frequencies
 
 import pandas as pd
 
@@ -34,7 +35,7 @@ class PatternDistribution(object):
             Name of the dataset.
     """
 
-    def __init__(self, patterns, name, features=None):
+    def __init__(self, patterns, dataset, features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -42,11 +43,12 @@ class PatternDistribution(object):
                 A dict of :class:`pandas.DataFrame`, where each row describes an alternation between
                 two cells forms belonging to different cells of the same lexeme.
                 The row also contains the correct pattern and the set of applicable patterns.
-            name (str): dataset name.
+            dataset (str): dataset metadata.
             features:
                 optional table of features
         """
-        self.name = name
+        self.name = dataset.name
+        self.frequencies = Frequencies(dataset)
         self.patterns = patterns
 
         if features is not None:
@@ -75,22 +77,85 @@ class PatternDistribution(object):
         Returns computation results from a distribution of patterns.
 
         Arguments:
-            measure (str): measure name.
-            n (int): number of predictors
+            measure (str): Kind of measure to return. Defaults to cond_entropy.
+            n (int): Number of predictors to include in the mean.
 
         Returns:
             pandas.DataFrame: a DataFrame of results.
-
         """
         is_cond_ent = self.data.loc[:, "measure"] == measure
         is_one_pred = self.data.loc[:, "n_preds"] == n
         return self.data.loc[is_cond_ent & is_one_pred, :]
 
-    def export_file(self, filename):
-        """ Export the :attr:`PatternDistribution.data` DataFrame to file
+    def get_mean(self, weighting=False, **kwargs):
+        """ Returns the average measures from the current run.
+
+        Arguments:
+            weighting (boolean): Whether the cell frequencies should be used for weighting.
+                Defaults to False.
+            **kwargs: Keyword arguments are passed to `get_results()`
+
+        Returns: mean (float)
+        """
+
+        results = self.get_results(**kwargs)
+
+        # Try to weight
+        if weighting:
+            weight = self._get_weights(results)
+            # Check that we got weight
+            if weight is not None:
+                return (weight * results.value).sum()
+
+        return results.loc[:, "value"].mean()
+
+    def _get_weights(self, data):
+        """ Returns weights computed from cell frequencies
+
+        Returns:
+            an array of weights (:class:`numpy:numpy.ndarray`)
+        """
+        if self.frequencies.source['cells'] == "empty":
+            log.warning("Couldn't find cell frequencies. "
+                        "Falling back on weighting by the number of pairs.")
+            return None
+
+        def compute_weight(row):
+            preds = tuple(row['predictor'].split('&'))
+            if isinstance(preds, str):
+                preds = (preds,)
+            orders = permutations(preds)
+            p_pred = 0
+
+            # Compute the probability of each permutation and sum them
+            for order in orders:
+                used = []
+                p_order = 1
+                # Probability of an ordered set of predictors
+                for pred in order:
+                    remain = ~cell_freq.index.isin(used)
+                    p_order *= cell_freq.loc[pred, 'result']\
+                        / cell_freq.loc[remain, "result"].sum()
+                    used.append(pred)
+                p_pred += p_order
+
+            # Probability of predicting the target cell among the cells other than the predictors
+            out = row['predicted']
+            p_out = cell_freq.loc[out, 'result'] \
+                / cell_freq.loc[~cell_freq.index.isin(preds), "result"].sum()
+            return p_out*p_pred
+
+        cell_freq = self.frequencies.get_relative_freq(data="cells")
+        weight = data.apply(compute_weight, axis=1)
+        return weight.values
+
+    def export_file(self, filename, weighting=False):
+        """ Export the data DataFrame to file
 
         Arguments:
             filename: the file's path.
+             weighting (boolean): Whether weights should be returned from cell frequencies.
+                Defaults to False.
         """
 
         def join_if_multiple(preds):
@@ -99,6 +164,10 @@ class PatternDistribution(object):
             return preds
 
         data = self.data.copy()
+        if weighting:
+            weight = self._get_weights(data)
+            if weight is not None:
+                data.loc[:, 'weight'] = weight.round(5)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
         if "entropy" in data.columns:
             # Rounding at 10 significant digits, ensuring positive zeros.
@@ -119,7 +188,7 @@ class PatternDistribution(object):
 
         data = pd.read_csv(filename)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(split_if_multiple)
-        self.data = pd.concat(self.data, data)
+        self.concat_data(data)
 
     def add_features(self, group):
         """
@@ -134,6 +203,16 @@ class PatternDistribution(object):
             return ret
         else:
             return group.applicable
+
+    def concat_data(self, *args, **kwargs):
+        """ Adds data to the existing measures.
+
+        Arguments:
+            *args (:class:`pandas:pandas.DataFrame`): DataFrames to add.
+            **kwargs: optional keyword arguments to pass to `pandas.concat()`.
+        """
+
+        self.data = pd.concat([self.data, *args], **kwargs)
 
     def prepare_data(self, n=1, debug=False):
         """
@@ -213,10 +292,7 @@ class PatternDistribution(object):
                                                                 pair,
                                                                 subset=selector)
 
-        if self.data.empty:
-            self.data = data.reset_index()
-        else:
-            self.data = pd.concat([self.data, data.reset_index()])
+        self.concat_data(data.reset_index())
 
     def cond_entropy_log(self, group, classes, cells, subset=None):
         """Print a log of the probability distribution for one predictor.
@@ -343,7 +419,7 @@ class PatternDistribution(object):
                 )
 
         # Add to previous results
-        self.data = pd.concat([self.data, data])
+        self.concat_data(data.reset_index(drop=True))
 
     def n_preds_condent(self, df, paradigms, pat_order, zeros, n):
         r"""
