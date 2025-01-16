@@ -44,7 +44,6 @@ def pat_command(cfg, md):
                                           seed=cfg.seed),
                           )
 
-    log.info("Looking for patterns...")
     patterns = ParadigmPatterns()
 
     patterns.find_patterns(paradigms,

@@ -892,7 +892,8 @@ class ParadigmPatterns(dict):
         self.optim_mem = optim_mem
 
         tqdm.pandas(leave=False, disable=disable_tqdm)
-        logging.info(f"Using {cpus} threads for pattern inference.")
+        log.info("Looking for analogical patterns...")
+        log.info(f"Using {cpus} threads for pattern inference.")
         # Register empty dfs of patterns
         # This is to avoid threads depending on a shared paradigms object !
         for pair in combinations(self.cells, 2):
@@ -920,7 +921,7 @@ class ParadigmPatterns(dict):
         # Create pattern map
         pattern_list = set()
         for pair in self:
-            patterns = self.unique_patterns(pair)
+            patterns = self[pair]['pattern'].unique()
             pattern_list.update([repr(pat) for pat in patterns])
         pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
         filename = md.register_file("patterns_map.csv")
@@ -1138,15 +1139,15 @@ class ParadigmPatterns(dict):
             types = list(collection[alt])
             pats = []
             log.debug("1.Generalizing in each type")
-            for j in collection[alt]:
-                log.debug("\tlooking at :" + str(collection[alt][j]))
-                if _compatible_context_type(j):
-                    collection[alt][j] = [generalize_patterns(collection[alt][j])]
+            for alt_type in collection[alt]:
+                log.debug("\tlooking at :" + str(collection[alt][alt_type]))
+                if _compatible_context_type(alt_type):
+                    collection[alt][alt_type] = [generalize_patterns(collection[alt][alt_type])]
                     # print("\t\tcontexts compatible",collection[alt][j])
                 else:
-                    collection[alt][j] = incremental_generalize_patterns(*collection[alt][j])
+                    collection[alt][alt_type] = incremental_generalize_patterns(*collection[alt][alt_type])
                     # print("\t\tcontexts not compatibles:",collection[alt][j])
-                pats.extend(collection[alt][j])
+                pats.extend(collection[alt][alt_type])
             log.debug("2.Generalizing across types")
             if _compatible_context_type(*types):
                 log.debug("\tlooking at compatible:" + str(pats))
@@ -1171,7 +1172,6 @@ class ParadigmPatterns(dict):
 
         df['pattern'] = df.apply(_best_pattern, axis=1)
         if self.optim_mem:
-            logging.info("OPTIM MEM IS TRUE")
             df.pattern = df.pattern.apply(repr)
         return (pair, df)
 
@@ -1230,24 +1230,17 @@ class ParadigmPatterns(dict):
         Returns:
             Dataframe of applicable patterns.
         """
-
-        df = self[pair]
-        available_patterns = self.unique_patterns(pair)
-        cell_x = pair[0]
-
         def applicable(form):
             """ Return a tuple of all applicable patterns for a given form"""
-            return tuple((p for p in available_patterns if p is not None and p.applicable(form, cell_x)))
+            return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
 
-        has_pat = df['pattern'].notna()
-        return (pair, df.loc[has_pat, "form_x"].apply(applicable))
-
-    def unique_patterns(self, pair):
-        """ Get a unique sequence of available patterns for a pair of cells.
-
-        Note: this replaces the old `pat_dict` !
-        """
-        return self[pair]['pattern'].unique()
+        df = self[pair]
+        available_patterns = [p for p in self[pair]['pattern'].unique() if p is not None]
+        cell_x = pair[0]
+        has_pat = ~df['pattern'].isnull()
+        applicables = df.loc[has_pat, "form_x"].apply(applicable)
+        applicables.name = "applicable"
+        return (pair, applicables)
 
     def find_applicable(self, cpus=1, **kwargs):
         """Find all applicable rules for each form.
@@ -1274,10 +1267,13 @@ class ParadigmPatterns(dict):
         log.info("total cpus: " + str(cpus))
 
         with Pool(cpus) as pool:  # Create a multiprocessing Pool
-
-            for pair, res in tqdm(pool.imap_unordered(self.find_cellpair_applicable, self), total=len(self)):
+            for pair, applicables in tqdm(pool.imap_unordered(self.find_cellpair_applicable, self), total=len(self)):
                 df = self[pair]
-                df.loc[res.index, "applicable"] = res
+                # We're trying to avoid any pandas internal issues in merging the df/series
+                # First, we create a new column in the df...
+                df.loc[:, "applicable"] = None
+                # Then we assign the returned series, which is already called "applicable":
+                df.loc[applicables.index, "applicable"] = applicables
 
     def incidence_table(self, microclasses):
         """ Create a Context from a dataframe of properties.
