@@ -185,7 +185,7 @@ def entropy_heatmap(results, md, cmap_name=False,
                               labelrotation=0)
 
     cg.set_axis_labels(x_var="Predicted", y_var="Predictor")
-    cg.fig.suptitle(f"Measured on the {md.datasets[0].name} dataset, version {md.datasets[0].version}")
+    cg.fig.suptitle(f"Measured on the {md.dataset.name} dataset, version {md.dataset.version}")
 
     cg.tight_layout()
 

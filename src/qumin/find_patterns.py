@@ -4,11 +4,13 @@
 
 Author: Sacha Beniamine.
 """
+from os import cpu_count
 import logging
-from itertools import combinations
 
 from .clustering import find_microclasses
-from .representations import patterns, segments, create_paradigms
+from .representations import segments
+from .representations.paradigms import Paradigms
+from .representations.patterns import ParadigmPatterns
 from .utils import get_cells
 
 log = logging.getLogger()
@@ -20,7 +22,7 @@ def pat_command(cfg, md):
     kind = cfg.pats.kind
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
-    cells = get_cells(cfg.cells, cfg.pos, md.datasets[0])
+    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
     segcheck = True
 
     # Initializing segments
@@ -29,44 +31,43 @@ def pat_command(cfg, md):
 
     merge_cols = True
 
-    paradigms = create_paradigms(md.datasets[0], defective=defective,
-                                 overabundant=overabundant, merge_cols=merge_cols,
-                                 segcheck=segcheck, cells=cells, pos=cfg.pos,
-                                 sample=cfg.sample,
-                                 most_freq=cfg.most_freq
-                                 )
+    paradigms = Paradigms(md.dataset,
+                          defective=defective,
+                          overabundant=overabundant,
+                          merge_cols=merge_cols,
+                          segcheck=segcheck,
+                          cells=cells,
+                          pos=cfg.pos,
+                          force=cfg.force,
+                          sample=cfg.sample,
+                          sample_kws=dict(force_random=cfg.force_random,
+                                          seed=cfg.seed),
+                          )
 
-    log.info("Looking for patterns...")
-    patterns_df, dic = patterns.find_patterns(paradigms, kind,
-                                              optim_mem=cfg.pats.optim_mem,
-                                              gap_prop=cfg.pats.gap_proportion)
+    patterns = ParadigmPatterns()
+
+    patterns.find_patterns(paradigms,
+                           method=kind,
+                           optim_mem=cfg.pats.optim_mem,
+                           gap_prop=cfg.pats.gap_proportion,
+                           cpus=cfg.cpus or min(1, cpu_count() - 2))
+
+    # Concatenate the patterns as a dict. Cell names are turned into columns.
+    # patterns_df = pd.concat([df for df in patterns_dfs.values()]).reset_index(drop=True)
 
     if merge_cols and not cfg.pats.merged:  # Re-build duplicate columns
-        for a, b in patterns_df.columns:
-            if "#" in a:
-                cols = a.split("#")
-                for c in cols:
-                    patterns_df[(c, b)] = patterns_df[(a, b)]
-                patterns_df.drop((a, b), axis=1, inplace=True)
-                for x, y in combinations(cols, 2):
-                    patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
+        paradigms.unmerge_columns()
+        patterns.unmerge_columns(paradigms)
 
-        for a, b in patterns_df.columns:
-            if "#" in b:
-                cols = b.split("#")
-                for c in cols:
-                    patterns_df[(a, c)] = patterns_df[(a, b)]
-                patterns_df.drop((a, b), axis=1, inplace=True)
-                for x, y in combinations(cols, 2):
-                    patterns_df[(x, y)] = patterns.Pattern.new_identity((x, y))
+    empty = [((df.form_x != '') & (df.form_y != '') & (df.pattern.isnull()))
+             for df in patterns.values()]
 
-    if patterns_df.isnull().values.any():
+    if any([x.any() for x in empty]):
         log.warning("Some words don't have any patterns "
                     "-- This means something went wrong."
                     "Please report this as a bug !")
-        log.warning(patterns_df[patterns_df.isnull().values])
 
-    microclasses = find_microclasses(patterns_df.map(str))
+    microclasses = find_microclasses(paradigms, patterns)
     filename = md.register_file("microclasses.txt",
                                 {'computation': cfg.pats.kind, 'content': 'microclasses'})
     log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
@@ -74,17 +75,4 @@ def pat_command(cfg, md):
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
 
-    patfilename = md.register_file(kind + ".csv",
-                                   {'computation': cfg.pats.kind, 'content': 'patterns'})
-    log.info("Writing patterns (importable by other scripts) to %s", patfilename)
-    if cfg.pats.optim_mem:
-        patterns.to_csv(patterns_df, patfilename, pretty=True)  # uses str because optim_mem already used repr
-        log.warning("Since you asked for args.optim_mem, I will not export the human_readable file.")
-    else:
-        patterns.to_csv(patterns_df, patfilename, pretty=False)  # uses repr
-        pathumanfilename = md.register_file("human_readable_" + kind + ".csv",
-                                            {'computation': cfg.pats.kind, 'content': 'patterns_human'})
-        log.info("Writing pretty patterns (for manual examination) to %s", pathumanfilename)
-        patterns.to_csv(patterns_df, pathumanfilename, pretty=True)  # uses str
-
-    return patfilename
+    return patterns.export(md, kind, optim_mem=cfg.pats.optim_mem)

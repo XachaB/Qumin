@@ -5,15 +5,15 @@
 This module addresses the modelisation of phonological segments.
 """
 
-import pandas as pd
-import numpy as np
-from itertools import combinations
 import functools
+import logging
 import re
+from itertools import combinations
+from concepts import Context
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
-from ..lattice.lattice import table_to_context
-import logging
 log = logging.getLogger("Qumin")
 
 inventory = None
@@ -32,14 +32,53 @@ _to_short_feature = {'anterior': 'ant', 'approximant': 'appr', 'back': 'back', '
 _short_features = [y for _, y in _to_short_feature.items()]
 
 
+def sound_lattice_context(dataframe):
+    """ Create a Context from a dataframe of properties.
+
+    Args:
+        dataframe (:class:`pandas:pandas.DataFrame`): A dataframe of sound / features incidence.
+            -1 means unapplicable
+            1 means +feature
+            0 means -feature
+
+    Returns:
+        concepts.Context: the created Context
+    """
+
+    def feature_formatter(columns):
+        signs = ["-", "+"]
+        for c in columns:
+            key, val = c.split("=")
+            i = int(float(val))
+            if i < 2:
+                yield signs[int(float(val))] + key.replace(" ", "_")
+            else:
+                yield c
+
+    dataframe = dataframe.map(lambda x: None if x == "-1" else x)
+    dummies = pd.get_dummies(dataframe, prefix_sep="=")
+    dummies = dummies.map(lambda x: "X" if x == 1 else "")
+    dummies.columns = feature_formatter(dummies.columns)
+    return Context.fromstring(dummies.to_csv(), frmat='csv')
+
+def _regex_or(sounds, sep=" "):
+    return "(?:" + "|".join(x + sep for x in sorted(sounds)) + ")"
+
+
 class Form(str):
     """ A form is a string of sounds, separated by spaces.
+    If a form is provided as defective, this information is still stored
+    as a Form object with empty content. Defectiveness can be tested with:
+
+        >>> Form('').is_defective()
+        True
 
     Sounds might be more than one character long.
     Forms are strings, they are segmented at the object creation.
 
     Attributes:
-        tokens (Tuple): Tuple of phonemes contained in this form
+        tokens (Tuple): Tuple of phonemes contained in this form. For defective entries,
+            tokens are an empty tuple.
         id (str): form_id of the corresponding form according to the Paralex package.
             If unknown, `None` will be assigned.
     """
@@ -47,22 +86,39 @@ class Form(str):
     def __new__(cls, string, form_id=None):
         tokens = Inventory._segmenter.findall(string)
         tokens = tuple(Inventory._normalization.get(c, c) for c in tokens)
-        if Inventory._legal_str.fullmatch("".join(tokens)) is None:
-            raise ValueError("Unknown sound in: " + repr(string))
-        self = str.__new__(cls, " ".join(tokens) + " ")
+        if string == "":
+            self = str.__new__(cls, "")
+        else:
+            if Inventory._legal_str.fullmatch("".join(tokens)) is None:
+                raise ValueError("Unknown sound in: " + repr(string))
+            self = str.__new__(cls, " ".join(tokens) + " ")
         self.tokens = tokens
         self.id = form_id
         return self
 
+    def __getnewargs__(self):
+        return ("".join(self.tokens), self.id)
+
     @classmethod
     def from_segmented_str(cls, segmented):
-        stripped = segmented.strip(" ")
-        self = cls.__new__(cls, stripped + " ")
-        self.tokens = stripped.split()
+        if segmented == "":
+            self = str.__new__(cls, "")
+            self.tokens = []
+        else:
+            stripped = segmented.strip(" ")
+            self = cls.__new__(cls, stripped + " ")
+            self.tokens = stripped.split()
         return self
 
+    def is_defective(self):
+        return self == ''
+
     def __repr__(self):
-        return f"Form({self}, id:{self.id})" if hasattr(self, "id") and self.id else f"Form({self})"
+        return f"Form({self if self != '' else '#DEF#'}, id='{self.id}')" if hasattr(self,
+                                                                                     "id") and self.id else f"Form({self})"
+
+    def __str__(self):
+        return "".join([x.strip() for x in self.tokens]) if self else '#DEF#'
 
 
 class Inventory(object):
@@ -127,8 +183,8 @@ class Inventory(object):
         """
         id = frozenset(extent) if len(extent) > 1 else extent[0]
         ordered = sorted(extent)
-        cls._regexes[id] = "(?:" + "|".join(x + " " for x in ordered) + ")"
-        cls._regexes_end[id] = "(?:" + "|".join(ordered) + ")"
+        cls._regexes[id] = _regex_or(ordered, sep=" ")
+        cls._regexes_end[id] = _regex_or(ordered, sep="")
         if len(extent) == 1:
             cls._pretty_str[id] = id
         else:
@@ -151,7 +207,7 @@ class Inventory(object):
         """
         if end:
             return cls._regexes_end[sound]
-        return  cls._regexes[sound]
+        return cls._regexes[sound]
 
     @classmethod
     def pretty_str(cls, sound, **kwargs):
@@ -316,24 +372,13 @@ class Inventory(object):
 
         log.debug("Normalization map: %s", cls._normalization)
 
-        def feature_formatter(columns):
-            signs = ["-", "+"]
-            for c in columns:
-                key, val = c.split("=")
-                i = int(float(val))
-                if i < 2:
-                    yield signs[int(float(val))] + key.replace(" ", "_")
-                else:
-                    yield c
-
         table = table.map(lambda x: str(x))
 
-        context = table_to_context(table, na_value="-1", col_formatter=feature_formatter)
+        context = sound_lattice_context(table)
         cls._lattice = context.lattice
 
         if shorthands is not None:
-            shorthand_context = table_to_context(shorthands, na_value="-1",
-                                                 col_formatter=feature_formatter)
+            shorthand_context = sound_lattice_context(shorthands)
 
             stack = shorthands.index.tolist()
             shorthands = {}
@@ -600,7 +645,7 @@ def normalize(ipa, features):
         except ValueError:
             if seg_features.shape[0] > 1:
                 raise ValueError("You have multiple definitions for {}\n{}".format(segment,
-                                                                                  seg_features))
+                                                                                   seg_features))
 
     ipa["Normalized"] = ""
 

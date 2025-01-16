@@ -133,7 +133,7 @@ class Frequencies(object):
 
         # 3. For cells and lexemes build from the forms table.
         # TODO read directly from the frequencies table if possible
-        elif not force_uniform and name != 'forms' and (self.source['forms'] != "empty"):
+        elif not force_uniform and name != 'forms' and (self.has_frequencies('forms')):
             log.info(f'{name}: No frequencies in the {name} table, building from the forms table.')
             freq = self.forms.groupby(name[:-1]).value.sum()
             table.loc[freq.index, "value"] = freq.values
@@ -188,10 +188,10 @@ class Frequencies(object):
             14    20.0
             18     NaN
             Name: value, dtype: float64
-            >>> f.get_absolute_freq(filters={'lexeme':'q'})
-            np.float64(nan)
-            >>> f.get_absolute_freq(filters={'cell':'third'}, mean=True, skipna=True)
-            np.float64(20.0)
+            >>> float(f.get_absolute_freq(filters={'lexeme':'q'}))
+            nan
+            >>> float(f.get_absolute_freq(filters={'cell':'third'}, mean=True, skipna=True))
+            20.0
             >>> f.get_absolute_freq(group_on=['lexeme'])
             lexeme
             k    193.0
@@ -358,6 +358,16 @@ class Frequencies(object):
             setattr(self, data, _selector(mapping))
         else:
             return _selector(mapping)
+
+    def has_frequencies(self, table="forms"):
+        """
+        Returns True if the requested contains real frequencies.
+
+        Parameters:
+            table (str): name of the table to test.
+        """
+
+        return self.source[table] != "empty"
 
     def info(self):
         """Returns a convenient DataFrame with summary statistics.

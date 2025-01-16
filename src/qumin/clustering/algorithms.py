@@ -30,7 +30,7 @@ def log_classes(classes, md, suffix):
                        + ", ".join(classes[m]))
 
 
-def hierarchical_clustering(patterns, Clusters, **kwargs):
+def hierarchical_clustering(patterns, paradigms, Clusters, **kwargs):
     """Perform hierarchical clustering on patterns according to a clustering algorithm and a measure.
 
     This function ::
@@ -49,7 +49,8 @@ def hierarchical_clustering(patterns, Clusters, **kwargs):
     Scoring, finding the best merges, merging nodes depends on the Clusters class.
 
     Arguments:
-        patterns (:class:`pandas:pandas.DataFrame`): a dataframe of strings representing alternation patterns.
+        patterns (patterns.ParadigmPatterns): alternation patterns
+        paradigms (paradigms.Paradigms): paradigms of forms
         Clusters : a cluster class to use in clustering.
         clustering_algorithm (Callable): a clustering algorithm.
         kwargs: any keywords arguments to pass to Clusters. Some keywords are mandatory :
@@ -57,9 +58,9 @@ def hierarchical_clustering(patterns, Clusters, **kwargs):
     """
 
     # Clustering
-    microclasses = find_microclasses(patterns)
+    microclasses = find_microclasses(paradigms, patterns)
 
-    clusters = Clusters(microclasses, paradigms=patterns, **kwargs)
+    clusters = Clusters(microclasses, patterns, **kwargs)
     while len(clusters.nodes) > 1:
         log.info("number of classes = %s", len(clusters.nodes))
         possible_merges = clusters.find_ordered_merges()

@@ -11,38 +11,56 @@ import pandas as pd
 
 from .clustering import find_microclasses
 from .lattice.lattice import ICLattice
-from .representations import segments, patterns
+from .representations import segments
+from .representations.paradigms import Paradigms
+from .representations.patterns import ParadigmPatterns
+from .utils import get_cells
 
 log = logging.getLogger()
 
 
 def lattice_command(cfg, md):
     r"""Infer Inflection classes as a lattice from alternation patterns."""
-
     # Loading files and paths
-    patterns_file_path = cfg.patterns
-    comp = None
+    patterns_folder_path = cfg.patterns
+    defective = cfg.pats.defective
+    overabundant = cfg.pats.overabundant
+    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
 
-    if cfg.pats.ortho:
-        log.info("Reading patterns...")
-        pat_table = pd.read_csv(patterns_file_path[0], index_col=0)
-        collections = False
-    else:
-        # Initializing segments
-        log.info("Initializing segments...")
-        sounds_file_name = md.get_table_path("sounds")
-        segments.Inventory.initialize(sounds_file_name)
+    # Initializing segments
+    sounds_file_name = md.get_table_path("sounds")
+    segments.Inventory.initialize(sounds_file_name)
 
-        log.info("Reading patterns...")
-        pat_table, _ = patterns.from_csv(patterns_file_path[0])
-        collections = True
+    # Loading paradigms
+    paradigms = Paradigms(md.dataset,
+                          defective=defective,
+                          overabundant=overabundant,
+                          merge_cols=cfg.entropy.merged,
+                          segcheck=True,
+                          cells=cells,
+                          pos=cfg.pos,
+                          force=cfg.force,
+                          sample=cfg.sample,
+                          sample_kws=dict(force_random=cfg.force_random,
+                                          seed=cfg.seed),
+                          )
 
-    microclasses = find_microclasses(pat_table.map(str))
+    # Loading Patterns
+    patterns = ParadigmPatterns()
+    patterns.from_file(patterns_folder_path,
+                       paradigms.data,
+                       defective=defective,
+                       overabundant=overabundant,
+                       force=cfg.force,
+                       )
 
+    for pair in patterns:
+        patterns[pair].loc[:, "pattern"] = patterns[pair].loc[:, "pattern"].map(str)
+
+    microclasses = find_microclasses(paradigms, patterns)
     log.info("Building the lattice...")
-    lattice = ICLattice(pat_table.loc[list(microclasses), :], microclasses,
-                        overabundant=collections,
-                        comp_prefix=comp,
+    incidence_table = patterns.incidence_table(microclasses)
+    lattice = ICLattice(incidence_table, microclasses,
                         aoc=cfg.lattice.aoc,
                         keep_names=(not cfg.lattice.shorten))
 

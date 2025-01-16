@@ -63,95 +63,26 @@ def _node_to_label_IC(node, comp=None, **kwargs):
     return ""
 
 
-def to_dummies_overabundant(table, **kwargs):
-    """Make a context table from a dataframe, where cells can be overabundant.
-
-    Overabundant entries are given as either ";" separated strings or as
-     :class:`qumin.representations.patterns.PatternCollection` objects
-
-    Arguments:
-        table (:class:`pandas:pandas.DataFrame`): A dataframe of patterns or strings
-
-    Returns:
-        dummies (:class:`pandas:pandas.DataFrame`): A context table.
-    """
-    dic_dummies = defaultdict(dict)
-
-    for l in table.index:
-        for col in table.columns:
-            values = table.at[l, col]
-            if values is not None:
-                if type(values) is str:
-                    for val in values.split(";"):
-                        if val:
-                            key = col + "=" + str(val)
-                            dic_dummies[key][l] = "X"
-                else:  # assuming this is a pattern collection
-                    c1, c2 = col
-                    for p in values.collection:
-                        if p:
-                            key = str(c1) + "~" + str(c2) + "=" + str(p)
-                            dic_dummies[key][l] = "X"
-
-    dummies = pd.DataFrame(dic_dummies)
-    dummies.fillna("", inplace=True)
-
-    return dummies.loc[table.index, :]
-
-
-def table_to_context(dataframe, dummy_formatter=None, keep_names=True,
-                     col_formatter=None, na_value=None, overabundant=False):
-    """ Create a Context from a dataframe of properties.
-
-    Args:
-        dataframe (:class:`pandas:pandas.DataFrame`): A dataframe
-        dummy_formatter (Callable): Function to make dummies from the table. (default to panda's)
-        keep_names (bool): whether to keep original column names when dropping duplicate dummy columns.
-        col_formatter (Callable): Function to format columns in the context table.
-        na_value : A value tu use as "Na". Defaults to `None`
-        overabundant (bool): Whether the table has overabundant cells (these should be
-            given as either ";" separated strings or
-            :class:`qumin.representations.patterns.PatternCollection` objects).
-
-    Returns:
-        concepts.Context: the created Context
-    """
-    if na_value is not None:
-        dataframe = dataframe.map(lambda x: None if x == na_value else x)
-    if overabundant:
-        dummies = to_dummies_overabundant(dataframe, keep_names=keep_names)
-    elif dummy_formatter:
-        dummies = dummy_formatter(dataframe)
-    else:
-        dummies = pd.get_dummies(dataframe, prefix_sep="=")
-        dummies = dummies.map(lambda x: "X" if x == 1 else "")
-    if col_formatter:
-        dummies.columns = col_formatter(dummies.columns)
-    context_str = dummies.to_csv()
-    return Context.fromstring(context_str, frmat='csv')
-
-
 class ICLattice(object):
     """Inflection Class Lattice.
 
     This is a wrapper around (:class:`concepts.Context`).
     """
 
-    def __init__(self, dataframe, leaves, annotate=None, comp_prefix=None, aoc=False,
+    def __init__(self, incidence_table, leaves, annotate=None, comp_prefix=None, aoc=False,
                  **kwargs):
         """
         Arguments:
-            dataframe (:class:`pandas:pandas.DataFrame`): A dataframe
+            patterns (patterns.ParadigmPatterns): patterns
             leaves (dict): Dictionnaire de microclasses
             annotate (dict): Extra annotations to add on lattice.
                 Of the form: {<object label>:<annotation>}
-            comp_prefix (str): If there are two sets of properties, the prefix used to distinguish column names.
             aoc (bool): Whether to limit ourselves to Attribute or Object Concepts.
             kwargs: all other keyword arguments are passed to table_to_context
         """
 
         self.comp = comp_prefix  # whether there are two sets of properties.
-        self.context = table_to_context(dataframe, **kwargs)
+        self.context = Context.fromstring(incidence_table.to_csv(), frmat='csv')
         self.lattice = self.context.lattice
         if annotate:
             for label in annotate:

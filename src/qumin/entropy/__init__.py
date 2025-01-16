@@ -41,7 +41,7 @@ def cond_P(A, B, subset=None):
 
 
 def cond_entropy(A, B, **kwargs):
-    """Calculate the conditional entropy between two series of data points.
+    """Calculate the conditional entropy of A knowing B, two series of data points.
        Presupposes that values in the series are of the same type, typically tuples.
 
     Arguments:

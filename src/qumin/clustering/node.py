@@ -204,7 +204,8 @@ class Node(object):
                 if i != j:
                     a1 = ancestors[tuple(leaf.labels)]
                     a2 = ancestors[tuple(leaf2.labels)]
-                    jaccard = len(a1 & a2) / len(a1 | a2)
+                    united = a1 | a2
+                    jaccard = len(a1 & a2) / len(united) if united else 0
                     similarities[i, j] = similarities[j, i] = jaccard
 
         paths = {i: [i] for i in range(li)}
@@ -244,7 +245,7 @@ class Node(object):
 
     def __repr__(self):
         rules = [
-            str(node.labels) + " -> " + " ".join(str(c.labels) for c in sorted(node.children, key=lambda x: x.labels))
+            str(node.labels) + " -> " + " ".join(str(c.labels) for c in sorted(node.children, key=lambda x: x.labels)) if node.children else str(node.labels)
             for
             node in self]
         return "\n".join(sorted(rules))
@@ -291,7 +292,7 @@ class Node(object):
             "{}={}".format(key, str(self.attributes[key]).replace(" ", "_")) for key in
             sorted(self.attributes) if
             key not in ignore)
-        children_str = [repr(child) for child in self.children]
+        children_str = [child.tree_string() for child in self.children]
         string = "(" + labels + "#" + attributes + " ".join([""] + children_str) + " )"
 
         return string
