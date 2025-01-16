@@ -123,7 +123,7 @@ html_theme = "sphinx_immaterial"
 # documentation.
 html_theme_options = {
     'repo_url': "https://github.com/XachaB/Qumin",
-    "palette": {"primary": "grey", "accent": "orange"},
+    "palette": { "primary": "grey" , "accent": "orange"},
 }
 
 # The name for this set of Sphinx documents.  If None, it defaults to
