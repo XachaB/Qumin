@@ -10,6 +10,9 @@ dev version (forthcoming)
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Adds a Frequency class able to handle multiple paralex sources for frequencies.
 - Switch patterns management to long format everywhere
+- Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
+- Change management of sampling: `most_freq=False` replaced by `force_random=True`.
+    Addition of a seed option to determinise sampling.  By default, sample by frequency.
 - Removal:
     - Support for sound table "Seg." column.
     - Bipartite entropy computations
