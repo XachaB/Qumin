@@ -207,7 +207,8 @@ def ent_heatmap_command(cfg, md):
         features_file_name = md.get_table_path("features-values")
     except FrictionlessException:
         features_file_name = None
-        log.warning("Your package doesn't contain any features-values file. You should provide an ordered list of cells in command line.")
+        log.warning("Your package doesn't contain any features-values file. "
+                    "You should provide an ordered list of cells in command line.")
 
     feat_order = get_features_order(features_file_name, results, cfg.heatmap.order)
 

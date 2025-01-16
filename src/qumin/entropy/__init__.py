@@ -62,4 +62,8 @@ def entropy(A):
 
     Return:
         H(A)"""
-    return -(A * np.log2(A)).sum()
+
+    # np.where avoids divide by zero when A == 0
+    # np.log is still evaluated, so we wrap it in a tolerant context.
+    with np.errstate(divide='ignore'):
+        return -(A * np.where(A > 0, np.log2(A), 0)*A).sum()
