@@ -11,52 +11,37 @@ from functools import reduce
 from itertools import combinations
 
 import pandas as pd
-from tqdm import tqdm
 
 from . import cond_entropy, entropy
 
 log = logging.getLogger("Qumin")
 
 
-def value_norm(df):
-    """ Rounding at 10 significant digits, avoiding negative 0s"""
-    return df.map(lambda x: round(x, 10)) + 0
-
-
-def merge_split_df(dfs):
-    merged = {col: reduce(lambda x, y: x + y, [df[col] for df in dfs])
-              for col in dfs[0].columns}
-    return pd.DataFrame(merged, index=dfs[0].index, columns=dfs[0].columns)
-
-
-def dfsum(df, **kwargs):
-    cols = df.columns
-    S = df[cols[0]]
-    for col in cols:
-        S += df[col]
-    return S
-
-
 class PatternDistribution(object):
     """Statistical distribution of patterns.
 
     Attributes:
-        patterns (:class:`pandas:pandas.DataFrame`):
-            A table where each row describes an alternation between
+        patterns (~qumin.representations.patterns.ParadigmPatterns):
+            A dict of :class:`pandas.DataFrame`, where each row describes an alternation between
             two cells forms belonging to different cells of the same lexeme.
             The row also contains the correct pattern and the set of applicable patterns.
 
-        entropies (dict[int, pandas.DataFrame]):
+        data (dict[int, pandas.DataFrame]):
             dict mapping n to a dataframe containing the entropies
             for the distribution :math:`P(c_{1}, ..., c_{n} → c_{n+1})`.
+
+        name (str):
+            Name of the dataset.
     """
 
     def __init__(self, patterns, name, features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
-            patterns (:class:`pandas:pandas.DataFrame`):
-                Table containing forms and patterns.
+            patterns (~qumin.representations.patterns.ParadigmPatterns):
+                A dict of :class:`pandas.DataFrame`, where each row describes an alternation between
+                two cells forms belonging to different cells of the same lexeme.
+                The row also contains the correct pattern and the set of applicable patterns.
             name (str): dataset name.
             features:
                 optional table of features
@@ -86,12 +71,23 @@ class PatternDistribution(object):
                                           ])
 
     def get_results(self, measure="cond_entropy", n=1):
+        """
+        Returns computation results from a distribution of patterns.
+
+        Arguments:
+            measure (str): measure name.
+            n (int): number of predictors
+
+        Returns:
+            pandas.DataFrame: a DataFrame of results.
+
+        """
         is_cond_ent = self.data.loc[:, "measure"] == measure
         is_one_pred = self.data.loc[:, "n_preds"] == n
         return self.data.loc[is_cond_ent & is_one_pred, :]
 
     def export_file(self, filename):
-        """ Export the data DataFrame to file
+        """ Export the :attr:`PatternDistribution.data` DataFrame to file
 
         Arguments:
             filename: the file's path.
@@ -105,7 +101,8 @@ class PatternDistribution(object):
         data = self.data.copy()
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
         if "entropy" in data.columns:
-            data.loc[:, "entropy"] = value_norm(data.loc[:, "entropy"])
+            # Rounding at 10 significant digits, ensuring positive zeros.
+            data.loc[:, "entropy"] = data.loc[:, "entropy"].map(lambda x: round(x, 10)) + 0
         data.to_csv(filename, index=False)
 
     def import_file(self, filename):
@@ -125,6 +122,13 @@ class PatternDistribution(object):
         self.data = pd.concat(self.data, data)
 
     def add_features(self, group):
+        """
+        Adds lexeme features if available to a DataFrame containing a column named "applicable"
+        and lexemes as indexes.
+
+        Arguments:
+            group (pandas.DataFrame): a dataframe of lexemes and applicable patterns.
+        """
         if self.features:
             ret = group.applicable + group.lexeme.map(self.features)
             return ret
@@ -133,7 +137,14 @@ class PatternDistribution(object):
 
     def prepare_data(self, n=1, debug=False):
         """
-        Prepares the dataframe to store the results for an entropy computation
+        Prepares the dataframe to store the results for an entropy computation.
+
+        Attributes:
+            n (int): number of predictors to consider
+            debug (bool): Whether the computation is a standard one or a debug one.
+        Returns:
+            pandas.DataFrame: a dataframe with the predictors and the predicted cells,
+                as well as some metadata.
         """
         rows = self.patterns.cells
         idx = ["&".join(x) for x in combinations(rows, n)]
@@ -157,9 +168,9 @@ class PatternDistribution(object):
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
 
-        Values are computed for all unordered combinations
-        of :math:`(c_{1}, c_{2})` where `c_{1} != c_{2}`
-        in the :attr:`PatternDistribution.paradigms`'s columns.
+        Values are computed for all unordered pairs
+        of columns :math:`(c_{1}, c_{2})` where `c_{1} != c_{2}`
+        in the :attr:`PatternDistribution.patterns`'s keys.
 
         Example:
             For two cells c1, c2, entropy of c1 → c2,
@@ -168,6 +179,9 @@ class PatternDistribution(object):
             .. math::
 
                 H( patterns_{c1, c2} | classes_{c1, c2} )
+
+        Arguments:
+            debug (bool): Whether to print a debug log. Defaults to False
         """
         log.info("Computing c1 → c2 entropies")
         log.debug("Logging one predictor probabilities")
@@ -209,8 +223,7 @@ class PatternDistribution(object):
 
         Writes down the distributions
         :math:`P( patterns_{c1, c2} | classes_{c1, c2} )`
-        for all unordered combinations of two column
-        names in :attr:`PatternDistribution.paradigms`.
+        for all unordered pairs of columns in :attr:`.patterns`.
         Also writes the entropy of the distributions.
         """
 
@@ -276,29 +289,15 @@ class PatternDistribution(object):
         return sum_entropy
 
     def n_preds_entropy(self, n, paradigms, debug=False):
-        r"""Return a:class:`pandas:pandas.DataFrame` with nary entropies, and one with counts of lexemes.
+        r"""
+        Wrapper to prepare the computation of nary entropies.
 
-        The result contains entropy :math:`H(c_{1}, ..., c_{n} \to c_{n+1} )`.
-
-        Values are computed for all unordered combinations of
-        :math:`(c_{1}, ..., c_{n+1})` in the
-        :attr:`PatternDistribution.paradigms`'s columns.
-        Indexes are tuples :math:`(c_{1}, ..., c_{n})`
-        and columns are the predicted cells :math:`c_{n+1}`.
-
-        Example:
-            For three cells c1, c2, c3, (n=2)
-            entropy of c1, c2 → c3,
-            noted :math:`H(c_{1}, c_{2} \to c_{3})` is:
-
-        .. math::
-
-            H( patterns_{c1, c3}, \; \; patterns_{c2, c3}\; \;
-            | classes_{c1, c3}, \; \; \; \;
-            classes_{c2, c3}, \; \;  patterns_{c1, c2} )
+        Loops through the cells and runs the computations for every set of predictors.
 
         Arguments:
             n (int): number of predictors.
+            paradigms (pandas.DataFrame): a DataFrame of paradigms
+            debug (bool): Whether to run a debug computation with full log. Defaults to False.
         """
 
         def check_zeros(n):
@@ -347,8 +346,44 @@ class PatternDistribution(object):
         self.data = pd.concat([self.data, data])
 
     def n_preds_condent(self, df, paradigms, pat_order, zeros, n):
-        # combinations gives us all x, y unordered unique pair for all of
-        # the n predictors.
+        r"""
+        Computes the probability distribution for n predictors.
+
+        Writes down the distributions:
+
+        .. math::
+
+            P( patterns_{c1, c3}, \; \; patterns_{c2, c3} \; \;  |
+               classes_{c1, c3}, \; \; \; \;  classes_{c2, c3},
+               \; \;  patterns_{c1, c2} )
+
+        The result contains entropy :math:`H(c_{1}, ..., c_{n} \\to c_{n+1} )`.
+
+        Values are computed for all unordered combinations of
+        :math:`(c_{1}, ..., c_{n+1})` in the
+        :attr:`paradigms`'s columns.
+        Indexes are tuples :math:`(c_{1}, ..., c_{n})`
+        and columns are the predicted cells :math:`c_{n+1}`.
+
+        Example:
+            For three cells c1, c2, c3, (n=2)
+            entropy of c1, c2 → c3,
+            noted :math:`H(c_{1}, c_{2} \to c_{3})` is:
+
+        .. math::
+
+            H( patterns_{c1, c3}, \; \; patterns_{c2, c3}\; \;
+            | classes_{c1, c3}, \; \; \; \;
+            classes_{c2, c3}, \; \;  patterns_{c1, c2} )
+
+        Arguments:
+            n (int): number of predictors.
+            df (pandas.DataFrame): a DataFrame containing patterns and applicable patterns for pairs of forms.
+            paradigms (pandas.DataFrame): a DataFrame of paradigms.
+            pat_order (dict): a dictionary to normalize cell names.
+            zeros (dict): a dictionary of pairs that lead to an entropy of zero.
+            n (int): number of predictors
+        """
 
         def already_zero(predictors, out, zeros):
             for preds_subset in combinations(predictors, n - 1):
@@ -373,6 +408,13 @@ class PatternDistribution(object):
             .sum(axis=1)
 
         def row_condent(x):
+            """
+            Computes the conditional entropy for a given set of predictors
+            and a target.
+
+            Arguments:
+                x (pandas.Series): a Series containing information for the computation.
+            """
             out = x.predicted
             outlexemes = paradigms[(paradigms.cell == out) &
                                    ~(paradigms.form.apply(lambda x: x.is_defective()))]
@@ -408,7 +450,9 @@ class PatternDistribution(object):
         return df.apply(row_condent, axis=1)
 
     def n_preds_condent_log(self, df, paradigms, pat_order, n):
-        r"""Print a log of the probability distribution for n predictors.
+        r"""
+        Computes the probability distribution for n predictors
+        and logs the details of the computations.
 
         Writes down the distributions:
 
@@ -418,11 +462,31 @@ class PatternDistribution(object):
                classes_{c1, c3}, \; \; \; \;  classes_{c2, c3},
                \; \;  patterns_{c1, c2} )
 
-        for all unordered combinations of two column names
-        in :attr:`PatternDistribution.paradigms`.
+        The result contains entropy :math:`H(c_{1}, ..., c_{n} \to c_{n+1} )`.
+
+        Values are computed for all unordered combinations of
+        :math:`(c_{1}, ..., c_{n+1})` in the
+        :attr:`paradigms`'s columns.
+        Indexes are tuples :math:`(c_{1}, ..., c_{n})`
+        and columns are the predicted cells :math:`c_{n+1}`.
+
+        Example:
+            For three cells c1, c2, c3, (n=2)
+            entropy of c1, c2 → c3,
+            noted :math:`H(c_{1}, c_{2} \to c_{3})` is:
+
+        .. math::
+
+            H( patterns_{c1, c3}, \; \; patterns_{c2, c3}\; \;
+            | classes_{c1, c3}, \; \; \; \;
+            classes_{c2, c3}, \; \;  patterns_{c1, c2} )
 
         Arguments:
             n (int): number of predictors.
+            df (pandas.DataFrame): a DataFrame containing patterns and applicable patterns for pairs of forms.
+            paradigms (pandas.DataFrame): a DataFrame of paradigms.
+            pat_order (dict): a dictionary to normalize cell names.
+            n (int): number of predictors
         """
 
         def count_with_examples(row, counter, examples, paradigms, pred, out):

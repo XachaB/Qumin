@@ -837,6 +837,9 @@ class Pattern(object):
 class ParadigmPatterns(dict):
     """
     This class stores alternation patterns computed for a paradigm.
+
+    Arguments:
+        cells (list[str]): cells for which patterns are registered.
     """
 
     def __init__(self, *args, **kwargs):
@@ -906,7 +909,13 @@ class ParadigmPatterns(dict):
         return f"ParadigmPatterns({', '.join([a + '~' + b for a, b in dict.keys(self)])})"
 
     def export(self, md, kind, optim_mem=False):
-        """ Export dataframes to a folder"""
+        """
+        Export dataframes to a folder for later use.
+
+        Arguments:
+            kind (str): type of patterns (phon or edits).
+            optim_mem (bool): Whether to not export human readable patterns too. Defaults to False.
+        """
 
         # Create pattern map
         pattern_list = set()
