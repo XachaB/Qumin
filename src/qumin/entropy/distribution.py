@@ -109,8 +109,34 @@ class PatternDistribution(object):
 
         return results.loc[:, "value"].mean()
 
-    def _get_weights(self, data):
-        """ Returns weights computed from cell frequencies
+    def get_weights(self, data):
+        r""" Returns weights computed from cell frequencies for pairs of cells.
+        As predictions are oriented, we take order into account.
+
+        The probability of a pair of cells will be:
+            .. math::
+
+                \begin{align}
+                P(A, B) &=
+                P(A)P(B\mid A)\\
+                P(A, B) &=
+                \frac{f_A}{f} \times \frac{f_B}{f_\bar{A}}
+                \end{align}
+
+        The probability with n predictors will be:
+            .. math::
+
+                \begin{align}
+                P(\{A_1, \dots A_n\}, B) &=
+                P(\{A_1, \dots A_n\})P(B\mid \{A_1, \dots A_n\})\\
+                P(\{A_1, \dots A_n\}, B) &=
+                \Big[\big(\frac{f_{A_1}}{f} \times \frac{f_{A_2}}{f_\bar{A_1}} \dots \big)
+                + \big(\frac{f_{A_2}}{f} \times \frac{f_{A_1}}{f_\bar{A_2}} \dots \big)\Big]
+                \times \frac{f_B}{f_\bar{\{A_1, \dots A_n\}}}
+                \end{align}
+
+        Notice that although the tuple is oriented the set of predictors is not, which is why
+        we need to sum the probabilities of all ordered combinations of predictors.
 
         Returns:
             an array of weights (:class:`numpy:numpy.ndarray`)
@@ -127,7 +153,9 @@ class PatternDistribution(object):
             orders = permutations(preds)
             p_pred = 0
 
-            # Compute the probability of each permutation and sum them
+            # For multiple predictors, we need to compute the probability
+            # of the unordered set of predictors, which is the sum
+            # of the probabilities of all ordered sets.
             for order in orders:
                 used = []
                 p_order = 1
@@ -139,7 +167,8 @@ class PatternDistribution(object):
                     used.append(pred)
                 p_pred += p_order
 
-            # Probability of predicting the target cell among the cells other than the predictors
+            # The probability of predicting the target cell
+            # among the cells other than the predictors
             out = row['predicted']
             p_out = cell_freq.loc[out, 'result'] \
                 / cell_freq.loc[~cell_freq.index.isin(preds), "result"].sum()
@@ -165,7 +194,7 @@ class PatternDistribution(object):
 
         data = self.data.copy()
         if weighting:
-            weight = self._get_weights(data)
+            weight = self.get_weights(data)
             if weight is not None:
                 data.loc[:, 'weight'] = weight.round(5)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
@@ -188,7 +217,7 @@ class PatternDistribution(object):
 
         data = pd.read_csv(filename)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(split_if_multiple)
-        self.concat_data(data)
+        self.add_measures(data)
 
     def add_features(self, group):
         """
@@ -204,7 +233,7 @@ class PatternDistribution(object):
         else:
             return group.applicable
 
-    def concat_data(self, *args, **kwargs):
+    def add_measures(self, *args, **kwargs):
         """ Adds data to the existing measures.
 
         Arguments:
@@ -292,7 +321,7 @@ class PatternDistribution(object):
                                                                 pair,
                                                                 subset=selector)
 
-        self.concat_data(data.reset_index())
+        self.add_measures(data.reset_index())
 
     def cond_entropy_log(self, group, classes, cells, subset=None):
         """Print a log of the probability distribution for one predictor.
@@ -419,7 +448,7 @@ class PatternDistribution(object):
                 )
 
         # Add to previous results
-        self.concat_data(data.reset_index(drop=True))
+        self.add_measures(data.reset_index(drop=True))
 
     def n_preds_condent(self, df, paradigms, pat_order, zeros, n):
         r"""
