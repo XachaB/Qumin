@@ -8,7 +8,6 @@ from pathlib import Path
 
 import hydra
 from frictionless import Package
-from paralex import read_table
 
 from .. import __version__
 
@@ -138,34 +137,6 @@ def get_version():
         (str): svn/git version or ''.
      """
     return __version__
-
-
-def get_cells(cells, pos, package):
-    """
-    Returns a list of usable cells based on CLI arguments.
-
-    Arguments:
-        cells (list): A list of cells
-        pos (str): A POS to consider
-    """
-    if cells and pos:
-        raise ValueError("You can't specify both cells and POS.")
-    elif cells:
-        if cells and len(cells) == 1:
-            raise ValueError("You can't provide only one cell.")
-        return cells
-    elif pos:
-        if 'cells' in package.resource_names:
-            table = read_table('cells', package)
-            if 'POS' not in table.columns:
-                log.warning('No POS column in the cells table. The POS filtering will be applied to lexemes only')
-            if isinstance(pos, str):
-                pos = [pos]
-            cells = table.loc[table['POS'].isin(pos), 'cell_id']
-            return cells
-        else:
-            log.warning('No cells table. The POS filtering will be applied to lexemes only')
-            return None
 
 
 def memory_check(df, factor, max_gb=2, force=False):

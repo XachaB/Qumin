@@ -23,7 +23,6 @@ from .clustering import algorithms, descriptionlength, find_min_attribute
 from .representations import segments
 from .representations.paradigms import Paradigms
 from .representations.patterns import ParadigmPatterns
-from .utils import get_cells
 
 log = logging.getLogger()
 
@@ -34,7 +33,6 @@ def macroclasses_command(cfg, md):
     patterns_folder_path = cfg.patterns
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
-    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
 
     # Initializing segments
     sounds_file_name = md.get_table_path("sounds")
@@ -43,12 +41,14 @@ def macroclasses_command(cfg, md):
     # Loading paradigms
     paradigms = Paradigms(md.dataset, defective=defective, overabundant=overabundant,
                           merge_cols=cfg.entropy.merged,
-                          segcheck=True, cells=cells, pos=cfg.pos,
-                          sample=cfg.sample,
-                          most_freq=cfg.most_freq,
+                          segcheck=True,
+                          cells=cfg.cells,
+                          pos=cfg.pos,
                           force=cfg.force,
+                          sample_lexemes=cfg.sample_lexemes,
+                          sample_cells=cfg.sample_cells,
                           sample_kws=dict(force_random=cfg.force_random,
-                                          seed=cfg.seed)
+                                          seed=cfg.seed),
                           )
 
     # Loading Patterns

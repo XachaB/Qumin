@@ -14,7 +14,6 @@ from .lattice.lattice import ICLattice
 from .representations import segments
 from .representations.paradigms import Paradigms
 from .representations.patterns import ParadigmPatterns
-from .utils import get_cells
 
 log = logging.getLogger()
 
@@ -25,7 +24,6 @@ def lattice_command(cfg, md):
     patterns_folder_path = cfg.patterns
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
-    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
 
     # Initializing segments
     sounds_file_name = md.get_table_path("sounds")
@@ -37,10 +35,11 @@ def lattice_command(cfg, md):
                           overabundant=overabundant,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
-                          cells=cells,
+                          cells=cfg.cells,
                           pos=cfg.pos,
                           force=cfg.force,
-                          sample=cfg.sample,
+                          sample_lexemes=cfg.sample_lexemes,
+                          sample_cells=cfg.sample_cells,
                           sample_kws=dict(force_random=cfg.force_random,
                                           seed=cfg.seed),
                           )
