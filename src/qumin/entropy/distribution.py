@@ -9,10 +9,10 @@ import logging
 from collections import Counter, defaultdict
 from functools import reduce
 from itertools import combinations, permutations
-from ..representations.frequencies import Frequencies
-
+from operator import mul
 import pandas as pd
 
+from ..representations.frequencies import Frequencies
 from . import cond_entropy, entropy
 
 log = logging.getLogger("Qumin")
@@ -102,41 +102,93 @@ class PatternDistribution(object):
 
         # Try to weight
         if weighting:
-            weight = self._get_weights(results)
+            data = self.get_weights(results)
             # Check that we got weight
-            if weight is not None:
-                return (weight * results.value).sum()
+            if data is not None:
+                return (data.weight * data.value).sum()
 
         return results.loc[:, "value"].mean()
 
     def get_weights(self, data):
         r""" Returns weights computed from cell frequencies for pairs of cells.
-        As predictions are oriented, we take order into account.
 
-        The probability of a pair of cells will be:
+        *The probability of a pair of cells is the product of the probability of the predictors
+        with the probability of the target. The target is chosen different from the predictors.*
+
+        Let :math:`\{A_1, \dots A_n\}` be the random variables describing
+        the drawing of :math:`n` predictors
+        and :math:`B` the random variable describing the drawing of a target cell.
+
+        One can write the following generic formula and rewrite it with Bayes' theorem:
+            .. math::
+                \begin{align}
+                P(\textrm{pred} \to \textrm{target}) &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                P(B = \textrm{target}\mid B \notin \textrm{pred})\\
+                &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                \frac{P(B = \textrm{target}\cap B \notin \textrm{pred})}{P(B \notin \textrm{pred})}
+                \end{align}
+
+        Since :math:`B = \textrm{target} \subset B \notin \textrm{pred}`, one can write:
+            .. math::
+                \begin{align}
+                P(\textrm{pred} \to \textrm{target}) &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                \frac{P(B = \textrm{target})}{P(B \notin \textrm{pred})}\\
+                &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                \frac{P(B = \textrm{target})}{1 - \sum_{a\in \textrm{pred}}P(a)}
+                \end{align}
+
+        We now need to estimate :math:`P(\textrm{pred})` and :math:`P(\textrm{target})`.
+        Let :math:`f_i` be the frequency of cell :math:`i` and
+        :math:`f` the cumulated frequency of all cells.
+
+        In the simplest case with **one predictor**, the formula can be simplified to:
             .. math::
 
                 \begin{align}
-                P(A, B) &=
-                P(A)P(B\mid A)\\
-                P(A, B) &=
-                \frac{f_A}{f} \times \frac{f_B}{f_\bar{A}}
+                P(\textrm{pred} \to \textrm{target}) &= P(A = \textrm{pred})
+                \frac{P(B = \textrm{target})}{P(B \neq \textrm{pred})}\\
+                &= \frac{f_\textrm{pred} f_\textrm{target}}{f f_\overline{\textrm{pred}}}
                 \end{align}
 
-        The probability with n predictors will be:
+        In the more complex case with **n predictor**, we need to estimate
+        :math:`P(\{A_1, \dots A_n\} = \textrm{pred})`.
+
+        Let us consider:
+
+        - :math:`S` the set of all cells,
+        - :math:`C^n_S` the set of all unordered combinations of :math:`k` cells.
+
+        For instance, if :math:`S=\{A, B, C\}` and :math:`n=2`, then:
+            .. math::
+
+                C^n_S = \{\{A, B\}, \{A, C\}, \{B, C\}\}
+
+        If we draw random combinations of :math:`n` cells,
+        how often are we going to draw each item of :math:`C^k_S`?
+
+        This value is:
             .. math::
 
                 \begin{align}
-                P(\{A_1, \dots A_n\}, B) &=
-                P(\{A_1, \dots A_n\})P(B\mid \{A_1, \dots A_n\})\\
-                P(\{A_1, \dots A_n\}, B) &=
-                \Big[\big(\frac{f_{A_1}}{f} \times \frac{f_{A_2}}{f_\bar{A_1}} \dots \big)
-                + \big(\frac{f_{A_2}}{f} \times \frac{f_{A_1}}{f_\bar{A_2}} \dots \big)\Big]
-                \times \frac{f_B}{f_\bar{\{A_1, \dots A_n\}}}
+                P(\{A_1, \dots A_n\} = \textrm{pred}) &= \frac{n!\prod_{a\in \textrm{pred}}P(a)}
+                {\sum_{c\in C_S^n} n! \prod_{a\in c}P(a)} \\
+                &= \frac{\prod_{a\in \textrm{pred}} f_a}{\sum_{c\in C_S^n} \prod_{a\in c}f_a}
                 \end{align}
 
-        Notice that although the tuple is oriented the set of predictors is not, which is why
-        we need to sum the probabilities of all ordered combinations of predictors.
+        Finally:
+            .. math::
+
+                \begin{align}
+                P(\textrm{pred} \to \textrm{target}) &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                \frac{P(B = \textrm{target})}{1 - \sum_{a\in \textrm{pred}}P(a)}\\
+                &= \frac{f_\textrm{target}}{f}\Big(\frac{\prod_{a\in \textrm{pred}} f_a}
+                {\sum_{c\in C_S^n} \prod_{a\in c}f_a
+                \times (1-\sum_{a\in \textrm{pred}}\frac{f_a}{f})}\Big)
+                \end{align}
+
+        Notice that the second part of the final formula does not depend on :math:`B` and can
+        be computed for the predictors beforehand. We then compute the product of this with
+        the relative frequency of the target cell.
 
         Returns:
             an array of weights (:class:`numpy:numpy.ndarray`)
@@ -146,37 +198,28 @@ class PatternDistribution(object):
                         "Falling back on weighting by the number of pairs.")
             return None
 
-        def compute_weight(row):
-            preds = tuple(row['predictor'].split('&'))
-            if isinstance(preds, str):
-                preds = (preds,)
-            orders = permutations(preds)
-            p_pred = 0
+        def compute_weight(x, freq):
+            """
+            For each group of predictors, compute the constant value.
+            Make then the product with the target frequency.
+            """
+            preds = x.name.split('&')
+            is_pred = freq.index.isin(preds)
 
-            # For multiple predictors, we need to compute the probability
-            # of the unordered set of predictors, which is the sum
-            # of the probabilities of all ordered sets.
-            for order in orders:
-                used = []
-                p_order = 1
-                # Probability of an ordered set of predictors
-                for pred in order:
-                    remain = ~cell_freq.index.isin(used)
-                    p_order *= cell_freq.loc[pred, 'result']\
-                        / cell_freq.loc[remain, "result"].sum()
-                    used.append(pred)
-                p_pred += p_order
-
-            # The probability of predicting the target cell
-            # among the cells other than the predictors
-            out = row['predicted']
-            p_out = cell_freq.loc[out, 'result'] \
-                / cell_freq.loc[~cell_freq.index.isin(preds), "result"].sum()
-            return p_out*p_pred
+            # Probabilities of the combinations of predictors
+            C_sum = sum([reduce(mul, p) for p in combinations(freq.result, len(preds))])
+            # Probabity of our combination of predictors
+            pred_product = reduce(mul, freq.loc[is_pred, 'result'])
+            # Constant part for predictor
+            constant = pred_product / (C_sum * (1 - freq.loc[is_pred, 'result'].sum()))
+            # Vectorized computation for the target
+            x['weight'] = (freq.loc[x.predicted] * constant).values
+            return x
 
         cell_freq = self.frequencies.get_relative_freq(data="cells")
-        weight = data.apply(compute_weight, axis=1)
-        return weight.values
+        data = data.groupby('predictor').apply(compute_weight, cell_freq).reset_index(drop=True)
+        breakpoint()
+        return data
 
     def export_file(self, filename, weighting=False):
         """ Export the data DataFrame to file
@@ -196,7 +239,7 @@ class PatternDistribution(object):
         if weighting:
             weight = self.get_weights(data)
             if weight is not None:
-                data.loc[:, 'weight'] = weight.round(5)
+                data.loc[:, 'weight'] = weight.weight.round(5)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
         if "entropy" in data.columns:
             # Rounding at 10 significant digits, ensuring positive zeros.
