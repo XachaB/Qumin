@@ -218,7 +218,6 @@ class PatternDistribution(object):
 
         cell_freq = self.frequencies.get_relative_freq(data="cells")
         data = data.groupby('predictor').apply(compute_weight, cell_freq).reset_index(drop=True)
-        breakpoint()
         return data
 
     def export_file(self, filename, weighting=False):
