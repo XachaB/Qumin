@@ -105,7 +105,7 @@ class Frequencies(object):
         elif not force_uniform and name == 'forms' and self.p.has_resource("frequencies"):
             log.info('No frequencies in the paradigms table, looking for a frequency table.')
             freq = px.read_table('frequencies', self.p, index_col='freq_id',
-                                 usecols=['form', 'value', 'freq_id'])
+                                 usecols=['freq_id', 'form', 'value', 'source'])
             freq_col = freq.columns
             if "form" not in freq_col:
                 raise ValueError("No form column in the frequency table."
@@ -117,7 +117,7 @@ class Frequencies(object):
                 freq['source'] = 'frequencies_table'
                 self.source['forms'] = 'frequencies_table'
             elif self.source['forms'] is None:
-                self.source['forms'] = list(self.freq['source'].unique())[0]
+                self.source['forms'] = list(freq['source'].unique())[0]
                 log.info(f"No default source provided for frequencies. Using {self.source['forms']}")
 
             # We use the form_id column to match both dataframes
@@ -129,9 +129,9 @@ class Frequencies(object):
                             f"a row for every form_id row."
                             f"Missing:\n{table.loc[missing_idx].head()}")
 
-            table.loc[self.freq.index, 'value'] = freq.value
+            table.loc[freq.index, ['value', 'source']] = freq[['value', 'source']]
 
-        # 3. For cells and lexemes build from the forms table.
+        # 3. For cells and lexemes built from the forms table.
         # TODO read directly from the frequencies table if possible
         elif not force_uniform and name != 'forms' and (self.has_frequencies('forms')):
             log.info(f'{name}: No frequencies in the {name} table, building from the forms table.')
