@@ -104,7 +104,7 @@ class Frequencies(object):
         # 2. For forms, try to read from the frequencies table.
         elif not force_uniform and name == 'forms' and self.p.has_resource("frequencies"):
             log.info('No frequencies in the paradigms table, looking for a frequency table.')
-            freq = px.read_table('frequency', self.p, index_col='freq_id',
+            freq = px.read_table('frequencies', self.p, index_col='freq_id',
                                  usecols=['form', 'value', 'freq_id'])
             freq_col = freq.columns
             if "form" not in freq_col:
