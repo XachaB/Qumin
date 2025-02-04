@@ -46,5 +46,6 @@ desktop.ini
 outputs/
 doc/
 *.egg-info/
+.hypothesis/
 build/
 TODO
