@@ -4,7 +4,7 @@
 import numpy as np
 
 
-def P(x, subset=None):
+def P(x, weights=None, subset=None):
     """Return the probability distribution of elements in a :class:`pandas.core.series.Series`.
 
     Arguments:
@@ -14,6 +14,8 @@ def P(x, subset=None):
     Returns:
         :class:`pandas.core.series.Series`: A Series which index are x's elements and which values are their probability in x.
     """
+    if weights is not None:
+        return weights.groupby(x).sum() / weights.sum()
     if subset is None:
         return x.value_counts(normalize=True, sort=False)
     else:
@@ -63,3 +65,15 @@ def entropy(A):
     Return:
         H(A)"""
     return -(A * np.log2(A)).sum()
+
+
+def cond_entropy_slow(df, subset=None):
+    """
+    Calculate the conditional entropy through a slower method (with iterations across all groups).
+
+    Uses token frequencies to weight the patterns.
+    """
+    def compute_group_ent(group):
+        return entropy(P(group.pattern, weights=group.w_pair)) * group.w_x.sum()
+
+    return 0 + df.groupby('applicable').apply(compute_group_ent).sum() / df.w_x.sum()

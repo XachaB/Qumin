@@ -12,7 +12,8 @@ from itertools import combinations
 
 import pandas as pd
 
-from . import cond_entropy, entropy
+from . import cond_entropy, cond_entropy_slow, entropy
+from ..representations.frequencies import Frequencies
 
 log = logging.getLogger("Qumin")
 
@@ -34,20 +35,22 @@ class PatternDistribution(object):
             Name of the dataset.
     """
 
-    def __init__(self, patterns, name, features=None):
+    def __init__(self, patterns, dataset, features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
             patterns (~qumin.representations.patterns.ParadigmPatterns):
-                A dict of :class:`pandas.DataFrame`, where each row describes an alternation between
-                two cells forms belonging to different cells of the same lexeme.
+                A dict of :class:`pandas.DataFrame`,
+                where each row describes an alternation between
+                forms belonging to two different cells of the same lexeme.
                 The row also contains the correct pattern and the set of applicable patterns.
             name (str): dataset name.
             features:
                 optional table of features
         """
-        self.name = name
+        self.name = dataset.name
         self.patterns = patterns
+        self.frequencies = Frequencies(dataset)
 
         if features is not None:
             # Add feature names
@@ -163,7 +166,7 @@ class PatternDistribution(object):
         data.set_index(['predictor', 'predicted'], inplace=True)
         return data
 
-    def one_pred_entropy(self, debug=False):
+    def one_pred_entropy(self, legacy=False, debug=False, tokens=False):
         r"""Return a :class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
@@ -178,10 +181,28 @@ class PatternDistribution(object):
 
             .. math::
 
-                H( patterns_{c1, c2} | classes_{c1, c2} )
+                H( \textrm{patterns}_{c1, c2} | \textrm{classes}_{c1, c2} )
+
+        The probability distribution of the patterns, on which this entropy
+        is computed, is established eithor on the type or token frequency of
+        the patterns. The probability of the pattern (:math:`p_i`) is the sum
+        of the frequencies of all pairs of forms :math:`(x, y)` that instanciate
+        this pattern (:math:`S_i`):
+
+        .. math ::
+
+            P(p_i) = \frac{\sum_{(x, y)\in S_i} f_x f_y}
+            {\sum_{L \in \mathcal{L}} f_{L_{c_1}} f_{L_{c_2}}}
+
+        Where :math:`\mathcal{L}` is the set of all lexemes and :math:` f_{L_{c_1}}`
+        is the frequency of the lexeme :math:`L` in cell :math:`c_1`.
 
         Arguments:
             debug (bool): Whether to print a debug log. Defaults to False
+            tokens (bool): Whether to use token frequencies to compute
+                pattern probabilities and to weight the metrics.
+            legacy (bool): Whether to use faster legacy computations.
+                This necessarily disables tokens.
         """
         log.info("Computing c1 → c2 entropies")
         log.debug("Logging one predictor probabilities")
@@ -191,10 +212,31 @@ class PatternDistribution(object):
         patterns = self.patterns
         data = self.prepare_data(debug=debug)
 
+        # Prepare frequency data
+        if tokens:
+            frequencies = self.frequencies.get_absolute_freq(group_on='form')\
+                .to_dict()
+        else:
+            frequencies = self.frequencies.get_relative_freq(group_on=["lexeme", 'cell'])\
+                .result.to_dict()
+
         # Compute conditional entropy
         for pair, df in patterns.items():
             # Defective rows can't be kept here.
             selector = df.pattern.notna()
+            df = df[selector].copy()
+
+            # We compute the frequency of the predictors and targets.
+            df['w_x'] = df.form_x.apply(lambda x: x.id).map(frequencies)
+            df['w_y'] = df.form_y.apply(lambda x: x.id).map(frequencies)
+
+            # Sum of the lexemes' weight
+            x_sum = df[~df.duplicated(['form_x', 'lexeme'])].w_x.sum()
+            y_sum = df[~df.duplicated(['form_y', 'lexeme'])].w_y.sum()
+
+            # Frequency of the pairs (
+            df['w_pair'] = (df.w_x * df.w_y) / (x_sum * y_sum)
+            df.w_pair = df.w_pair / df.w_pair.sum()
 
             # We compute the number of pairs concerned with this calculation.
             data.loc[pair, "n_pairs"] = sum(selector)
@@ -203,10 +245,12 @@ class PatternDistribution(object):
             # Lexemes that share these properties belong to similar classes.
             classes = self.add_features(df)
 
-            if debug:
+            if legacy and not debug:
                 data.loc[pair, "value"] = cond_entropy(df.pattern.apply(lambda x: (x,)),
                                                        classes,
                                                        subset=selector)
+            elif not debug:
+                data.loc[pair, "value"] = cond_entropy_slow(df)
             else:
                 data.loc[pair, "value"] = self.cond_entropy_log(df,
                                                                 classes,
