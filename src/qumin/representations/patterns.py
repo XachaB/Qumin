@@ -854,7 +854,8 @@ class ParadigmPatterns(dict):
         else:
             log.debug('Does not contain any dataframe')
 
-    def find_patterns(self, paradigms, *args, method="edits", disable_tqdm=False, cpus=1, optim_mem=False, **kwargs):
+    def find_patterns(self, paradigms, *args, method="edits", disable_tqdm=False,
+                      cpus=1, optim_mem=False, **kwargs):
         """Find Patterns in a DataFrame.
 
         Methods can be:
@@ -966,11 +967,13 @@ class ParadigmPatterns(dict):
             export.pattern = export.pattern.map(pattern_map)
         export.drop(["lexeme"], axis=1).to_csv(filename, sep=",", index=False)
 
-    def from_file(self, folder, *args, force=False, **kwargs):
+    def from_file(self, folder, *args, force=False, cells=None, **kwargs):
         """Read pattern data from a previous export.
 
         Arguments:
             folder (str): path to the folder
+            cells (List[str]): a list of cell names to read.
+
 
         """
         collection = defaultdict(lambda: defaultdict(str))
@@ -978,22 +981,28 @@ class ParadigmPatterns(dict):
 
         # Read patterns map
         patterns_map = pd.read_csv(folder / 'patterns_map.csv', index_col=0).patterns
-        # patterns_map = pd.Series(s.index.values, index=s)
 
         # Parse patterns for each pair of cells
         first = True
         for path in (folder / "patterns").iterdir():
-            self.from_csv(path, patterns_map, collection, *args, **kwargs)
-            if first:
-                n_files = len(list(folder.iterdir()))
-                memory_check(list(self.values())[0], n_files, force=force)
-                first = False
+            reg = re.compile(r"[^_]+_(.+)-(.+)\.csv")
+            pair = tuple(reg.match(path.name).groups())
+            if cells is None or (set(pair) <= set(cells)):
+                self.from_csv(path, pair, patterns_map, collection, *args, **kwargs)
+                if first:
+                    n_files = len(list(folder.iterdir()))
+                    memory_check(list(self.values())[0], n_files, force=force)
+                    first = False
 
-        # Raise error if wrong parameters.
-        # return table
+        # Raise error if cell was not found.
+        if cells is not None and (set(cells) != set(self.cells)):
+            raise ValueError("Couldn't find patterns for the following cells: "
+                             f"{", ".join(list(set(cells) - set(self.cells)))}. "
+                             "Check your patterns.""")
 
-    def from_csv(self, path, patterns_map, collection,
-                 paradigms, defective=True, overabundant=True):
+    def from_csv(self, path, pair, patterns_map, collection,
+                 paradigms, defective=True, overabundant=True,
+                 cells=None):
         """
         Read a patterns dataframe for a specific pair of cells
 
@@ -1003,6 +1012,7 @@ class ParadigmPatterns(dict):
             overabundant (bool): whether to consider overabundance.
             collection (defaultdict): a defaultdict to avoid recomputing
                 patterns from strings.
+            pair (tuple) a tuple of cells to read.
         """
 
         def read_pattern(string):
@@ -1012,11 +1022,11 @@ class ParadigmPatterns(dict):
                 string (str): a string representation of a pattern.
             """
             if string and not pd.isnull(string):
-                if string in collection[cells]:
-                    result = collection[cells][string]
+                if string in collection[pair]:
+                    result = collection[pair][string]
                 else:
-                    pattern = Pattern._from_str(cells, string)
-                    collection[cells][string] = pattern
+                    pattern = Pattern._from_str(pair, string)
+                    collection[pair][string] = pattern
                     result = pattern
                 return result
             if defective:
@@ -1026,9 +1036,7 @@ class ParadigmPatterns(dict):
 
         table = pd.read_csv(path, sep=",", dtype="str")
 
-        reg = re.compile(r"[^_]+_(.+)-(.+)\.csv")
-        cells = tuple(reg.match(path.name).groups())
-        for cell in cells:
+        for cell in pair:
             if cell not in self.cells:
                 self.cells.append(cell)
 
@@ -1048,13 +1056,13 @@ class ParadigmPatterns(dict):
 
         if (
                 defective
-                and (paradigms[paradigms.cell.isin(cells)].form == '').any()
+                and (paradigms[paradigms.cell.isin(pair)].form == '').any()
                 and table.pattern.notna().all()
         ):
             raise ValueError("It looks like you ignored defective rows"
                              "when computing patterns. Set defective=False.")
 
-        self[cells] = table
+        self[pair] = table
 
     def _generate_rules(self, row, pair, collection):
         """

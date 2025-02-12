@@ -51,6 +51,7 @@ def H_command(cfg, md):
     patterns = ParadigmPatterns()
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
+                       cells=cells,
                        defective=defective,
                        overabundant=False,
                        force=cfg.force,
