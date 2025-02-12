@@ -50,7 +50,6 @@ class Paradigms(object):
 
         # Reading the paradigms.
         self.dataset = dataset
-        self.frequencies = Frequencies(dataset)
         data_file_name = Path(dataset.basepath) / dataset.get_resource("forms").path
         self.data = pd.read_csv(data_file_name, na_values=["#DEF#"],
                                 dtype=defaultdict(lambda: 'string', {'cell': 'category',
@@ -58,6 +57,7 @@ class Paradigms(object):
                                 keep_default_na=False,
                                 usecols=["form_id"] + list(self.default_cols))
         self.preprocess(**kwargs)
+        self.frequencies = Frequencies(dataset, self.data)
 
     def _get_unknown_segments(self, row, unknowns):
         """
