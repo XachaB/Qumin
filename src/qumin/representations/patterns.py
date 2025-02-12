@@ -997,8 +997,8 @@ class ParadigmPatterns(dict):
         # Raise error if cell was not found.
         if cells is not None and (set(cells) != set(self.cells)):
             raise ValueError("Couldn't find patterns for the following cells: "
-                             f"{", ".join(list(set(cells) - set(self.cells)))}. "
-                             "Check your patterns.""")
+                             f"{', '.join(list(set(cells) - set(self.cells)))}. "
+                             "Check your patterns.")
 
     def from_csv(self, path, pair, patterns_map, collection,
                  paradigms, defective=True, overabundant=True,
