@@ -58,7 +58,7 @@ class Frequencies(object):
               "lexemes": None,
               "forms": None}
 
-    def __init__(self, package, source=False, **kwargs):
+    def __init__(self, package, *args, source=False, **kwargs):
         """Constructor for Frequencies. We gather and store frequencies
         for forms, lexemes and cells. Behaviour is the following:
             - If `force_uniform` is `True`, we use the paradigms table to generate a Uniform distribution.
@@ -67,7 +67,7 @@ class Frequencies(object):
             - If we can't use the frequency table, we fall back to a uniform.
 
         Arguments:
-            p (frictionless.Package): package to analyze
+            package (frictionless.Package): package to analyze
             source (Dict[str, str]): name of the source to use when several are available.
             **kwargs: keyword arguments for frequency reading methods.
         """
@@ -77,9 +77,9 @@ class Frequencies(object):
         if source:
             self.source.update(source)
 
-        self._read_aggregate_frequencies("forms", **kwargs)
-        self._read_aggregate_frequencies("lexemes", **kwargs)
-        self._read_aggregate_frequencies("cells", **kwargs)
+        self._read_aggregate_frequencies("forms", *args, **kwargs)
+        self._read_aggregate_frequencies("lexemes", *args, **kwargs)
+        self._read_aggregate_frequencies("cells", *args, **kwargs)
 
     def _read_aggregate_frequencies(self, name, force_uniform=False):
         """
@@ -87,6 +87,7 @@ class Frequencies(object):
 
         Arguments:
             name(str): Frequency table to build. Either forms, cells or lexemes.
+            paradigms (pandas.DataFrame): full paradigms. To ensure that the same forms are used.
             force_uniform (bool): Whether to replace everywhere real frequencies
                 by empty uniform distributions. Defaults to False
 
@@ -131,7 +132,7 @@ class Frequencies(object):
 
             table.loc[freq.index, ['value', 'source']] = freq[['value', 'source']]
 
-        # 3. For cells and lexemes built from the forms table.
+        # 3. For cells and lexemes build from the forms table.
         # TODO read directly from the frequencies table if possible
         elif not force_uniform and name != 'forms' and (self.has_frequencies('forms')):
             log.info(f'{name}: No frequencies in the {name} table, building from the forms table.')
@@ -162,6 +163,7 @@ class Frequencies(object):
                     table.loc[dup].groupby(self.col_names).value.transform(sum)
                 table.drop_duplicates(subset=self.col_names, inplace=True)
             cols = ['cell', 'lexeme', 'value', 'source']
+
         else:
             cols = ['value', 'source']
 
@@ -170,6 +172,16 @@ class Frequencies(object):
         table.index.name = name[:-1]
         table.index = table.index.astype('str')
         setattr(self, name, table[cols])
+
+    def drop_unused(self, paradigms):
+        """
+        If the paradigms table implied some sampling / filtering,
+        make sure that the frequencies are also sampled.
+        """
+
+        self.forms = self.forms[self.forms.index.astype(str).isin(paradigms.index)]
+        # TODO it would be nice to recompute the lexeme/cell frequencies
+        # based on the forms that we kept.
 
     def get_absolute_freq(self, mean=False, group_on=False, skipna=False, **kwargs):
         """
