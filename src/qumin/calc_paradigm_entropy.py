@@ -73,17 +73,20 @@ def H_command(cfg, md):
     patterns.info()
 
     distrib = PatternDistribution(patterns,
-                                  md.dataset,
+                                  md.dataset.name,
+                                  paradigms.frequencies,
                                   features=features)
 
     if onePred:
         if verbose:
             distrib.one_pred_entropy(debug=verbose,
                                      legacy=cfg.entropy.legacy,
-                                     tokens=cfg.entropy.tokens.patterns,
+                                     token_patterns=cfg.entropy.tokens.patterns,
+                                     token_predictors=cfg.entropy.tokens.predictors,
                                      )
         distrib.one_pred_entropy(legacy=cfg.entropy.legacy,
-                                 tokens=cfg.entropy.tokens.patterns,
+                                 token_patterns=cfg.entropy.tokens.patterns,
+                                 token_predictors=cfg.entropy.tokens.predictors,
                                  )
         mean = distrib.get_results().loc[:, "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)

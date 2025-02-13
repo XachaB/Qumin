@@ -76,7 +76,8 @@ entropy:
   stacked: False      # Whether to stack results in long form
   legacy: False       # Whether to use the legacy calculation. Slightly slower, but less options.
   tokens:             # Whether to use token frequencies for...
-    patterns: True    # The probability of the patterns and the weighting of the predictors.
+    patterns: True    # The probability of the patterns.
+    predictors: True  # The probability of the predictor classes and of the predictor forms.
     cells: True       # The weighting of the measures across different cells.
 
 eval:

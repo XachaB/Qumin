@@ -13,7 +13,6 @@ from itertools import combinations
 import pandas as pd
 
 from . import cond_entropy, cond_entropy_slow, entropy
-from ..representations.frequencies import Frequencies
 
 log = logging.getLogger("Qumin")
 
@@ -35,7 +34,7 @@ class PatternDistribution(object):
             Name of the dataset.
     """
 
-    def __init__(self, patterns, dataset, features=None):
+    def __init__(self, patterns, name, frequencies, features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -45,12 +44,15 @@ class PatternDistribution(object):
                 forms belonging to two different cells of the same lexeme.
                 The row also contains the correct pattern and the set of applicable patterns.
             name (str): dataset name.
+            frequencies (~qumin.representations.frequencies.Frequencies):
+                The frequencies for the paradigms.
+
             features:
                 optional table of features
         """
-        self.name = dataset.name
+        self.name = name
         self.patterns = patterns
-        self.frequencies = Frequencies(dataset)
+        self.frequencies = frequencies
 
         if features is not None:
             # Add feature names
@@ -166,7 +168,8 @@ class PatternDistribution(object):
         data.set_index(['predictor', 'predicted'], inplace=True)
         return data
 
-    def one_pred_entropy(self, legacy=False, debug=False, tokens=False):
+    def one_pred_entropy(self, legacy=False, debug=False,
+                         token_patterns=False, token_predictors=False):
         r"""Return a :class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
@@ -199,8 +202,10 @@ class PatternDistribution(object):
 
         Arguments:
             debug (bool): Whether to print a debug log. Defaults to False
-            tokens (bool): Whether to use token frequencies to compute
-                pattern probabilities and to weight the metrics.
+            token_patterns (bool): Whether to use token frequencies to compute
+                pattern probabilities.
+            token_predictors (bool): Whether to use token frequencies to compute
+                pattern probabilities.
             legacy (bool): Whether to use faster legacy computations.
                 This necessarily disables tokens.
         """
@@ -213,12 +218,10 @@ class PatternDistribution(object):
         data = self.prepare_data(debug=debug)
 
         # Prepare frequency data
-        if tokens:
-            frequencies = self.frequencies.get_absolute_freq(group_on='form')\
-                .to_dict()
-        else:
-            frequencies = self.frequencies.get_relative_freq(group_on=["lexeme", 'cell'])\
-                .result.to_dict()
+        tok_freq = self.frequencies.get_absolute_freq(group_on='form')\
+            .to_dict()
+        typ_freq = self.frequencies.get_relative_freq(group_on=["lexeme", 'cell'])\
+            .result.to_dict()
 
         # Compute conditional entropy
         for pair, df in patterns.items():
@@ -226,17 +229,19 @@ class PatternDistribution(object):
             selector = df.pattern.notna()
             df = df[selector].copy()
 
-            # We compute the frequency of the predictors and targets.
-            df['w_x'] = df.form_x.apply(lambda x: x.id).map(frequencies)
-            df['w_y'] = df.form_y.apply(lambda x: x.id).map(frequencies)
+            # We compute the probability of the predictors.
+            df['f_pred'] = df.form_x.apply(lambda x: x.id).map(
+                tok_freq if token_predictors else typ_freq)
 
-            # Sum of the lexemes' weight
-            x_sum = df[~df.duplicated(['form_x', 'lexeme'])].w_x.sum()
-            y_sum = df[~df.duplicated(['form_y', 'lexeme'])].w_y.sum()
+            # We compute the probability of the pairs
+            freq = tok_freq if token_patterns else typ_freq
+            f_pred = df.f_pred if token_predictors else \
+                df.form_x.apply(lambda x: x.id).map(freq)
 
-            # Frequency of the pairs (
-            df['w_pair'] = (df.w_x * df.w_y) / (x_sum * y_sum)
-            df.w_pair = df.w_pair / df.w_pair.sum()
+            f_out = df.form_y.apply(lambda x: x.id).map(freq)
+
+            # Final result
+            df['f_pair'] = f_pred * f_out
 
             # We compute the number of pairs concerned with this calculation.
             data.loc[pair, "n_pairs"] = sum(selector)
@@ -271,12 +276,14 @@ class PatternDistribution(object):
         Also writes the entropy of the distributions.
         """
 
-        def subclass_summary(subgroup):
+        def subclass_summary(subgroup, total):
             """ Produces a nice summary for a subclass"""
             ex = subgroup.iloc[0, :]
+            freq = subgroup.f_pair.sum() / total if total is not None else subgroup.shape[0]
+
             return pd.Series([
                               f"{ex.lexeme}: {ex.form_x} → {ex.form_y}",
-                              subgroup.shape[0]
+                              freq,
                              ],
                              index=["example", 'subclass_size'])
 
@@ -296,7 +303,7 @@ class PatternDistribution(object):
                                                      key=lambda x: len(x[1]),
                                                      reverse=True)):
             # Group by patterns and build a summary
-            table = members.groupby('pattern').apply(subclass_summary)
+            table = members.groupby('pattern').apply(subclass_summary, members.f_pair.sum())
 
             if self.features is not None:
                 feature_log = (
@@ -312,11 +319,11 @@ class PatternDistribution(object):
             # Get the slow computation results
             table['proba'] = table.subclass_size / table.subclass_size.sum()
             ent = 0 + entropy(table.proba)
-            summary.append([table.subclass_size.sum(), ent])
+            summary.append([members.f_pred.sum(), ent])
 
             # Log the subclass properties
             headers = ("Pattern", "Example",
-                       "Size", "P(Pattern|class)")
+                       "Frequency", "P(Pattern|class)")
             table.reset_index(inplace=True)
             table.columns = headers
             log.debug(f"\n## Class n°{i} ({len(members)} members), H={ent}")
@@ -325,7 +332,7 @@ class PatternDistribution(object):
             log.debug("\n" + table.to_markdown())
 
         log.debug('\n## Class summary')
-        summary = pd.DataFrame(summary, columns=['Size', 'H(pattern|class)'])
+        summary = pd.DataFrame(summary, columns=['Frequency', 'H(pattern|class)'])
         summary.index.name = "Class"
         sum_entropy = (summary.iloc[:, -2] * summary.iloc[:, -1] / summary.iloc[:, -2].sum()).sum()
         log.debug(f'\nAv. conditional entropy: H(pattern|class)={sum_entropy}')
