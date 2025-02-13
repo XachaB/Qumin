@@ -81,7 +81,7 @@ class Frequencies(object):
         self._read_aggregate_frequencies("lexemes", *args, **kwargs)
         self._read_aggregate_frequencies("cells", *args, **kwargs)
 
-    def _read_aggregate_frequencies(self, name, paradigms, force_uniform=False):
+    def _read_aggregate_frequencies(self, name, force_uniform=False):
         """
         Recover frequency information for forms, cells or lexemes.
 
@@ -164,9 +164,6 @@ class Frequencies(object):
                 table.drop_duplicates(subset=self.col_names, inplace=True)
             cols = ['cell', 'lexeme', 'value', 'source']
 
-            # If the paradigms table implied some sampling,
-            # make sure that the frequencies are also sampled.
-            table = table[table.index.astype(str).isin(paradigms.index)]
         else:
             cols = ['value', 'source']
 
@@ -175,6 +172,16 @@ class Frequencies(object):
         table.index.name = name[:-1]
         table.index = table.index.astype('str')
         setattr(self, name, table[cols])
+
+    def drop_unused(self, paradigms):
+        """
+        If the paradigms table implied some sampling / filtering,
+        make sure that the frequencies are also sampled.
+        """
+
+        self.forms = self.forms[self.forms.index.astype(str).isin(paradigms.index)]
+        # TODO it would be nice to recompute the lexeme/cell frequencies
+        # based on the forms that we kept.
 
     def get_absolute_freq(self, mean=False, group_on=False, skipna=False, **kwargs):
         """

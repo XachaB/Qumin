@@ -56,8 +56,9 @@ class Paradigms(object):
                                                                      'lexeme': 'category'}),
                                 keep_default_na=False,
                                 usecols=["form_id"] + list(self.default_cols))
+        self.frequencies = Frequencies(dataset)
         self.preprocess(**kwargs)
-        self.frequencies = Frequencies(dataset, self.data)
+        self.frequencies.drop_unused(self.data)
 
     def _get_unknown_segments(self, row, unknowns):
         """
