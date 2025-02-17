@@ -81,17 +81,17 @@ def H_command(cfg, md):
 
     if onePred:
         if verbose:
-            distrib.one_pred_entropy(debug=verbose,
+            distrib.one_pred_metrics(debug=verbose,
                                      legacy=cfg.entropy.legacy,
                                      token_patterns=cfg.entropy.tokens.patterns,
                                      token_predictors=cfg.entropy.tokens.predictors,
                                      )
-        distrib.one_pred_entropy(legacy=cfg.entropy.legacy,
+        distrib.one_pred_metrics(legacy=cfg.entropy.legacy,
                                  token_patterns=cfg.entropy.tokens.patterns,
                                  token_predictors=cfg.entropy.tokens.predictors,
                                  )
-        mean = distrib.get_results().loc[:, "value"].mean()
-        log.info("Mean H(c1 -> c2) = %s ", mean)
+        means = distrib.get_results().groupby('measure').value.mean()
+        log.info("Mean metrics:\n " + means.to_markdown())
 
     if preds:
         if cfg.entropy.importFile:
