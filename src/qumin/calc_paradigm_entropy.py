@@ -25,10 +25,12 @@ def H_command(cfg, md):
     sounds_file_name = md.get_table_path("sounds")
     defective = cfg.pats.defective
 
-    assert not (cfg.entropy.tokens.patterns and cfg.entropy.legacy), \
-        "Token weighting of the patterns are not available with legacy computation."
+    assert not ((cfg.entropy.tokens.patterns or cfg.entropy.tokens.patterns) and cfg.entropy.legacy), \
+        "Tokens can't be used in entropy computations with legacy=True."
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
+    assert (preds[-1] == 1 or cfg.entropy.legacy), \
+        "N predictor computations are only available with legacy=True"
     onePred = preds[0] == 1
     if onePred:
         preds.pop(0)

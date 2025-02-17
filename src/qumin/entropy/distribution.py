@@ -217,11 +217,12 @@ class PatternDistribution(object):
         patterns = self.patterns
         data = self.prepare_data(debug=debug)
 
-        # Prepare frequency data
-        tok_freq = self.frequencies.get_absolute_freq(group_on='form')\
-            .to_dict()
-        typ_freq = self.frequencies.get_relative_freq(group_on=["lexeme", 'cell'])\
-            .result.to_dict()
+        if not legacy:
+            # Prepare frequency data
+            tok_freq = self.frequencies.get_absolute_freq(group_on='form')\
+                .to_dict()
+            typ_freq = self.frequencies.get_relative_freq(group_on=["lexeme", 'cell'])\
+                .result.to_dict()
 
         # Compute conditional entropy
         for pair, df in patterns.items():
@@ -229,19 +230,23 @@ class PatternDistribution(object):
             selector = df.pattern.notna()
             df = df[selector].copy()
 
-            # We compute the probability of the predictors.
-            df['f_pred'] = df.form_x.apply(lambda x: x.id).map(
-                tok_freq if token_predictors else typ_freq)
+            if not legacy:
+                # We compute the probability of the predictors.
+                df['f_pred'] = df.form_x.apply(lambda x: x.id).map(
+                    tok_freq if token_predictors else typ_freq)
 
-            # We compute the probability of the pairs
-            freq = tok_freq if token_patterns else typ_freq
-            f_pred = df.f_pred if token_predictors else \
-                df.form_x.apply(lambda x: x.id).map(freq)
+                # We compute the probability of the pairs
+                freq = tok_freq if token_patterns else typ_freq
+                f_pred = df.f_pred if token_predictors else \
+                    df.form_x.apply(lambda x: x.id).map(freq)
 
-            f_out = df.form_y.apply(lambda x: x.id).map(freq)
+                f_out = df.form_y.apply(lambda x: x.id).map(freq)
 
-            # Final result
-            df['f_pair'] = f_pred * f_out
+                # Final result
+                df['f_pair'] = f_pred * f_out
+            else:
+                df['f_pred'] = 1
+                df['f_pair'] = 1
 
             # We compute the number of pairs concerned with this calculation.
             data.loc[pair, "n_pairs"] = sum(selector)
