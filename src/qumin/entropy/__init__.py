@@ -67,6 +67,7 @@ def entropy(A):
     return -(A * np.log2(A)).sum()
 
 
+
 def cond_entropy_slow(df, subset=None):
     """
     Calculate the conditional entropy through a slower method (with iterations across all groups).
@@ -86,8 +87,8 @@ def cond_psuccess(df):
     Uses token frequencies to weight the patterns.
     """
     def compute_group_psuccess(group):
-        proba = P(group.pattern, weights=group.f_pair)
-        return group.pattern.map(proba)
+        group["psuccess"] = group.pattern.map(P(group.pattern, weights=group.f_pair))
+        return group
 
-    return 0 + (df.groupby("applicable", group_keys=False).apply(compute_group_psuccess)
-                * df.f_pred / df.f_pred.sum()).sum()
+    df = df.groupby("applicable", group_keys=False).apply(compute_group_psuccess)
+    return 0 + ((df.psuccess * df.f_pred) / df.f_pred.sum()).sum()
