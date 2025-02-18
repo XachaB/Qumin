@@ -346,7 +346,10 @@ class PatternDistribution(object):
                        "Frequency", "P(Pattern|class)")
             table.reset_index(inplace=True)
             table.columns = headers
-            log.debug(f"\n## Class n°{i} ({len(members)} members), H={ent}")
+            stats = f"\n## Class n°{i} ({len(members)} members), H={ent:.3f}"
+            if not legacy:
+                stats += f", P(success)={psuccess:.3f}"
+            log.debug(stats)
             if self.features is not None:
                 log.debug(feature_log)
             if legacy:
