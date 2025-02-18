@@ -168,10 +168,13 @@ class PatternDistribution(object):
         data = data[data.apply(lambda x: x.predicted not in x.predictor.split('&'), axis=1)]
         data.loc[:, "n_pairs"] = None
         data.loc[:, "n_preds"] = n
-        measures = ["cond_entropy" + suffix]
-        if not legacy:
-            measures += ['accuracy' + suffix]
-        data.loc[:, "measure"] = [measures] * data.shape[0]
+        if n == 1:
+            measures = ["cond_entropy" + suffix]
+            if not legacy:
+                measures += ['accuracy' + suffix]
+            data.loc[:, "measure"] = [measures] * data.shape[0]
+        else:
+            data.loc[:, "measure"] = "cond_entropy" + suffix
         data.loc[:, "dataset"] = self.name
         data.set_index(['predictor', 'predicted'], inplace=True)
         return data
@@ -272,15 +275,15 @@ class PatternDistribution(object):
                 data.at[pair, "value"] = self.cond_metrics_log(df,
                                                                classes,
                                                                pair,
+                                                               legacy=legacy,
                                                                subset=selector)
-
         data = data.explode(['value', "measure"])
         if self.data.empty:
             self.data = data.reset_index()
         else:
             self.data = pd.concat([self.data, data.reset_index()])
 
-    def cond_metrics_log(self, group, classes, cells, subset=None):
+    def cond_metrics_log(self, group, classes, cells, subset=None, legacy=False):
         """Print a log of the probability distribution for one predictor.
 
         Writes down the distributions
@@ -344,6 +347,8 @@ class PatternDistribution(object):
             log.debug(f"\n## Class n°{i} ({len(members)} members), H={ent}")
             if self.features is not None:
                 log.debug(feature_log)
+            if legacy:
+                table = table.iloc[:, :-1]
             log.debug("\n" + table.to_markdown())
 
         log.debug('\n## Class summary')
@@ -351,9 +356,13 @@ class PatternDistribution(object):
                                                  'H(pattern|class)',
                                                  'P(success|class)'])
         summary.index.name = "Class"
-        sums = summary.iloc[:, -3].T @ summary.iloc[:,-2::] / summary.iloc[:, -3].sum()
+
+        if legacy:
+            summary = summary.iloc[:, :-1]
+        sums = summary.iloc[:, 0].T @ summary.iloc[:, 1::] / summary.iloc[:, 0].sum()
         log.debug(f'\nAv. conditional entropy: H(pattern|class)={sums.iloc[0]}')
-        log.debug(f'\nAv. success probability: P(success|class)={sums.iloc[1]}')
+        if not legacy:
+            log.debug(f'\nAv. success probability: P(success|class)={sums.iloc[1]}')
         log.debug("\n" + summary.to_markdown())
         return sums.values
 

@@ -62,6 +62,8 @@ heatmap:
   order: False             # Priority list for sorting features (for entropy heatmap)
                            # ex: [number, case]). If no features-values file available,
                            # it should contain an ordered list of the cells to display.
+  n_pairs: True            # Whether to display a heatmap of the number of pairs.
+  debug: False             # Whether to display debug results on the heatmap.
 
 entropy:
   heatmap: True       # Whether to draw a heatmap.
