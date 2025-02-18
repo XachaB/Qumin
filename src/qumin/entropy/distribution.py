@@ -285,6 +285,7 @@ class PatternDistribution(object):
             """ Produces a nice summary for a subclass"""
             ex = subgroup.iloc[0, :]
             freq = subgroup.f_pair.sum() / total if total is not None else subgroup.shape[0]
+            freq = 0 if pd.isna(freq) else freq
 
             return pd.Series([
                               f"{ex.lexeme}: {ex.form_x} → {ex.form_y}",
@@ -323,6 +324,7 @@ class PatternDistribution(object):
 
             # Get the slow computation results
             table['proba'] = table.subclass_size / table.subclass_size.sum()
+            table.fillna(0, inplace=True)
             ent = 0 + entropy(table.proba)
             summary.append([members.f_pred.sum(), ent])
 
