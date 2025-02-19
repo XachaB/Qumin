@@ -308,6 +308,14 @@ class PatternDistribution(object):
                              ],
                              index=["example", 'subclass_size'])
 
+        def success_table(subgroup, patterns):
+            ex = subgroup.iloc[0]
+            series = {'example': f"{ex.lexeme}: {ex.form_x} → {', '.join(subgroup.form_y.values)}"}
+            series.update({patterns.loc[p, 'id']: patterns.loc[p, 'proba'] for p in ex.pattern_pred})
+            series['f_pred'] = subgroup.f_pred.sum()
+            series['psuccess'] = subgroup.psuccess.sum()
+            return pd.Series(series)
+
         log.debug("\n# Distribution of {}→{} \n".format(cells[0], cells[1]))
 
         A = group[subset]
@@ -324,8 +332,9 @@ class PatternDistribution(object):
                                                      key=lambda x: len(x[1]),
                                                      reverse=True)):
             # Group by patterns and build a summary
-            table = members.groupby('pattern').apply(subclass_summary, members.f_pair.sum())
+            p_table = members.groupby('pattern').apply(subclass_summary, members.f_pair.sum())
 
+            # Log features
             if self.features is not None:
                 feature_log = (
                     "Features: "
@@ -334,22 +343,42 @@ class PatternDistribution(object):
 
             # List possible patterns that are not used in this class.
             for pattern in classe:
-                if pattern not in table.index:
-                    table.loc[str(pattern), :] = ["-", 0]
+                if pattern not in p_table.index:
+                    p_table.loc[str(pattern), :] = ["-", 0]
 
-            # Get the slow computation results
-            table['proba'] = table.subclass_size / table.subclass_size.sum()
-            table.fillna(0, inplace=True)
-            ent = 0 + entropy(table.proba)
-            members['psuccess'] = members.pattern.map(table.proba)
-            psuccess = (members.pattern.map(table.proba) @ members.f_pred) / members.f_pred.sum()
+            # Create an ID for the patterns
+            p_table['id'] = range(p_table.shape[0])
+            p_table.id = "p_" + p_table.id.astype(str)
+
+            # Group by patterns for the predictor only (i.e. allow for overabundance)
+            members['pattern_pred'] = members.groupby(['lexeme', 'form_x'], observed=False)\
+                .pattern.transform(lambda x: [tuple(x)]*x.shape[0])
+
+            # Compute the pattern probabilities
+            p_table['proba'] = p_table.subclass_size / p_table.subclass_size.sum()
+            p_table.fillna(0, inplace=True)
+            members['psuccess'] = members.pattern.map(p_table.proba)
+
+            # Get nice table with examples.
+            table = members.groupby('pattern_pred')\
+                .apply(success_table, patterns=p_table)\
+                .reset_index(drop=True)
+
+            # Compute metrics
+            ent = 0 + entropy(p_table.proba)
+            psuccess = table.f_pred @ table.psuccess / table.f_pred.sum()
             summary.append([members.f_pred.sum(), ent, psuccess])
 
             # Log the subclass properties
             headers = ("Pattern", "Example",
                        "Frequency", "P(Pattern|class)")
-            table.reset_index(inplace=True)
-            table.columns = headers
+            p_table = p_table.reset_index().set_index("id")
+            p_table.columns = headers
+            table.rename(columns={"example": "Example",
+                                  "f_pred": "Frequency",
+                                  "psuccess": "P(success|class)"}, inplace=True)
+            table.set_index('Example', inplace=True)
+
             stats = f"\n## Class n°{i} ({len(members)} members), H={ent:.3f}"
             if not legacy:
                 stats += f", P(success)={psuccess:.3f}"
@@ -357,8 +386,10 @@ class PatternDistribution(object):
             if self.features is not None:
                 log.debug(feature_log)
             if legacy:
-                table = table.iloc[:, :-1]
-            log.debug("\n" + table.to_markdown())
+                p_table = p_table.iloc[:, :-1]
+            log.debug("\nPatterns found\n\n" + p_table.to_markdown())
+            if not legacy:
+                log.debug("\nDistribution of the forms\n\n" + table.to_markdown())
 
         log.debug('\n## Class summary')
         summary = pd.DataFrame(summary, columns=['Frequency',
