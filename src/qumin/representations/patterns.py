@@ -982,7 +982,8 @@ class ParadigmPatterns(dict):
 
         # Parse patterns for each pair of cells
         first = True
-        for path in (folder / "patterns").iterdir():
+        log.info('Reading patterns...')
+        for path in tqdm((folder / "patterns").iterdir()):
             self.from_csv(path, patterns_map, collection, *args, **kwargs)
             if first:
                 n_files = len(list(folder.iterdir()))
