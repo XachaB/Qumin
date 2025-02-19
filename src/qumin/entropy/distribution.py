@@ -180,7 +180,8 @@ class PatternDistribution(object):
         return data
 
     def one_pred_metrics(self, legacy=False, debug=False,
-                         token_patterns=False, token_predictors=False):
+                         token_patterns=False, token_predictors=False,
+                         token_oa=False):
         r"""Return a :class:`pandas:pandas.DataFrame` with unary entropies and counts of lexemes.
 
         The result contains entropy :math:`H(c_{1} \to c_{2})`.
@@ -217,6 +218,8 @@ class PatternDistribution(object):
                 pattern probabilities.
             token_predictors (bool): Whether to use token frequencies to compute
                 pattern probabilities.
+            token_oa (bool): Whether to use token frequencies to compute
+                the relative weight of overabundant forms.
             legacy (bool): Whether to use legacy computations.
         """
         log.info("Computing c1 → c2 entropies")
@@ -231,7 +234,8 @@ class PatternDistribution(object):
             # Prepare frequency data
             tok_freq = self.frequencies.get_absolute_freq(group_on='form')\
                 .to_dict()
-            typ_freq = self.frequencies.get_relative_freq(group_on=["lexeme", 'cell'])\
+            typ_freq = self.frequencies.get_relative_freq(group_on=["lexeme", 'cell'],
+                                                          uniform_duplicates=not token_oa)\
                 .result.to_dict()
 
         # Compute conditional entropy

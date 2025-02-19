@@ -81,6 +81,7 @@ entropy:
     patterns: False   # The probability of the patterns.
     predictors: False # The probability of the predictor classes and of the predictor forms.
     cells: False      # The weighting of the measures across different cells.
+    overabundant: True # The weighting of overabundant cellmates
 
 eval:
   iter: 10            # How many 90/10 train/test folds to do.

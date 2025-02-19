@@ -24,6 +24,7 @@ def H_command(cfg, md):
     patterns_folder_path = cfg.patterns
     sounds_file_name = md.get_table_path("sounds")
     defective = cfg.pats.defective
+    legacy = cfg.entropy.legacy
 
     assert not ((cfg.entropy.tokens.patterns or cfg.entropy.tokens.patterns) and cfg.entropy.legacy), \
         "Tokens can't be used in entropy computations with legacy=True."
@@ -43,7 +44,7 @@ def H_command(cfg, md):
     # Inflectional paradigms: rows are forms, with lexeme and cell..
     paradigms = Paradigms(md.dataset,
                           defective=defective,
-                          overabundant=False,
+                          overabundant=not legacy,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
                           cells=cells,
@@ -57,7 +58,7 @@ def H_command(cfg, md):
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
                        defective=defective,
-                       overabundant=False,
+                       overabundant=not legacy,
                        force=cfg.force,
                        )
 
@@ -85,15 +86,19 @@ def H_command(cfg, md):
                                      legacy=cfg.entropy.legacy,
                                      token_patterns=cfg.entropy.tokens.patterns,
                                      token_predictors=cfg.entropy.tokens.predictors,
+                                     token_oa=cfg.entropy.tokens.overabundant,
                                      )
         distrib.one_pred_metrics(legacy=cfg.entropy.legacy,
                                  token_patterns=cfg.entropy.tokens.patterns,
                                  token_predictors=cfg.entropy.tokens.predictors,
+                                 token_oa=cfg.entropy.tokens.overabundant,
                                  )
         means = distrib.get_results().groupby('measure').value.mean()
         log.info("Mean metrics:\n " + means.to_markdown())
 
     if preds:
+        if cfg.overabundant:
+            raise NotImplementedError
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
         for n in preds:

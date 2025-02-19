@@ -1043,8 +1043,12 @@ class ParadigmPatterns(dict):
         if not defective:
             table.dropna(axis=0, subset="pattern", inplace=True)
 
-        if overabundant:
-            raise NotImplementedError
+        if not overabundant:
+            dupl = table.duplicated('lexeme')
+            if dupl.any():
+                raise ValueError("Overabundant is unexpected, but some rows are duplicated. "
+                                 "Set entropy.legacy=False or recompute patterns with "
+                                 f"pats.overabundant=False. Examples:\n{table[dupl].head()}.")
 
         if (
                 defective
