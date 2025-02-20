@@ -89,6 +89,6 @@ def cond_psuccess(df):
 
     df = df.groupby("applicable", group_keys=False) \
         .apply(compute_group_psuccess) \
-        .groupby('form_x')[['f_pred', 'psuccess']].sum()
+        .groupby(['form_x', 'lexeme'])[['f_pred', 'psuccess']].sum()
 
     return 0 + ((df.psuccess * df.f_pred) / df.f_pred.sum()).sum()

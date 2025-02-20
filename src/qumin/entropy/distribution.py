@@ -297,7 +297,7 @@ class PatternDistribution(object):
         """
 
         def subclass_summary(subgroup, total):
-            """ Produces a nice summary for a subclass"""
+            """ Produces a nice summary of the available patterns for a subclass"""
             ex = subgroup.iloc[0, :]
             freq = subgroup.f_pair.sum() / total if total is not None else subgroup.shape[0]
             freq = 0 if pd.isna(freq) else freq
@@ -309,11 +309,19 @@ class PatternDistribution(object):
                              index=["example", 'subclass_size'])
 
         def success_table(subgroup, patterns):
-            ex = subgroup.iloc[0]
-            series = {'example': f"{ex.lexeme}: {ex.form_x} → {', '.join(subgroup.form_y.values)}"}
-            series.update({patterns.loc[p, 'id']: patterns.loc[p, 'proba'] for p in ex.pattern_pred})
+            """
+            Create a table which tells for each set of words behaving in a similar way,
+            which patterns could apply and what would be their probability of success.
+            """
+            ex = subgroup.iloc[0, :]
+            forms_y = (str(y) for y in subgroup[subgroup.form_x == ex.form_x].form_y.values)
+            series = {'example': f"{ex.lexeme}: {ex.form_x} → {', '.join(forms_y)}"}
+            pats = patterns.copy()
+            pats.proba = pats.proba.astype(str)
+            pats.loc[~pats.index.isin(ex.pattern_pred), "proba"] = ""
+            series.update(pats.set_index('id').proba.to_dict())
             series['f_pred'] = subgroup.f_pred.sum()
-            series['psuccess'] = subgroup.psuccess.sum()
+            series['psuccess'] = ex.psuccess
             return pd.Series(series)
 
         log.debug("\n# Distribution of {}→{} \n".format(cells[0], cells[1]))
@@ -360,7 +368,7 @@ class PatternDistribution(object):
             members['psuccess'] = members.pattern.map(p_table.proba)
 
             # Get nice table with examples.
-            table = members.groupby('pattern_pred')\
+            table = members.groupby('pattern_pred', group_keys=False)\
                 .apply(success_table, patterns=p_table)\
                 .reset_index(drop=True)
 
