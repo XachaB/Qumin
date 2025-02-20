@@ -366,7 +366,8 @@ class PatternDistribution(object):
 
             # Compute metrics
             ent = 0 + entropy(p_table.proba)
-            psuccess = table.f_pred @ table.psuccess / table.f_pred.sum()
+            psuccess = table.f_pred @ table.psuccess / table.f_pred.sum()\
+                if table.f_pred.sum() > 0 else 0
             summary.append([members.f_pred.sum(), ent, psuccess])
 
             # Log the subclass properties
