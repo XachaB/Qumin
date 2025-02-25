@@ -50,7 +50,7 @@ class PatternsTestCase(unittest.TestCase):
         p = patterns.Pattern._from_str(c, "te ⇌  / sa_<2.0>")
         p_reverse = patterns.Pattern._from_str(c, " ⇌ te / sa_<2.0>")
         self.assertTrue(p.applicable(fa, "A"), f"{p} should be applicable to {fa}")
-        self.assertTrue(p.applicable(fa, "B"), f"{p_reverse} should be applicable to {fa}")
+        self.assertTrue(p_reverse.applicable(fa, "B"), f"{p_reverse} should be applicable to {fa}")
 
     def test_applicable(self):
         c = ("a", "b")
