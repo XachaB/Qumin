@@ -49,6 +49,7 @@ class PatternsTestCase(unittest.TestCase):
         fa = segments.Form.from_segmented_str("s a t e")
         p = patterns.Pattern._from_str(c, "te ⇌  / sa_<2.0>")
         p_reverse = patterns.Pattern._from_str(c, " ⇌ te / sa_<2.0>")
+
         self.assertTrue(p.applicable(fa, "A"), f"{p} should be applicable to {fa}")
         self.assertTrue(p_reverse.applicable(fa, "B"), f"{p_reverse} should be applicable to {fa}")
 
@@ -103,7 +104,6 @@ class PatternsTestCase(unittest.TestCase):
             new = patterns.Pattern._from_str(("a", "b"), pat_str)
             self.assertEqual(repr(new), pat_str)
             self.assertEqual(str(new), pretty_result)
-
 
     def test_from_alignment(self):
         c = ("a", "b")
