@@ -250,7 +250,7 @@ class Frequencies(object):
         else:
             return result
 
-    def get_relative_freq(self, group_on=False, **kwargs):
+    def get_relative_freq(self, group_on=False, uniform_duplicates=False, **kwargs):
         """
         Returns the relative frequencies of a set of rows according to a set of grouping columns.
         If any of the values is empty, we generate a Uniform distribution for this group.
@@ -280,6 +280,8 @@ class Frequencies(object):
 
         Arguments:
             group_on (List[str]): column on which relative frequencies should be computed
+            uniform_duplicates (bool): Whether to give a uniform weight to duplicate items
+                or a relative weight based on tokens.
 
         Returns:
             `pandas.DataFrame`: a DataFrame which contains a `result` column with the output value.
@@ -309,8 +311,8 @@ class Frequencies(object):
         # 3. If a whole group contains zeros, we give a uniform frequency to the group
         all_zero = sublist.groupby(groups).value.transform(lambda x: (x == 0).all())
 
-        # Apply 2 and 3
-        selector = (sublist.result != 1) & (any_nan | all_zero)
+        # Apply 2 and 3 or apply everywhere if uniform_duplicates
+        selector = (sublist.result != 1) & (any_nan | all_zero | uniform_duplicates)
         sublist.loc[selector, 'result'] = 1/sublist.loc[selector, 'result']
 
         # 4. If all values are filled and if the group is bigger than one, we sum the frequencies

@@ -24,8 +24,14 @@ def H_command(cfg, md):
     patterns_folder_path = cfg.patterns
     sounds_file_name = md.get_table_path("sounds")
     defective = cfg.pats.defective
+    legacy = cfg.entropy.legacy
+
+    assert not ((cfg.entropy.tokens.patterns or cfg.entropy.tokens.patterns) and cfg.entropy.legacy), \
+        "Tokens can't be used in entropy computations with legacy=True."
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
+    assert (preds[-1] == 1 or cfg.entropy.legacy), \
+        "N predictor computations are only available with legacy=True"
     onePred = preds[0] == 1
     if onePred:
         preds.pop(0)
@@ -38,7 +44,7 @@ def H_command(cfg, md):
     # Inflectional paradigms: rows are forms, with lexeme and cell..
     paradigms = Paradigms(md.dataset,
                           defective=defective,
-                          overabundant=False,
+                          overabundant=not legacy,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
                           cells=cells,
@@ -52,7 +58,7 @@ def H_command(cfg, md):
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
                        defective=defective,
-                       overabundant=False,
+                       overabundant=not legacy,
                        force=cfg.force,
                        )
 
@@ -71,16 +77,28 @@ def H_command(cfg, md):
 
     distrib = PatternDistribution(patterns,
                                   md.dataset.name,
+                                  paradigms.frequencies,
                                   features=features)
 
     if onePred:
         if verbose:
-            distrib.one_pred_entropy(debug=verbose)
-        distrib.one_pred_entropy()
-        mean = distrib.get_results().loc[:, "value"].mean()
-        log.info("Mean H(c1 -> c2) = %s ", mean)
+            distrib.one_pred_metrics(debug=verbose,
+                                     legacy=cfg.entropy.legacy,
+                                     token_patterns=cfg.entropy.tokens.patterns,
+                                     token_predictors=cfg.entropy.tokens.predictors,
+                                     token_oa=cfg.entropy.tokens.overabundant,
+                                     )
+        distrib.one_pred_metrics(legacy=cfg.entropy.legacy,
+                                 token_patterns=cfg.entropy.tokens.patterns,
+                                 token_predictors=cfg.entropy.tokens.predictors,
+                                 token_oa=cfg.entropy.tokens.overabundant,
+                                 )
+        means = distrib.get_results().groupby('measure').value.mean()
+        log.info("Mean metrics:\n " + means.to_markdown())
 
     if preds:
+        if cfg.overabundant:
+            raise NotImplementedError
         if cfg.entropy.importFile:
             distrib.import_file(cfg.entropy.importFile)
         for n in preds:

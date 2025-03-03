@@ -24,7 +24,8 @@ def qumin_command(cfg):
         not_defect = cfg.pats.defective is False
         for_H = cfg.action == "H"
         for_m = cfg.action == "macroclasses"
-        assert not_overab or not (for_H or for_m), "For this calculation, overabundant must be False"
+        assert not_overab or not ((for_H and cfg.entropy.legacy) or for_m), \
+            "For this calculation, overabundant must be False"
         assert not_defect or not for_m, "For this calculation, defective must be False"
         patterns_file = pat_command(cfg, md)
         cfg.patterns = patterns_file
