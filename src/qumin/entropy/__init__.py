@@ -59,12 +59,16 @@ def cond_entropy(A, B, **kwargs):
 def entropy(A):
     """Calculate the entropy for a series of probabilities.
 
+    Since some probabilities may be null, we keep only positive values.
+    This does not affect the result of the computation.
+
     Arguments:
         A (:class:`pandas.core.series.Series`): A series of data.
 
     Return:
         H(A)"""
-    return -(A * np.log2(A)).sum()
+    pos = A > 0
+    return -(A[pos] * np.log2(A[pos])).sum()
 
 
 def cond_entropy_slow(df, subset=None):

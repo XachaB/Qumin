@@ -646,8 +646,8 @@ class Pattern(object):
             if group.blank:
                 # alternation
                 # We build one regex group for each continuous sequence of segments and each transformation
-                for (is_segments, chars_1), (_, chars_2) in alternances[i]:
-                    if is_segments:
+                for (is_segments_1, chars_1), (is_segments_2, chars_2) in alternances[i]:
+                    if is_segments_1 or is_segments_2:
                         # Substitution replacement: pass directly the target segments
                         # (this is a string; or None if no replacement)
                         repl[c1].append(" ".join(chars_1))
@@ -982,7 +982,8 @@ class ParadigmPatterns(dict):
 
         # Parse patterns for each pair of cells
         first = True
-        for path in (folder / "patterns").iterdir():
+        log.info('Reading patterns...')
+        for path in tqdm((folder / "patterns").iterdir()):
             self.from_csv(path, patterns_map, collection, *args, **kwargs)
             if first:
                 n_files = len(list(folder.iterdir()))
@@ -1234,7 +1235,7 @@ class ParadigmPatterns(dict):
             """ Return a tuple of all applicable patterns for a given form"""
             return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
 
-        df = self[pair]
+        df = self[pair].copy()
         available_patterns = [p for p in self[pair]['pattern'].unique() if p is not None]
         cell_x = pair[0]
         has_pat = ~df['pattern'].isnull()
