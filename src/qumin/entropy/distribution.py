@@ -87,11 +87,11 @@ class PatternDistribution(object):
         is_one_pred = self.data.loc[:, "n_preds"] == n
         return self.data.loc[is_cond_ent & is_one_pred, :]
 
-    def get_mean(self, weighting=False, **kwargs):
+    def get_mean(self, tokens=False, **kwargs):
         """ Returns the average measures from the current run.
 
         Arguments:
-            weighting (boolean): Whether the cell frequencies should be used for weighting.
+            tokens (boolean): Whether the cell token frequencies should be used for weighting.
                 Defaults to False.
             **kwargs: Keyword arguments are passed to `get_results()`
 
@@ -101,7 +101,7 @@ class PatternDistribution(object):
         results = self.get_results(**kwargs)
 
         # Try to weight
-        if weighting:
+        if tokens:
             data = self.get_weights(results)
             # Check that we got weight
             if data is not None:
@@ -220,12 +220,12 @@ class PatternDistribution(object):
         data = data.groupby('predictor').apply(compute_weight, cell_freq).reset_index(drop=True)
         return data
 
-    def export_file(self, filename, weighting=False):
+    def export_file(self, filename, tokens=False):
         """ Export the data DataFrame to file
 
         Arguments:
             filename: the file's path.
-             weighting (boolean): Whether weights should be returned from cell frequencies.
+             tokens (boolean): Whether weights should be returned from cell token frequencies.
                 Defaults to False.
         """
 
@@ -235,7 +235,7 @@ class PatternDistribution(object):
             return preds
 
         data = self.data.copy()
-        if weighting:
+        if tokens:
             weight = self.get_weights(data)
             if weight is not None:
                 data.loc[:, 'weight'] = weight.weight.round(5)

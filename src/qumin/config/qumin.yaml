@@ -74,7 +74,8 @@ entropy:
                       # with n-1 predictors, allows for acceleration on nPreds entropy computation.
   merged: False       # Whether identical columns are merged in the input.
   stacked: False      # whether to stack results in long form.
-  weighting: True     # whether to use cell frequencies for weighting.
+  tokens:             # Whether to use token frequencies for weighting...
+    cells: False      # Cell frequencies
 
 eval:
   iter: 10            # How many 90/10 train/test folds to do.
