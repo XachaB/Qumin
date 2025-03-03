@@ -50,7 +50,7 @@ class Paradigms(object):
 
         # Reading the paradigms.
         self.dataset = dataset
-        data_file_name = Path(dataset.basepath) / dataset.get_resource("forms").path
+        data_file_name = Path(dataset.basepath or "./") / dataset.get_resource("forms").path
         self.data = pd.read_csv(data_file_name, na_values=["#DEF#"],
                                 dtype=defaultdict(lambda: 'string', {'cell': 'category',
                                                                      'lexeme': 'category'}),
