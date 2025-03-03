@@ -67,7 +67,8 @@ class Metadata():
 
     def get_table_path(self, table_name):
         dataset = self.dataset
-        return Path(dataset.basepath) / dataset.get_resource(table_name).path
+        basepath = Path(dataset.basepath or "./")
+        return basepath / dataset.get_resource(table_name).path
 
     def save_metadata(self):
         """ Save the metadata as a JSON file."""
