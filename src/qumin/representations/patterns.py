@@ -1235,7 +1235,7 @@ class ParadigmPatterns(dict):
             """ Return a tuple of all applicable patterns for a given form"""
             return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
 
-        df = self[pair]
+        df = self[pair].copy()
         available_patterns = [p for p in self[pair]['pattern'].unique() if p is not None]
         cell_x = pair[0]
         has_pat = ~df['pattern'].isnull()
