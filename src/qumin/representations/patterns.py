@@ -646,8 +646,8 @@ class Pattern(object):
             if group.blank:
                 # alternation
                 # We build one regex group for each continuous sequence of segments and each transformation
-                for (is_segments, chars_1), (_, chars_2) in alternances[i]:
-                    if is_segments:
+                for (is_segments_1, chars_1), (is_segments_2, chars_2) in alternances[i]:
+                    if is_segments_1 or is_segments_2:
                         # Substitution replacement: pass directly the target segments
                         # (this is a string; or None if no replacement)
                         repl[c1].append(" ".join(chars_1))
