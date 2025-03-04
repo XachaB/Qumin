@@ -6,7 +6,7 @@ Qumin follows the `semver <https://semver.org/>`_ principles for versioning. Thi
 dev version (forthcoming)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Add a `pos` keyword to filter paradigms on POS.
+- Add a `pos` keyword to filter paradigms on POS and improve the behaviour of `cells`.
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Adds a Frequency class able to handle multiple paralex sources for frequencies.
 - Switch patterns management to long format everywhere
