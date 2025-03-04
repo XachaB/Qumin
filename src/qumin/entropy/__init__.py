@@ -2,6 +2,7 @@
 # !/usr/bin/python3
 
 import numpy as np
+import pandas as pd
 
 
 def P(x, weights=None, subset=None):
@@ -9,6 +10,16 @@ def P(x, weights=None, subset=None):
     Return the probability distribution of unique elements in a :class:`pandas.core.series.Series`.
     The default is a Uniform probability distribution, where each token in `x` has the same
     probability. If weights are provided, they will be used as the probability of the tokens.
+
+    Example:
+        >>> P(pd.Series(["A", "B", "B"]))
+        A    0.333333
+        B    0.666667
+        Name: proportion, dtype: float64
+        >>> P(pd.Series(["A", "B", "B"]), weights=pd.Series([2, 1, 1]))
+        A    0.5
+        B    0.5
+        dtype: float64
 
     Arguments:
         x (:class:`pandas.core.series.Series`): A series of data.
@@ -19,12 +30,15 @@ def P(x, weights=None, subset=None):
         :class:`pandas.core.series.Series`: A Series which index are x's unique elements
             and which values are their probability in x.
     """
-    if weights is not None:
-        return weights.groupby(x).sum() / weights.sum()
-    if subset is None:
-        return x.value_counts(normalize=True, sort=False)
-    else:
+
+    if (subset is not None) and (weights is not None):
+        return weights[subset].groupby(x[subset]).sum() / weights[subset].sum()
+    elif subset is not None:
         return x[subset].value_counts(normalize=True, sort=False)
+    elif weights is not None:
+        return weights.groupby(x).sum() / weights.sum()
+    else:
+        return x.value_counts(normalize=True, sort=False)
 
 
 def cond_P(A, B, subset=None):
