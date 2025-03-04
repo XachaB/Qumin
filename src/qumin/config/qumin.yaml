@@ -31,7 +31,8 @@ data: null            # path to paralex.package.json paradigms, segments
 cells: null           # List of cells to use (subset)
 pos: null             # List of parts of speech to use (subset)
 patterns: null        # path to pre-computed patterns. If null, will compute patterns.
-sample: null          # (int) A number of lexemes to sample, for debug purposes.
+sample_lexemes: null  # (int) A number of lexemes to sample, for debug purposes.
+sample_cells: null    # (int) A number of lexemes to sample, for debug purposes.
                       # Samples by frequency if possible, otherwise randomly.
 force_random: False   # Whether to force random sampling.
 seed: 1               # Random seed for reproducible random effects.
@@ -73,7 +74,6 @@ entropy:
                       # with any file, use to compute entropy heatmap
                       # with n-1 predictors, allows for acceleration on nPreds entropy computation.
   merged: False       # Whether identical columns are merged in the input.
-  stacked: False      # Whether to stack results in long form
   legacy: False       # Whether to use the legacy calculation. Slightly slower, but less options.
   token_freq:         # [incompatible with legacy] Whether to use token frequencies for...
     patterns: False   # The probability of the patterns.
