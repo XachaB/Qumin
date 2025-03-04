@@ -899,9 +899,9 @@ class ParadigmPatterns(dict):
         for pair in combinations(self.cells, 2):
             dict.__setitem__(self, pair, paradigms.get_empty_pattern_df(*pair))
 
+        tasks = [(self[pair], pair, self.insert_cost, self.sub_cost, self.optim_mem) for pair in self]
         with Pool(cpus) as pool:  # Create a multiprocessing Pool
-            self.update(tqdm(pool.imap_unordered(self.find_cellpair_patterns,
-                                                 list(self)),  # list of dict keys = the pairs
+            self.update(tqdm(pool.starmap(_find_cellpair_patterns, tasks),
                              total=comb(len(self.cells), 2)))
 
     def __repr__(self):
@@ -1057,125 +1057,6 @@ class ParadigmPatterns(dict):
 
         self[cells] = table
 
-    def _generate_rules(self, row, pair, collection):
-        """
-        Generates the patterns for each pair of forms.
-
-        Arguments:
-            row (pandas.Series): a dataframe row containing the two forms.
-            collection (defaultdict): the patterns collection
-        """
-        lex, a, b = row.lexeme, row.form_x, row.form_y
-
-        if a and b:
-            if a == b:
-                new_rule = Pattern(pair, zip(a.tokens, b.tokens), aligned=True)
-                new_rule.lexemes = {(lex, a, b)}
-                alt = new_rule.to_alt(exhaustive_blanks=False)
-                t = _get_pattern_matchtype(new_rule, pair[0], pair[1])
-                collection[alt][t].append(new_rule)
-            else:
-                done = []
-                log.debug("All alignments of {}, {}".format(a, b))
-                for aligned in alignment.align_auto(a.tokens, b.tokens,
-                                                    self.insert_cost, self.sub_cost):
-                    log.debug((aligned))
-                    new_rule = Pattern(pair, aligned, aligned=True)
-                    new_rule.lexemes = {(lex, a, b)}
-                    log.debug("pattern: " + str(new_rule))
-                    if str(new_rule) not in done:
-                        done.append(str(new_rule))
-                        if new_rule._gen_alt:
-                            alt = new_rule.to_alt(exhaustive_blanks=False, use_gen=True)
-                            log.debug("gen alt: " + str(alt))
-                        else:
-                            alt = new_rule.to_alt(exhaustive_blanks=False)
-                        t = _get_pattern_matchtype(new_rule, pair[0], pair[1])
-                        collection[alt][t].append(new_rule)
-
-    def find_cellpair_patterns(self, pair, **kwargs):
-        """
-        Finds patterns for a pair of cells and returns a Dataframe containing the patterns.
-        """
-
-        def _score(p):
-            """Scores each pattern"""
-
-            def test_all(row, p):
-                """Tests each pattern against each form"""
-                correct = 0
-                lex, a, b = row.lexeme, row.form_x, row.form_y
-                if a and b:
-                    if (lex, a, b) in p.lexemes:
-                        correct += 1
-                    else:
-                        B = p.apply(a, pair, raiseOnFail=False)
-                        A = p.apply(b, pair[::-1], raiseOnFail=False)
-
-                        if (B == b) and (A == a):
-                            correct += 1
-                            p.lexemes.add((lex, a, b))
-                return correct
-
-            counts = df.apply(test_all, axis=1, p=p)
-            return counts.sum()
-
-        def _attribute_best_pattern(sorted_collection, lex, a, b):
-            for p in sorted_collection:
-                if (lex, a, b) in p.lexemes:
-                    return p
-
-        df = self[pair]  # Retrieve the empty df from inner dict
-        collection = defaultdict(lambda: defaultdict(list))
-        c1, c2 = pair
-
-        # Identify pairwise alternations
-        df.apply(self._generate_rules, axis=1, pair=pair, collection=collection)
-
-        sorted_collection = []
-
-        for alt in collection:
-            log.debug("\n\n####Considering alt:" + str(alt))
-            # Attempt to generalize
-            types = list(collection[alt])
-            pats = []
-            log.debug("1.Generalizing in each type")
-            for alt_type in collection[alt]:
-                log.debug("\tlooking at :" + str(collection[alt][alt_type]))
-                if _compatible_context_type(alt_type):
-                    collection[alt][alt_type] = [generalize_patterns(collection[alt][alt_type])]
-                    # print("\t\tcontexts compatible",collection[alt][j])
-                else:
-                    collection[alt][alt_type] = incremental_generalize_patterns(*collection[alt][alt_type])
-                    # print("\t\tcontexts not compatibles:",collection[alt][j])
-                pats.extend(collection[alt][alt_type])
-            log.debug("2.Generalizing across types")
-            if _compatible_context_type(*types):
-                log.debug("\tlooking at compatible:" + str(pats))
-                collection[alt] = [generalize_patterns(pats)]
-            else:
-                log.debug("\tlooking at incompatible:" + str(pats))
-                collection[alt] = incremental_generalize_patterns(*pats)
-            log.debug("Result:" + str(collection[alt]))
-            # Score
-            for p in collection[alt]:
-                p.score = _score(p)
-                sorted_collection.append(p)
-
-        # Sort by score and choose best patterns
-        sorted_collection = sorted(sorted_collection, key=lambda x: x.score, reverse=True)
-
-        def _best_pattern(row):
-            lex, a, b = row.lexeme, row.form_x, row.form_y
-            if a != '' and b != '':
-                return _attribute_best_pattern(sorted_collection, lex, a, b)
-            return None
-
-        df['pattern'] = df.apply(_best_pattern, axis=1)
-        if self.optim_mem:
-            df.pattern = df.pattern.apply(repr)
-        return (pair, df)
-
     def unmerge_columns(self, paradigms):
         """
         Recreates merged columnss
@@ -1222,27 +1103,6 @@ class ParadigmPatterns(dict):
                 self[pair].loc[~defective, 'pattern'] = Pattern.new_identity(pair)
                 self[pair].loc[defective, 'pattern'] = None
 
-    def find_cellpair_applicable(self, pair):
-        """ Find applicable patterns for a single cell pair.
-
-        Args:
-            pair (tuple of str): pair of cells
-
-        Returns:
-            Dataframe of applicable patterns.
-        """
-        def applicable(form):
-            """ Return a tuple of all applicable patterns for a given form"""
-            return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
-
-        df = self[pair].copy()
-        available_patterns = [p for p in self[pair]['pattern'].unique() if p is not None]
-        cell_x = pair[0]
-        has_pat = ~df['pattern'].isnull()
-        applicables = df.loc[has_pat, "form_x"].apply(applicable)
-        applicables.name = "applicable"
-        return (pair, applicables)
-
     def find_applicable(self, cpus=1, **kwargs):
         """Find all applicable rules for each form.
 
@@ -1267,8 +1127,9 @@ class ParadigmPatterns(dict):
 
         log.info("total cpus: " + str(cpus))
 
+        tasks = [(pair, self[pair]) for pair in self]
         with Pool(cpus) as pool:  # Create a multiprocessing Pool
-            for pair, applicables in tqdm(pool.imap_unordered(self.find_cellpair_applicable, self), total=len(self)):
+            for pair, applicables in tqdm(pool.starmap(_find_cellpair_applicable, tasks), total=len(self)):
                 df = self[pair]
                 # We're trying to avoid any pandas internal issues in merging the df/series
                 # First, we create a new column in the df...
@@ -1295,3 +1156,149 @@ class ParadigmPatterns(dict):
                 pair_has_pattern = f"{header}=<{row.pattern}>"
                 incidence_table[pair_has_pattern][row.lexeme] = "X"
         return pd.DataFrame(incidence_table).fillna("")
+
+
+def _find_cellpair_applicable(pair, df):
+    """ Find applicable patterns for a single cell pair.
+
+    Args:
+        pair (tuple of str): pair of cells
+        df (pd.DataFrame): patterns dataframe for that pair
+
+    Returns:
+        (pair, df): pair of cell and dataframe of applicable patterns.
+    """
+
+    def applicable(form):
+        """ Return a tuple of all applicable patterns for a given form"""
+        return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
+
+    available_patterns = [p for p in df['pattern'].unique() if p is not None]
+    cell_x = pair[0]
+    has_pat = ~df['pattern'].isnull()
+    applicables = df.loc[has_pat, "form_x"].apply(applicable)
+    applicables.name = "applicable"
+    return (pair, applicables)
+
+
+def _find_cellpair_patterns(df, pair, insert_cost, sub_cost, optim_mem):
+    """
+    Finds patterns for a pair of cells and returns a Dataframe containing the patterns.
+    """
+
+    def _score(p):
+        """Scores each pattern"""
+
+        def test_all(row, p):
+            """Tests each pattern against each form"""
+            correct = 0
+            lex, a, b = row.lexeme, row.form_x, row.form_y
+            if a and b:
+                if (lex, a, b) in p.lexemes:
+                    correct += 1
+                else:
+                    B = p.apply(a, pair, raiseOnFail=False)
+                    A = p.apply(b, pair[::-1], raiseOnFail=False)
+
+                    if (B == b) and (A == a):
+                        correct += 1
+                        p.lexemes.add((lex, a, b))
+            return correct
+
+        counts = df.apply(test_all, axis=1, p=p)
+        return counts.sum()
+
+    def _attribute_best_pattern(sorted_collection, lex, a, b):
+        for p in sorted_collection:
+            if (lex, a, b) in p.lexemes:
+                return p
+
+    collection = defaultdict(lambda: defaultdict(list))
+
+    # Identify pairwise alternations
+    df.apply(_generate_rules,
+             axis=1,
+             pair=pair,
+             collection=collection,
+             insert_cost=insert_cost,
+             sub_cost=sub_cost)
+
+    sorted_collection = []
+
+    for alt in collection:
+        log.debug("\n\n####Considering alt:" + str(alt))
+        # Attempt to generalize
+        types = list(collection[alt])
+        pats = []
+        log.debug("1.Generalizing in each type")
+        for alt_type in collection[alt]:
+            log.debug("\tlooking at :" + str(collection[alt][alt_type]))
+            if _compatible_context_type(alt_type):
+                collection[alt][alt_type] = [generalize_patterns(collection[alt][alt_type])]
+                # print("\t\tcontexts compatible",collection[alt][j])
+            else:
+                collection[alt][alt_type] = incremental_generalize_patterns(*collection[alt][alt_type])
+                # print("\t\tcontexts not compatibles:",collection[alt][j])
+            pats.extend(collection[alt][alt_type])
+        log.debug("2.Generalizing across types")
+        if _compatible_context_type(*types):
+            log.debug("\tlooking at compatible:" + str(pats))
+            collection[alt] = [generalize_patterns(pats)]
+        else:
+            log.debug("\tlooking at incompatible:" + str(pats))
+            collection[alt] = incremental_generalize_patterns(*pats)
+        log.debug("Result:" + str(collection[alt]))
+        # Score
+        for p in collection[alt]:
+            p.score = _score(p)
+            sorted_collection.append(p)
+
+    # Sort by score and choose best patterns
+    sorted_collection = sorted(sorted_collection, key=lambda x: x.score, reverse=True)
+
+    def _best_pattern(row):
+        lex, a, b = row.lexeme, row.form_x, row.form_y
+        if a != '' and b != '':
+            return _attribute_best_pattern(sorted_collection, lex, a, b)
+        return None
+
+    df['pattern'] = df.apply(_best_pattern, axis=1)
+    if optim_mem:
+        df.pattern = df.pattern.apply(repr)
+    return (pair, df)
+
+
+def _generate_rules(row, pair, collection, insert_cost, sub_cost):
+    """
+    Generates the patterns for each pair of forms.
+
+    Arguments:
+        row (pandas.Series): a dataframe row containing the two forms.
+        collection (defaultdict): the patterns collection
+    """
+    lex, a, b = row.lexeme, row.form_x, row.form_y
+
+    if a and b:
+        if a == b:
+            new_rule = Pattern(pair, zip(a.tokens, b.tokens), aligned=True)
+            new_rule.lexemes = {(lex, a, b)}
+            alt = new_rule.to_alt(exhaustive_blanks=False)
+            t = _get_pattern_matchtype(new_rule, pair[0], pair[1])
+            collection[alt][t].append(new_rule)
+        else:
+            done = []
+            log.debug("All alignments of {}, {}".format(a, b))
+            for aligned in alignment.align_auto(a.tokens, b.tokens, insert_cost, sub_cost):
+                log.debug((aligned))
+                new_rule = Pattern(pair, aligned, aligned=True)
+                new_rule.lexemes = {(lex, a, b)}
+                log.debug("pattern: " + str(new_rule))
+                if str(new_rule) not in done:
+                    done.append(str(new_rule))
+                    if new_rule._gen_alt:
+                        alt = new_rule.to_alt(exhaustive_blanks=False, use_gen=True)
+                        log.debug("gen alt: " + str(alt))
+                    else:
+                        alt = new_rule.to_alt(exhaustive_blanks=False)
+                    t = _get_pattern_matchtype(new_rule, pair[0], pair[1])
+                    collection[alt][t].append(new_rule)
