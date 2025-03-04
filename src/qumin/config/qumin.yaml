@@ -75,7 +75,7 @@ entropy:
   merged: False       # Whether identical columns are merged in the input.
   stacked: False      # Whether to stack results in long form
   legacy: False       # Whether to use the legacy calculation. Slightly slower, but less options.
-  tokens:             # [incompatible with legacy] Whether to use token frequencies for...
+  token_freq:         # [incompatible with legacy] Whether to use token frequencies for...
     patterns: False   # The probability of the patterns.
     predictors: False # The probability of the predictor classes and of the predictor forms.
     cells: False      # The weighting of the measures across different cells.

@@ -25,8 +25,9 @@ def H_command(cfg, md):
     sounds_file_name = md.get_table_path("sounds")
     defective = cfg.pats.defective
 
-    assert not ((cfg.entropy.tokens.patterns or cfg.entropy.tokens.patterns) and cfg.entropy.legacy), \
-        "Tokens can't be used in entropy computations with legacy=True."
+    assert not ((cfg.entropy.token_freq.patterns or cfg.entropy.token_freq.patterns)
+                and cfg.entropy.legacy), \
+        "Token frequencies can't be used in entropy computations with legacy=True."
 
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
     assert (preds[-1] == 1 or cfg.entropy.legacy), \
@@ -83,12 +84,12 @@ def H_command(cfg, md):
         if verbose:
             distrib.one_pred_entropy(debug=verbose,
                                      legacy=cfg.entropy.legacy,
-                                     token_patterns=cfg.entropy.tokens.patterns,
-                                     token_predictors=cfg.entropy.tokens.predictors,
+                                     token_patterns=cfg.entropy.token_freq.patterns,
+                                     token_predictors=cfg.entropy.token_freq.predictors,
                                      )
         distrib.one_pred_entropy(legacy=cfg.entropy.legacy,
-                                 token_patterns=cfg.entropy.tokens.patterns,
-                                 token_predictors=cfg.entropy.tokens.predictors,
+                                 token_patterns=cfg.entropy.token_freq.patterns,
+                                 token_predictors=cfg.entropy.token_freq.predictors,
                                  )
         mean = distrib.get_results().loc[:, "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)

@@ -187,7 +187,7 @@ class PatternDistribution(object):
                 H( \textrm{patterns}_{c1, c2} | \textrm{classes}_{c1, c2} )
 
         The probability distribution of the patterns, on which this entropy
-        is computed, is established eithor on the type or token frequency of
+        is computed, is established either on the type or token frequency of
         the patterns. The probability of the pattern (:math:`p_i`) is the sum
         of the frequencies of all pairs of forms :math:`(x, y)` that instanciate
         this pattern (:math:`S_i`):
@@ -204,10 +204,10 @@ class PatternDistribution(object):
             debug (bool): Whether to print a debug log. Defaults to False
             token_patterns (bool): Whether to use token frequencies to compute
                 pattern probabilities.
-            token_predictors (bool): Whether to use token frequencies to compute
-                pattern probabilities.
+            token_predictors (bool): Whether to use token frequencies to weight
+                the predictors.
             legacy (bool): Whether to use faster legacy computations.
-                This necessarily disables tokens.
+                This necessarily disables token frequencies.
         """
         log.info("Computing c1 → c2 entropies")
         log.debug("Logging one predictor probabilities")
@@ -436,7 +436,8 @@ class PatternDistribution(object):
 
         Arguments:
             n (int): number of predictors.
-            df (pandas.DataFrame): a DataFrame containing patterns and applicable patterns for pairs of forms.
+            df (pandas.DataFrame): a DataFrame containing patterns
+                and applicable patterns for pairs of forms.
             paradigms (pandas.DataFrame): a DataFrame of paradigms.
             pat_order (dict): a dictionary to normalize cell names.
             zeros (dict): a dictionary of pairs that lead to an entropy of zero.
@@ -541,7 +542,8 @@ class PatternDistribution(object):
 
         Arguments:
             n (int): number of predictors.
-            df (pandas.DataFrame): a DataFrame containing patterns and applicable patterns for pairs of forms.
+            df (pandas.DataFrame): a DataFrame containing patterns
+                and applicable patterns for pairs of forms.
             paradigms (pandas.DataFrame): a DataFrame of paradigms.
             pat_order (dict): a dictionary to normalize cell names.
             n (int): number of predictors
