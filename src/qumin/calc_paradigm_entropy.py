@@ -23,15 +23,13 @@ def H_command(cfg, md):
     patterns_folder_path = cfg.patterns
     sounds_file_name = md.get_table_path("sounds")
     defective = cfg.pats.defective
-
-    assert not ((cfg.entropy.token_freq.patterns or cfg.entropy.token_freq.patterns)
-                and cfg.entropy.legacy), \
-        "Token frequencies can't be used in entropy computations with legacy=True."
-
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
-    assert (preds[-1] == 1 or cfg.entropy.legacy), \
-        "N predictor computations are only available with legacy=True"
     onePred = preds[0] == 1
+    legacy = not (cfg.entropy.token_freq.patterns or cfg.entropy.token_freq.patterns)
+
+    assert legacy or (preds[-1] == 1), \
+        "Token frequencies can't be used in N predictor computations, except for weighting cells."
+
     if onePred:
         preds.pop(0)
 
@@ -82,11 +80,11 @@ def H_command(cfg, md):
     if onePred:
         if verbose:
             distrib.one_pred_entropy(debug=verbose,
-                                     legacy=cfg.entropy.legacy,
+                                     legacy=legacy,
                                      token_patterns=cfg.entropy.token_freq.patterns,
                                      token_predictors=cfg.entropy.token_freq.predictors,
                                      )
-        distrib.one_pred_entropy(legacy=cfg.entropy.legacy,
+        distrib.one_pred_entropy(legacy=legacy,
                                  token_patterns=cfg.entropy.token_freq.patterns,
                                  token_predictors=cfg.entropy.token_freq.predictors,
                                  )
