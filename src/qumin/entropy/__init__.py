@@ -5,14 +5,19 @@ import numpy as np
 
 
 def P(x, weights=None, subset=None):
-    """Return the probability distribution of elements in a :class:`pandas.core.series.Series`.
+    """
+    Return the probability distribution of unique elements in a :class:`pandas.core.series.Series`.
+    The default is a Uniform probability distribution, where each token in `x` has the same
+    probability. If weights are provided, they will be used as the probability of the tokens.
 
     Arguments:
         x (:class:`pandas.core.series.Series`): A series of data.
+        weights (:class:`pandas.core.series.Series`): A series of weights.
         subset (Iterable): Only give the distribution for a subset of values.
 
     Returns:
-        :class:`pandas.core.series.Series`: A Series which index are x's elements and which values are their probability in x.
+        :class:`pandas.core.series.Series`: A Series which index are x's unique elements
+            and which values are their probability in x.
     """
     if weights is not None:
         return weights.groupby(x).sum() / weights.sum()
