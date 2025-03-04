@@ -1222,26 +1222,6 @@ class ParadigmPatterns(dict):
                 self[pair].loc[~defective, 'pattern'] = Pattern.new_identity(pair)
                 self[pair].loc[defective, 'pattern'] = None
 
-    def find_cellpair_applicable(self, pair):
-        """ Find applicable patterns for a single cell pair.
-
-        Args:
-            pair (tuple of str): pair of cells
-
-        Returns:
-            Dataframe of applicable patterns.
-        """
-        def applicable(form):
-            """ Return a tuple of all applicable patterns for a given form"""
-            return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
-
-        df = self[pair].copy()
-        available_patterns = [p for p in self[pair]['pattern'].unique() if p is not None]
-        cell_x = pair[0]
-        has_pat = ~df['pattern'].isnull()
-        applicables = df.loc[has_pat, "form_x"].apply(applicable)
-        applicables.name = "applicable"
-        return (pair, applicables)
 
     def find_applicable(self, cpus=1, **kwargs):
         """Find all applicable rules for each form.
@@ -1267,8 +1247,9 @@ class ParadigmPatterns(dict):
 
         log.info("total cpus: " + str(cpus))
 
+        tasks = [(pair, self[pair]) for pair in self]
         with Pool(cpus) as pool:  # Create a multiprocessing Pool
-            for pair, applicables in tqdm(pool.imap_unordered(self.find_cellpair_applicable, self), total=len(self)):
+            for pair, applicables in tqdm(pool.starmap(find_cellpair_applicable, tasks), total=len(self)):
                 df = self[pair]
                 # We're trying to avoid any pandas internal issues in merging the df/series
                 # First, we create a new column in the df...
@@ -1295,3 +1276,25 @@ class ParadigmPatterns(dict):
                 pair_has_pattern = f"{header}=<{row.pattern}>"
                 incidence_table[pair_has_pattern][row.lexeme] = "X"
         return pd.DataFrame(incidence_table).fillna("")
+
+
+def find_cellpair_applicable(pair, df):
+    """ Find applicable patterns for a single cell pair.
+
+    Args:
+        pair (tuple of str): pair of cells
+        df (pd.DataFrame): patterns dataframe for that pair
+
+    Returns:
+        (pair, df): pair of cell and dataframe of applicable patterns.
+    """
+    def applicable(form):
+        """ Return a tuple of all applicable patterns for a given form"""
+        return tuple((p for p in available_patterns if p.applicable(form, cell_x)))
+
+    available_patterns = [p for p in df['pattern'].unique() if p is not None]
+    cell_x = pair[0]
+    has_pat = ~df['pattern'].isnull()
+    applicables = df.loc[has_pat, "form_x"].apply(applicable)
+    applicables.name = "applicable"
+    return (pair, applicables)
