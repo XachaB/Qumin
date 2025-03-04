@@ -13,6 +13,7 @@ dev version (forthcoming)
 - Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
 - Change management of sampling: `most_freq=False` replaced by `force_random=True`.
     Addition of a seed option to determinise sampling.  By default, sample by frequency.
+    Change `sample` for `sample_lexemes` and add `sample_cells` with the same behaviour for cells.
 - Removal:
     - Support for sound table "Seg." column.
     - Bipartite entropy computations
