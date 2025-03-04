@@ -74,7 +74,6 @@ entropy:
                       # with any file, use to compute entropy heatmap
                       # with n-1 predictors, allows for acceleration on nPreds entropy computation.
   merged: False       # Whether identical columns are merged in the input.
-  stacked: False      # whether to stack results in long form
 
 eval:
   iter: 10            # How many 90/10 train/test folds to do.
