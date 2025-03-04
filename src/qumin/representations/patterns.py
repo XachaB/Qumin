@@ -901,7 +901,7 @@ class ParadigmPatterns(dict):
 
         tasks = [(self[pair], pair, self.insert_cost, self.sub_cost, self.optim_mem) for pair in self]
         with Pool(cpus) as pool:  # Create a multiprocessing Pool
-            self.update(tqdm(pool.starmap(find_cellpair_patterns, tasks),
+            self.update(tqdm(pool.starmap(_find_cellpair_patterns, tasks),
                              total=comb(len(self.cells), 2)))
 
     def __repr__(self):
@@ -1129,7 +1129,7 @@ class ParadigmPatterns(dict):
 
         tasks = [(pair, self[pair]) for pair in self]
         with Pool(cpus) as pool:  # Create a multiprocessing Pool
-            for pair, applicables in tqdm(pool.starmap(find_cellpair_applicable, tasks), total=len(self)):
+            for pair, applicables in tqdm(pool.starmap(_find_cellpair_applicable, tasks), total=len(self)):
                 df = self[pair]
                 # We're trying to avoid any pandas internal issues in merging the df/series
                 # First, we create a new column in the df...
@@ -1158,7 +1158,7 @@ class ParadigmPatterns(dict):
         return pd.DataFrame(incidence_table).fillna("")
 
 
-def find_cellpair_applicable(pair, df):
+def _find_cellpair_applicable(pair, df):
     """ Find applicable patterns for a single cell pair.
 
     Args:
@@ -1181,7 +1181,7 @@ def find_cellpair_applicable(pair, df):
     return (pair, applicables)
 
 
-def find_cellpair_patterns(df, pair, insert_cost, sub_cost, optim_mem):
+def _find_cellpair_patterns(df, pair, insert_cost, sub_cost, optim_mem):
     """
     Finds patterns for a pair of cells and returns a Dataframe containing the patterns.
     """
