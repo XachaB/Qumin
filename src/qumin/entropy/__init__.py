@@ -2,22 +2,43 @@
 # !/usr/bin/python3
 
 import numpy as np
+import pandas as pd
 
 
-def P(x, subset=None):
-    """Return the probability distribution of elements in a :class:`pandas.core.series.Series`.
+def P(x, weights=None, subset=None):
+    """
+    Return the probability distribution of unique elements in a :class:`pandas.core.series.Series`.
+    The default is a Uniform probability distribution, where each token in `x` has the same
+    probability. If weights are provided, they will be used as the probability of the tokens.
+
+    Example:
+        >>> P(pd.Series(["A", "B", "B"]))
+        A    0.333333
+        B    0.666667
+        Name: proportion, dtype: float64
+        >>> P(pd.Series(["A", "B", "B"]), weights=pd.Series([2, 1, 1]))
+        A    0.5
+        B    0.5
+        dtype: float64
 
     Arguments:
         x (:class:`pandas.core.series.Series`): A series of data.
+        weights (:class:`pandas.core.series.Series`): A series of weights.
         subset (Iterable): Only give the distribution for a subset of values.
 
     Returns:
-        :class:`pandas.core.series.Series`: A Series which index are x's elements and which values are their probability in x.
+        :class:`pandas.core.series.Series`: A Series which index are x's unique elements
+            and which values are their probability in x.
     """
-    if subset is None:
-        return x.value_counts(normalize=True, sort=False)
-    else:
+
+    if (subset is not None) and (weights is not None):
+        return weights[subset].groupby(x[subset]).sum() / weights[subset].sum()
+    elif subset is not None:
         return x[subset].value_counts(normalize=True, sort=False)
+    elif weights is not None:
+        return weights.groupby(x).sum() / weights.sum()
+    else:
+        return x.value_counts(normalize=True, sort=False)
 
 
 def cond_P(A, B, subset=None):
@@ -67,3 +88,15 @@ def entropy(A):
         H(A)"""
     pos = A > 0
     return -(A[pos] * np.log2(A[pos])).sum()
+
+
+def cond_entropy_slow(df, subset=None):
+    """
+    Calculate the conditional entropy through a slower method (with iterations across all groups).
+
+    Uses token frequencies to weight the patterns.
+    """
+    def compute_group_ent(group):
+        return entropy(P(group.pattern, weights=group.f_pair)) * group.f_pred.sum()
+
+    return 0 + df.groupby('applicable').apply(compute_group_ent).sum() / df.f_pred.sum()

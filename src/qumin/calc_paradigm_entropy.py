@@ -23,9 +23,13 @@ def H_command(cfg, md):
     patterns_folder_path = cfg.patterns
     sounds_file_name = md.get_table_path("sounds")
     defective = cfg.pats.defective
-
     preds = [cfg.entropy.n] if type(cfg.entropy.n) is int else sorted(cfg.entropy.n)
     onePred = preds[0] == 1
+    legacy = not (cfg.entropy.token_freq.patterns or cfg.entropy.token_freq.patterns)
+
+    assert legacy or (preds[-1] == 1), \
+        "Token frequencies can't be used in N predictor computations, except for weighting cells."
+
     if onePred:
         preds.pop(0)
 
@@ -70,12 +74,20 @@ def H_command(cfg, md):
 
     distrib = PatternDistribution(patterns,
                                   md.dataset.name,
+                                  paradigms.frequencies,
                                   features=features)
 
     if onePred:
         if verbose:
-            distrib.one_pred_entropy(debug=verbose)
-        distrib.one_pred_entropy()
+            distrib.one_pred_entropy(debug=verbose,
+                                     legacy=legacy,
+                                     token_patterns=cfg.entropy.token_freq.patterns,
+                                     token_predictors=cfg.entropy.token_freq.predictors,
+                                     )
+        distrib.one_pred_entropy(legacy=legacy,
+                                 token_patterns=cfg.entropy.token_freq.patterns,
+                                 token_predictors=cfg.entropy.token_freq.predictors,
+                                 )
         mean = distrib.get_results().loc[:, "value"].mean()
         log.info("Mean H(c1 -> c2) = %s ", mean)
 
