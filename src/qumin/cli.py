@@ -6,7 +6,7 @@ from .find_patterns import pat_command
 from .find_macroclasses import macroclasses_command
 from .make_lattice import lattice_command
 from .microclass_heatmap import heatmap_command
-from .entropy_analysis import ent_heatmap_command
+from .entropy_heatmap import ent_heatmap_command
 from .eval import eval_command
 from .utils import Metadata
 
@@ -40,7 +40,7 @@ def qumin_command(cfg):
     elif cfg.action == "eval":
         eval_command(cfg, md)
 
-    if (cfg.action == "H" and cfg.entropy.heatmap) or cfg.action == 'ent_heatmap':
+    if (cfg.action == "H" and cfg.entropy.vis) or cfg.action == 'ent_heatmap':
         ent_heatmap_command(cfg, md)
 
     md.save_metadata()

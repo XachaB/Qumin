@@ -63,6 +63,8 @@ heatmap:
   order: False             # Priority list for sorting features (for entropy heatmap)
                            # ex: [number, case]). If no features-values file available,
                            # it should contain an ordered list of the cells to display.
+  cols: False              # List of features to show in columns (for zones heatmap)
+                           # ex: [Mode, Tense]). All other features will constitute rows.
 
 entropy:
   heatmap: True       # Whether to draw a heatmap.

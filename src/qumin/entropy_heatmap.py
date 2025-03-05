@@ -15,13 +15,123 @@ import logging
 logging.getLogger('matplotlib.font_manager').disabled = True
 log = logging.getLogger("Qumin")
 
+def get_zones(df, threshold=0):
+    """ Cluster cells into 'zones' of inter-predictibility.
 
-def get_features_order(features_file, results, sort_order=False):
+    By default, two cells are interpredictible if the entropy in both direction is 0.
+    Threshold can be used (eg. set to 0.005) to get zones of very good predictibility instead.
+
+    Args:
+        df: results table with conditional entropies
+        threshold: below this threshold, consider the zones interpredictible.
+
+    Returns:
+        a dictionary of cells to zone indexes (clusters).
+    """
+    df = df[df["measure"] == "cond_entropy"].pivot_table(index="predictor", columns="predicted", values="value")
+    clusters = {x: None for x in df.index}
+    n_clusters = 1
+    for x in clusters:
+        row = df.loc[x, :]
+        mates_row = (row.fillna(False) <= threshold)
+        col = df.loc[:, x]
+        mates_col = (col.fillna(False) <= threshold)
+        mates = row[mates_row & mates_col].index
+        if clusters[x] is None:
+            for m in mates:
+                if clusters[m] is not None:
+                    clusters[x] = clusters[m]
+                    break
+            if clusters[x] is None:
+                clusters[x] = n_clusters
+                n_clusters += 1
+        for m in mates:
+            if clusters[m] is None:
+                clusters[m] = clusters[x]
+    return clusters
+
+
+def zones_heatmap(results, md, features, cell_order=None, cols=None):
+    """ Produces a heatmap of zones of interpredictibility clusters.
+
+    Args:
+        results: qumin entropy result file
+        md: frictionless metadata for the paralex dataset
+        features: feature table from the dataset
+        cell_order: list of cells sorted in a predefined way
+        cols: list of feature dimensions to use as columns (the rest will be cells)
+
+    Returns:
+        Clusters of zones with total predictibility.
+    """
+
+    def partial_cell(c, decomposed, dims):
+        partials = [v for v in decomposed.loc[c, dims] if not pd.isna(v)]
+        return ".".join(partials)
+
+    def zone_table_one(clusters, ax):
+        table = pd.DataFrame(clusters.items(), columns=["cell", "zones"])
+        if cols is not None:
+            decomposed = decompose(features, list(table["cell"]))
+            table["cols"] = table["cell"].apply(lambda c: partial_cell(c, decomposed, cols))
+            rows = [f for f in decomposed.columns if f not in cols]
+            table["rows"] = table["cell"].apply(lambda c: partial_cell(c, decomposed, rows))
+        else:
+            table["rows"] = table["cell"]
+            table["cols"] = ""
+
+        table = table.sort_values("cell", key=lambda s: s.apply(cell_order.index))
+        maxi = table["zones"].max()
+        table = table.pivot_table(index="rows", columns="cols", values="zones", sort=False)
+        palette =  sns.color_palette(n_colors=maxi)
+        g =  sns.heatmap(table, cmap=palette, square=True, xticklabels=True, yticklabels=True,
+                        cbar=False, annot=True, linewidths=0, ax=ax)
+        g.set_title(f"Entropy threshold: {t} ({maxi} zones)")
+        g.set_facecolor('white')
+
+
+    dataset = results["dataset"].iloc[0]
+
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    fig.set_figheight(10)
+    fig.set_figwidth(20)
+    for ax, t in zip(axes.flat, [0.005, 0]):
+        clusters = get_zones(results, threshold=t)
+        zone_table_one(clusters, ax)
+    fig.suptitle(f"Zones of inter-predictibility for {dataset}")
+    plt.tight_layout()
+
+    name = md.register_file("zonesTable.png",
+                            {"computation": "zone_table",
+                             "content": "figure"})
+
+    log.info("Writing zones table to: " + name)
+    plt.savefig(name, pad_inches=0.1)
+    return clusters # this is the last computed: with 0 entropy threshold
+
+def decompose(features, cells):
+    """ Decompose a set of cells to separate each of their feature-value by feature.
+
+    Args:
+        features: features-values file from paralex
+        cells: list of cells
+
+    Returns:
+        A dataframe with the cells as indexes, the features (dimensions) as columns,
+            giving for their intersection the corresponding value.
+            NaNs are present if a cell is not specified for a feature.
+    """
+    df_c = pd.DataFrame(index=list(cells))
+    for c in cells:
+        for v in c.split('.'):
+            f = features.loc[v, 'feature']
+            df_c.loc[c, f] = v
+    return df_c
+
+def get_features_order(features, results, sort_order=False):
     """Returns an ordered list of the cells from a Paralex compliant
     cell file."""
-    if features_file:
-        log.info("Reading features")
-        features = pd.read_csv(features_file, index_col=0)
+    if features is not None:
 
         df = results.reset_index()
         cells = sorted(set(df.predictor.to_list() + df.predicted.to_list()))
@@ -29,15 +139,8 @@ def get_features_order(features_file, results, sort_order=False):
         # Handle multiple predictor format ('cellA&cellB')
         cells = sorted(set(sum([x.split('&') for x in cells], [])))
 
-        df_c = pd.DataFrame(index=list(cells))
-        for c in cells:
-            feat_order = {}
-
-            for f in c.split('.'):
-                feat_order[features.loc[f, 'feature']] = features.loc[f, 'canonical_order']
-            for f, v in feat_order.items():
-                df_c.loc[c, f] = v
-
+        df_c = decompose(features, list(cells))
+        df_c = df_c.applymap(lambda f: features.loc[f, 'canonical_order'] if not pd.isna(f) else f)
         if not sort_order:
             sort_order = list(df_c.columns)
         return df_c.sort_values(by=[x for x in sort_order], axis=0).index.to_list()
@@ -51,13 +154,11 @@ def get_features_order(features_file, results, sort_order=False):
 
 
 def entropy_heatmap(results, md, cmap_name=False,
-                    feat_order=None, dense=False, annotate=False,
-                    parameter=False):
+                    feat_order=None, dense=False, annotate=False, filename="entropyHeatmap.png"):
 
-    """Make a FacetGrid heatmap of all metrics.
+    """Make a FacetGrid heatmap of all metrics
 
     Arguments:
-        parameter: ## What is this ? ##
         results (:class:`pandas:pandas.DataFrame`):
             a results DataFrame as produced by calc_paradigm_entropy.
         md (qumin.utils.Metadata): MetaData handler to get access to file location.
@@ -67,6 +168,7 @@ def entropy_heatmap(results, md, cmap_name=False,
             Used to sort the labels.
         dense (bool): whether to use short cell names or not.
         annotate (bool): whether to add an annotation overlay.
+        filename (str): filename to save the heatmap.
     """
 
     if not cmap_name:
@@ -189,19 +291,17 @@ def entropy_heatmap(results, md, cmap_name=False,
 
     cg.tight_layout()
 
-    name = md.register_file("entropyHeatmap.png",
+    name = md.register_file(filename,
                             {"computation": "entropy_heatmap",
                              "content": "figure"})
 
     log.info("Writing heatmap to: " + name)
-
     cg.savefig(name, pad_inches=0.1)
 
 
 def ent_heatmap_command(cfg, md):
-    r"""Draw a heatmap of results similarities using seaborn.
+    r"""Draw a heatmap of results similarities and a plot of zones.
     """
-    log.info("Drawing a heatmap of the results...")
     results = pd.read_csv(cfg.entropy.importFile, index_col=[0, 1])
     try:
         features_file_name = md.get_table_path("features-values")
@@ -209,10 +309,36 @@ def ent_heatmap_command(cfg, md):
         features_file_name = None
         log.warning("Your package doesn't contain any features-values file. You should provide an ordered list of cells in command line.")
 
-    feat_order = get_features_order(features_file_name, results, cfg.heatmap.order)
+    features = None
+    if features_file_name:
+        log.info("Reading features")
+        features = pd.read_csv(features_file_name, index_col=0)
+    feat_order = get_features_order(features, results, cfg.heatmap.order)
 
+    log.info("Drawing a heatmap of the results...")
     entropy_heatmap(results, md,
                     cmap_name=cfg.heatmap.cmap,
                     feat_order=feat_order,
                     dense=cfg.heatmap.dense,
                     annotate=cfg.heatmap.annotate)
+
+    log.info("Drawing zones of interpredictibility...")
+    clusters = zones_heatmap(results, md, features, cell_order=feat_order, cols=cfg.heatmap.cols)
+
+    cl_found = set()
+    distillation = []
+    for c in feat_order:
+        if clusters[c] not in cl_found:
+            cl_found.add(clusters[c])
+            distillation.append(c)
+
+
+    log.info("Drawing a heatmap of a distillation of the results...")
+    print(results)
+    result_subset = results.loc[results.index.isin(distillation, level=0) & results.index.isin(distillation, level=1)]
+    entropy_heatmap(result_subset, md,
+                    cmap_name=cfg.heatmap.cmap,
+                    feat_order=distillation,
+                    dense=cfg.heatmap.dense,
+                    annotate=cfg.heatmap.annotate,
+                    filename="entropyHeatmap_distillation.png")
