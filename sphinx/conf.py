@@ -245,7 +245,7 @@ latex_logo = "../qumin.png"
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'qumin', 'Qumin Documentation',
-     ['Sacha Beniamine'], 1)
+     ['Sacha Beniamine, Jules Bouton'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -259,7 +259,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     ('index', 'Qumin', 'Qumin Documentation',
-     'Sacha Beniamine', 'Qumin', 'One line description of project.',
+     'Sacha Beniamine, Jules Bouton', 'Qumin', 'One line description of project.',
      'Miscellaneous'),
 ]
 

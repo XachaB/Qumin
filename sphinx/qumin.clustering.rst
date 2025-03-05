@@ -4,14 +4,6 @@ qumin.clustering package
 Submodules
 ----------
 
-qumin.clustering.__init__ module
---------------------------------
-
-.. automodule:: qumin.clustering.__init__
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 qumin.clustering.algorithms module
 ----------------------------------
 
