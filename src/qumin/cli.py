@@ -6,7 +6,7 @@ from .find_patterns import pat_command
 from .find_macroclasses import macroclasses_command
 from .make_lattice import lattice_command
 from .microclass_heatmap import heatmap_command
-from .entropy_heatmap import ent_heatmap_command
+from .entropy_analysis import ent_heatmap_command
 from .eval import eval_command
 from .utils import Metadata
 
