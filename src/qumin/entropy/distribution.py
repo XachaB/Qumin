@@ -8,10 +8,11 @@ Encloses distribution of patterns on paradigms.
 import logging
 from collections import Counter, defaultdict
 from functools import reduce
-from itertools import combinations
-
+from itertools import combinations, permutations
+from operator import mul
 import pandas as pd
 
+from ..representations.frequencies import Frequencies
 from . import cond_entropy, entropy
 
 log = logging.getLogger("Qumin")
@@ -34,7 +35,7 @@ class PatternDistribution(object):
             Name of the dataset.
     """
 
-    def __init__(self, patterns, name, features=None):
+    def __init__(self, patterns, dataset, features=None):
         """Constructor for PatternDistribution.
 
         Arguments:
@@ -42,11 +43,12 @@ class PatternDistribution(object):
                 A dict of :class:`pandas.DataFrame`, where each row describes an alternation between
                 two cells forms belonging to different cells of the same lexeme.
                 The row also contains the correct pattern and the set of applicable patterns.
-            name (str): dataset name.
+            dataset (str): dataset metadata.
             features:
                 optional table of features
         """
-        self.name = name
+        self.name = dataset.name
+        self.frequencies = Frequencies(dataset)
         self.patterns = patterns
 
         if features is not None:
@@ -75,22 +77,156 @@ class PatternDistribution(object):
         Returns computation results from a distribution of patterns.
 
         Arguments:
-            measure (str): measure name.
-            n (int): number of predictors
+            measure (str): Kind of measure to return. Defaults to cond_entropy.
+            n (int): Number of predictors to include in the mean.
 
         Returns:
             pandas.DataFrame: a DataFrame of results.
-
         """
         is_cond_ent = self.data.loc[:, "measure"] == measure
         is_one_pred = self.data.loc[:, "n_preds"] == n
         return self.data.loc[is_cond_ent & is_one_pred, :]
 
-    def export_file(self, filename):
-        """ Export the :attr:`PatternDistribution.data` DataFrame to file
+    def get_mean(self, tokens=False, **kwargs):
+        """ Returns the average measures from the current run.
+
+        Arguments:
+            tokens (boolean): Whether the cell token frequencies should be used for weighting.
+                Defaults to False.
+            **kwargs: Keyword arguments are passed to `get_results()`
+
+        Returns: mean (float)
+        """
+
+        results = self.get_results(**kwargs)
+
+        # Try to weight
+        if tokens:
+            data = self.get_weights(results)
+            # Check that we got weight
+            if data is not None:
+                return (data.weight * data.value).sum()
+
+        return results.loc[:, "value"].mean()
+
+    def get_weights(self, data):
+        r""" Returns weights computed from cell frequencies for pairs of cells.
+
+        *The probability of a pair of cells is the product of the probability of the predictors
+        with the probability of the target. The target is chosen different from the predictors.*
+
+        Let :math:`\{A_1, \dots A_n\}` be the random variables describing
+        the drawing of :math:`n` predictors
+        and :math:`B` the random variable describing the drawing of a target cell.
+
+        One can write the following generic formula and rewrite it with Bayes' theorem:
+            .. math::
+                \begin{align}
+                P(\textrm{pred} \to \textrm{target}) &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                P(B = \textrm{target}\mid B \notin \textrm{pred})\\
+                &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                \frac{P(B = \textrm{target}\cap B \notin \textrm{pred})}{P(B \notin \textrm{pred})}
+                \end{align}
+
+        Since :math:`B = \textrm{target} \subset B \notin \textrm{pred}`, one can write:
+            .. math::
+                \begin{align}
+                P(\textrm{pred} \to \textrm{target}) &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                \frac{P(B = \textrm{target})}{P(B \notin \textrm{pred})}\\
+                &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                \frac{P(B = \textrm{target})}{1 - \sum_{a\in \textrm{pred}}P(a)}
+                \end{align}
+
+        We now need to estimate :math:`P(\textrm{pred})` and :math:`P(\textrm{target})`.
+        Let :math:`f_i` be the frequency of cell :math:`i` and
+        :math:`f` the cumulated frequency of all cells.
+
+        In the simplest case with **one predictor**, the formula can be simplified to:
+            .. math::
+
+                \begin{align}
+                P(\textrm{pred} \to \textrm{target}) &= P(A = \textrm{pred})
+                \frac{P(B = \textrm{target})}{P(B \neq \textrm{pred})}\\
+                &= \frac{f_\textrm{pred} f_\textrm{target}}{f f_\overline{\textrm{pred}}}
+                \end{align}
+
+        In the more complex case with **n predictor**, we need to estimate
+        :math:`P(\{A_1, \dots A_n\} = \textrm{pred})`.
+
+        Let us consider:
+
+        - :math:`S` the set of all cells,
+        - :math:`C^n_S` the set of all unordered combinations of :math:`k` cells.
+
+        For instance, if :math:`S=\{A, B, C\}` and :math:`n=2`, then:
+            .. math::
+
+                C^n_S = \{\{A, B\}, \{A, C\}, \{B, C\}\}
+
+        If we draw random combinations of :math:`n` cells,
+        how often are we going to draw each item of :math:`C^k_S`?
+
+        This value is:
+            .. math::
+
+                \begin{align}
+                P(\{A_1, \dots A_n\} = \textrm{pred}) &= \frac{n!\prod_{a\in \textrm{pred}}P(a)}
+                {\sum_{c\in C_S^n} n! \prod_{a\in c}P(a)} \\
+                &= \frac{\prod_{a\in \textrm{pred}} f_a}{\sum_{c\in C_S^n} \prod_{a\in c}f_a}
+                \end{align}
+
+        Finally:
+            .. math::
+
+                \begin{align}
+                P(\textrm{pred} \to \textrm{target}) &= P(\{A_1, \dots A_n\} = \textrm{pred})
+                \frac{P(B = \textrm{target})}{1 - \sum_{a\in \textrm{pred}}P(a)}\\
+                &= \frac{f_\textrm{target}}{f}\Big(\frac{\prod_{a\in \textrm{pred}} f_a}
+                {\sum_{c\in C_S^n} \prod_{a\in c}f_a
+                \times (1-\sum_{a\in \textrm{pred}}\frac{f_a}{f})}\Big)
+                \end{align}
+
+        Notice that the second part of the final formula does not depend on :math:`B` and can
+        be computed for the predictors beforehand. We then compute the product of this with
+        the relative frequency of the target cell.
+
+        Returns:
+            an array of weights (:class:`numpy:numpy.ndarray`)
+        """
+        if self.frequencies.source['cells'] == "empty":
+            log.warning("Couldn't find cell frequencies. "
+                        "Falling back on weighting by the number of pairs.")
+            return None
+
+        def compute_weight(x, freq):
+            """
+            For each group of predictors, compute the constant value.
+            Make then the product with the target frequency.
+            """
+            preds = x.name.split('&')
+            is_pred = freq.index.isin(preds)
+
+            # Probabilities of the combinations of predictors
+            C_sum = sum([reduce(mul, p) for p in combinations(freq.result, len(preds))])
+            # Probabity of our combination of predictors
+            pred_product = reduce(mul, freq.loc[is_pred, 'result'])
+            # Constant part for predictor
+            constant = pred_product / (C_sum * (1 - freq.loc[is_pred, 'result'].sum()))
+            # Vectorized computation for the target
+            x['weight'] = (freq.loc[x.predicted] * constant).values
+            return x
+
+        cell_freq = self.frequencies.get_relative_freq(data="cells")
+        data = data.groupby('predictor').apply(compute_weight, cell_freq).reset_index(drop=True)
+        return data
+
+    def export_file(self, filename, tokens=False):
+        """ Export the data DataFrame to file
 
         Arguments:
             filename: the file's path.
+             tokens (boolean): Whether weights should be returned from cell token frequencies.
+                Defaults to False.
         """
 
         def join_if_multiple(preds):
@@ -99,6 +235,10 @@ class PatternDistribution(object):
             return preds
 
         data = self.data.copy()
+        if tokens:
+            weight = self.get_weights(data)
+            if weight is not None:
+                data.loc[:, 'weight'] = weight.weight.round(5)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
         if "entropy" in data.columns:
             # Rounding at 10 significant digits, ensuring positive zeros.
@@ -119,7 +259,7 @@ class PatternDistribution(object):
 
         data = pd.read_csv(filename)
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(split_if_multiple)
-        self.data = pd.concat(self.data, data)
+        self.add_measures(data)
 
     def add_features(self, group):
         """
@@ -134,6 +274,16 @@ class PatternDistribution(object):
             return ret
         else:
             return group.applicable
+
+    def add_measures(self, *args, **kwargs):
+        """ Adds data to the existing measures.
+
+        Arguments:
+            *args (:class:`pandas:pandas.DataFrame`): DataFrames to add.
+            **kwargs: optional keyword arguments to pass to `pandas.concat()`.
+        """
+
+        self.data = pd.concat([self.data, *args], **kwargs)
 
     def prepare_data(self, n=1, debug=False):
         """
@@ -213,10 +363,7 @@ class PatternDistribution(object):
                                                                 pair,
                                                                 subset=selector)
 
-        if self.data.empty:
-            self.data = data.reset_index()
-        else:
-            self.data = pd.concat([self.data, data.reset_index()])
+        self.add_measures(data.reset_index())
 
     def cond_entropy_log(self, group, classes, cells, subset=None):
         """Print a log of the probability distribution for one predictor.
@@ -343,7 +490,7 @@ class PatternDistribution(object):
                 )
 
         # Add to previous results
-        self.data = pd.concat([self.data, data])
+        self.add_measures(data.reset_index(drop=True))
 
     def n_preds_condent(self, df, paradigms, pat_order, zeros, n):
         r"""

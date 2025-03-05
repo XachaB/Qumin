@@ -4,14 +4,6 @@ qumin.representations package
 Submodules
 ----------
 
-qumin.representations.__init__ module
--------------------------------------
-
-.. automodule:: qumin.representations.__init__
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 qumin.representations.alignment module
 --------------------------------------
 
@@ -45,7 +37,7 @@ qumin.representations.generalize module
    :show-inheritance:
 
 qumin.representations.paradigms module
--------------------------------------
+--------------------------------------
 
 .. automodule:: qumin.representations.paradigms
    :members:

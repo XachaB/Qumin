@@ -7,8 +7,10 @@ Version 3.0
 ~~~~~~~~~~~
 
 - Add a `pos` keyword to filter paradigms on POS and improve the behaviour of `cells`.
+- Usage of frequencies:
+    - Read frequencies from as much sources as possible in the Paralex package (Frequencies class).
+    - Weight cells based on the predictor-target pair frequency.
 - Prevent Matplotlib font manager from spamming the log in debug mode.
-- Adds a Frequency class able to handle multiple paralex sources for frequencies.
 - Switch patterns management to long format everywhere
 - Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
 - Change management of sampling:
@@ -25,6 +27,7 @@ Version 2.0
 
 * Support for the Paralex standard.
 * Automatic generation of heatmaps for entropy computations.
+* Add a `cells` keyword to filter paradigms on cells.
 * Several bugfixes
 * Removal:
     * Support for wide paradigms.
