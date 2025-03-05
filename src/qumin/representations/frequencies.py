@@ -58,7 +58,7 @@ class Frequencies(object):
               "lexemes": None,
               "forms": None}
 
-    def __init__(self, package, source=False, **kwargs):
+    def __init__(self, package, *args, source=False, **kwargs):
         """Constructor for Frequencies. We gather and store frequencies
         for forms, lexemes and cells. Behaviour is the following:
             - If `force_uniform` is `True`, we use the paradigms table to generate a Uniform distribution.
@@ -67,7 +67,7 @@ class Frequencies(object):
             - If we can't use the frequency table, we fall back to a uniform.
 
         Arguments:
-            p (frictionless.Package): package to analyze
+            package (frictionless.Package): package to analyze
             source (Dict[str, str]): name of the source to use when several are available.
             **kwargs: keyword arguments for frequency reading methods.
         """
@@ -77,9 +77,9 @@ class Frequencies(object):
         if source:
             self.source.update(source)
 
-        self._read_aggregate_frequencies("forms", **kwargs)
-        self._read_aggregate_frequencies("lexemes", **kwargs)
-        self._read_aggregate_frequencies("cells", **kwargs)
+        self._read_aggregate_frequencies("forms", *args, **kwargs)
+        self._read_aggregate_frequencies("lexemes", *args, **kwargs)
+        self._read_aggregate_frequencies("cells", *args, **kwargs)
 
     def _read_aggregate_frequencies(self, name, force_uniform=False):
         """
@@ -87,6 +87,7 @@ class Frequencies(object):
 
         Arguments:
             name(str): Frequency table to build. Either forms, cells or lexemes.
+            paradigms (pandas.DataFrame): full paradigms. To ensure that the same forms are used.
             force_uniform (bool): Whether to replace everywhere real frequencies
                 by empty uniform distributions. Defaults to False
 
@@ -104,8 +105,8 @@ class Frequencies(object):
         # 2. For forms, try to read from the frequencies table.
         elif not force_uniform and name == 'forms' and self.p.has_resource("frequencies"):
             log.info('No frequencies in the paradigms table, looking for a frequency table.')
-            freq = px.read_table('frequency', self.p, index_col='freq_id',
-                                 usecols=['form', 'value', 'freq_id'])
+            freq = px.read_table('frequencies', self.p, index_col='freq_id',
+                                 usecols=['freq_id', 'form', 'value', 'source'])
             freq_col = freq.columns
             if "form" not in freq_col:
                 raise ValueError("No form column in the frequency table."
@@ -117,7 +118,7 @@ class Frequencies(object):
                 freq['source'] = 'frequencies_table'
                 self.source['forms'] = 'frequencies_table'
             elif self.source['forms'] is None:
-                self.source['forms'] = list(self.freq['source'].unique())[0]
+                self.source['forms'] = list(freq['source'].unique())[0]
                 log.info(f"No default source provided for frequencies. Using {self.source['forms']}")
 
             # We use the form_id column to match both dataframes
@@ -129,7 +130,7 @@ class Frequencies(object):
                             f"a row for every form_id row."
                             f"Missing:\n{table.loc[missing_idx].head()}")
 
-            table.loc[self.freq.index, 'value'] = freq.value
+            table.loc[freq.index, ['value', 'source']] = freq[['value', 'source']]
 
         # 3. For cells and lexemes build from the forms table.
         # TODO read directly from the frequencies table if possible
@@ -162,13 +163,25 @@ class Frequencies(object):
                     table.loc[dup].groupby(self.col_names).value.transform(sum)
                 table.drop_duplicates(subset=self.col_names, inplace=True)
             cols = ['cell', 'lexeme', 'value', 'source']
+
         else:
             cols = ['value', 'source']
 
         # We save the resulting table
         table.sort_index(inplace=True)
         table.index.name = name[:-1]
+        table.index = table.index.astype('str')
         setattr(self, name, table[cols])
+
+    def drop_unused(self, paradigms):
+        """
+        If the paradigms table implied some sampling / filtering,
+        make sure that the frequencies are also sampled.
+        """
+
+        self.forms = self.forms[self.forms.index.astype(str).isin(paradigms.index)]
+        # TODO it would be nice to recompute the lexeme/cell frequencies
+        # based on the forms that we kept.
 
     def get_absolute_freq(self, mean=False, group_on=False, skipna=False, **kwargs):
         """
@@ -262,6 +275,8 @@ class Frequencies(object):
             array([0.25, 0.25, 0.25, 0.25])
             >>> f.get_relative_freq(filters={'lexeme':'p'}, group_on=["lexeme", "cell"])['result'].values
             array([0.05882353, 0.94117647, 1.        , 1.        ])
+            >>> f.get_relative_freq(filters={'lexeme':'s', 'cell': 'first'}, group_on=["lexeme", "cell"]).result.values
+            array([0.33333333, 0.33333333, 0.33333333])
 
         Arguments:
             group_on (List[str]): column on which relative frequencies should be computed
@@ -289,12 +304,16 @@ class Frequencies(object):
         sublist.result = sublist.result.astype('float64')
 
         # 2. If there are any NaN values, we give a uniform frequency to the group
-        sublist['notna'] = True
-        sublist.loc[sublist.value.isna(), 'notna'] = False
-        nanval = (sublist.result != 1) & ~sublist.groupby(groups).notna.transform('all')
-        sublist.loc[nanval, 'result'] = 1/sublist.loc[nanval, 'result']
+        any_nan = sublist.groupby(groups).value.transform(lambda x: x.isna().any())
 
-        # 3. If all values are filled and if the group is bigger than one, we sum the frequencies
+        # 3. If a whole group contains zeros, we give a uniform frequency to the group
+        all_zero = sublist.groupby(groups).value.transform(lambda x: (x == 0).all())
+
+        # Apply 2 and 3
+        selector = (sublist.result != 1) & (any_nan | all_zero)
+        sublist.loc[selector, 'result'] = 1/sublist.loc[selector, 'result']
+
+        # 4. If all values are filled and if the group is bigger than one, we sum the frequencies
         selector = sublist.result > 1
 
         if group_on is False:

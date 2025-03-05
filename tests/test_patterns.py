@@ -39,11 +39,19 @@ class PatternsTestCase(unittest.TestCase):
         self.assertDictEqual(p._gen_alt, expected)
 
     def test_applicable_optional_end(self):
-        c = ("A","B")
+        c = ("A", "B")
         fa = segments.Form.from_segmented_str("s a t")
-        p = patterns.Pattern._from_str(c,"t ⇌  / sa_i?<2.0>")
+        p = patterns.Pattern._from_str(c, "t ⇌  / sa_i?<2.0>")
         self.assertTrue(p.applicable(fa, "A"), f"{p} should be applicable to {fa}")
 
+    def test_applicable_optional_end_multiple(self):
+        c = ("A", "B")
+        fa = segments.Form.from_segmented_str("s a t e")
+        p = patterns.Pattern._from_str(c, "te ⇌  / sa_<2.0>")
+        p_reverse = patterns.Pattern._from_str(c, " ⇌ te / sa_<2.0>")
+
+        self.assertTrue(p.applicable(fa, "A"), f"{p} should be applicable to {fa}")
+        self.assertTrue(p_reverse.applicable(fa, "B"), f"{p_reverse} should be applicable to {fa}")
 
     def test_applicable(self):
         c = ("a", "b")
@@ -96,7 +104,6 @@ class PatternsTestCase(unittest.TestCase):
             new = patterns.Pattern._from_str(("a", "b"), pat_str)
             self.assertEqual(repr(new), pat_str)
             self.assertEqual(str(new), pretty_result)
-
 
     def test_from_alignment(self):
         c = ("a", "b")

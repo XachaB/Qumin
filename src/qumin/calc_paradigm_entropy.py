@@ -13,7 +13,6 @@ from .entropy.distribution import PatternDistribution
 from .representations import segments, create_features
 from .representations.patterns import ParadigmPatterns
 from .representations.paradigms import Paradigms
-from .utils import get_cells
 
 log = logging.getLogger()
 
@@ -30,8 +29,6 @@ def H_command(cfg, md):
     if onePred:
         preds.pop(0)
 
-    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
-
     # Initialize segment inventory for phonological computations
     segments.Inventory.initialize(sounds_file_name)
 
@@ -41,16 +38,18 @@ def H_command(cfg, md):
                           overabundant=False,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
-                          cells=cells,
+                          cells=cfg.cells,
                           pos=cfg.pos,
                           force=cfg.force,
-                          sample=cfg.sample,
+                          sample_lexemes=cfg.sample_lexemes,
+                          sample_cells=cfg.sample_cells,
                           sample_kws=dict(force_random=cfg.force_random,
                                           seed=cfg.seed),
                           )
     patterns = ParadigmPatterns()
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
+                       cells=cfg.cells,
                        defective=defective,
                        overabundant=False,
                        force=cfg.force,

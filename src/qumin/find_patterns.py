@@ -11,7 +11,6 @@ from .clustering import find_microclasses
 from .representations import segments
 from .representations.paradigms import Paradigms
 from .representations.patterns import ParadigmPatterns
-from .utils import get_cells
 
 log = logging.getLogger()
 
@@ -22,7 +21,6 @@ def pat_command(cfg, md):
     kind = cfg.pats.kind
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
-    cells = get_cells(cfg.cells, cfg.pos, md.dataset)
     segcheck = True
 
     # Initializing segments
@@ -36,10 +34,11 @@ def pat_command(cfg, md):
                           overabundant=overabundant,
                           merge_cols=merge_cols,
                           segcheck=segcheck,
-                          cells=cells,
+                          cells=cfg.cells,
                           pos=cfg.pos,
                           force=cfg.force,
-                          sample=cfg.sample,
+                          sample_lexemes=cfg.sample_lexemes,
+                          sample_cells=cfg.sample_cells,
                           sample_kws=dict(force_random=cfg.force_random,
                                           seed=cfg.seed),
                           )

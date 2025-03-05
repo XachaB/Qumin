@@ -18,7 +18,7 @@ Qumin (QUantitative Modelling of INflection) is a package for the computational 
 **Github**: https://github.com/XachaB/Qumin
 
 
-This is **version 2**, which was significantly updated since the publications cited below. These updates do not affect results, and focused on bugfixes, command line interface, paralex compatibility, workflow improvement and overall tidyness.
+This is version |version|, which was significantly updated since the publications cited below. These updates do not affect results, and focused on bugfixes, command line interface, paralex compatibility, workflow improvement and overall tidyness.
 
 For more detail, you can refer to Sacha's dissertation (in French, `Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_).
 
@@ -137,7 +137,6 @@ The config file contains the following keys, which can be set through the comman
                           # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
       importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
       merged: False       # Whether identical columns are merged in the input.
-      stacked: False      # whether to stack results in long form
 
 Visualizing results
 ^^^^^^^^^^^^^^^^^^^

@@ -50,14 +50,15 @@ class Paradigms(object):
 
         # Reading the paradigms.
         self.dataset = dataset
-        self.frequencies = Frequencies(dataset)
-        data_file_name = Path(dataset.basepath) / dataset.get_resource("forms").path
+        data_file_name = Path(dataset.basepath or "./") / dataset.get_resource("forms").path
         self.data = pd.read_csv(data_file_name, na_values=["#DEF#"],
                                 dtype=defaultdict(lambda: 'string', {'cell': 'category',
                                                                      'lexeme': 'category'}),
                                 keep_default_na=False,
                                 usecols=["form_id"] + list(self.default_cols))
+        self.frequencies = Frequencies(dataset)
         self.preprocess(**kwargs)
+        self.frequencies.drop_unused(self.data)
 
     def _get_unknown_segments(self, row, unknowns):
         """
@@ -72,7 +73,7 @@ class Paradigms(object):
 
     def preprocess(self, fillna=True, segcheck=False,
                    defective=False, overabundant=False, merge_cols=False,
-                   cells=None, sample=None, sample_kws=None, pos=None, **kwargs):
+                   cells=None, sample_lexemes=None, sample_cells=None, sample_kws=None, pos=None, **kwargs):
         """
         Preprocess a Paralex paradigms table to meet the requirements of Qumin:
             - Filter by POS and by cells
@@ -92,7 +93,9 @@ class Paradigms(object):
                 (fully syncretic)?
             cells (List[str]): List of cell names to consider. Defaults to all.
             pos (List[str]): List of parts of speech to consider. Defaults to all.
-            sample (int): Defaults to None. Should I sample n lexemes
+            sample_lexemes (int): Defaults to None. Should I sample n lexemes
+                (for debug purposes)?
+            sample_cells (int): Defaults to None. Should I sample n lexemes
                 (for debug purposes)?
             sample_kws (dict): Dict of keywords passed to :func:`_sample_paradigms`.
         """
@@ -108,8 +111,10 @@ class Paradigms(object):
         if pos:
             self._filter_pos(paradigms, pos)
 
+        sample_kws = {} if sample_kws is None else sample_kws
+        cells = self._get_cells(cells=cells, pos=pos, n=sample_cells, **sample_kws)
         if cells is not None:
-            self._drop_cells(paradigms, cells, cell_col)
+            self._filter_cells(paradigms, cells, cell_col)
 
         # Remove defectives
         if not defective:
@@ -122,9 +127,8 @@ class Paradigms(object):
             paradigms.drop_duplicates([lexemes, cell_col], inplace=True)
 
         # Sample lexemes
-        if sample:
-            sample_kws = {} if sample_kws is None else sample_kws
-            self._sample_paradigms(paradigms, lexeme_col=lexemes, n=sample, **sample_kws)
+        if sample_lexemes:
+            self._sample_paradigms(paradigms, lexeme_col=lexemes, n=sample_lexemes, **sample_kws)
 
         paradigms[form_col] = paradigms[form_col].fillna(value="")
 
@@ -217,8 +221,68 @@ class Paradigms(object):
         paradigms.drop(paradigms.loc[~paradigms.lexeme.isin(selected), :].index,
                        inplace=True)
 
-    def _drop_cells(self, paradigms, cells, column):
-        """ Drops cells from a table.
+    def _get_cells(self, cells=None, pos=None, n=None, force_random=False, seed=1):
+        """
+        Returns a list of cells to use based on CLI arguments. Two configurations:
+            - If a list of cells was provided, select those cells
+            - If a POS, select all cells belonging to this POS
+            - If n is provided, sample n cells randomly from the resulting list.
+
+        Arguments:
+            cells (list): A list of cells
+            pos (str): A POS to consider
+            n (int): The number of lexemes to sample.
+            force_random (bool): Whether to forced random sampling.
+            seed (int): Random seed to use. Ensures reproducibility between scripts.
+        """
+
+        # POS based selection
+        if cells and pos:
+            raise ValueError("You can't specify both cells and POS.")
+        elif cells:
+            if cells and len(cells) == 1:
+                raise ValueError("You can't provide only one cell.")
+            cells = cells
+        elif pos:
+            if 'cells' in self.dataset.resource_names:
+                table = read_table('cells', self.dataset)
+                if 'POS' not in table.columns:
+                    log.warning('No POS column in the cells table. The POS filtering will be applied to lexemes only')
+                if isinstance(pos, str):
+                    pos = [pos]
+                cells = table.loc[table['POS'].isin(pos), 'cell_id']
+            else:
+                log.warning('No cells table. The POS filtering will be applied to lexemes only')
+                cells = None
+
+        # Optional sampling
+        if n:
+            if not cells:
+                cells = list(read_table('forms', self.dataset).cell.unique())
+
+            if not force_random and self.frequencies.has_frequencies('cells'):
+                cell_freq = self.frequencies.cells
+                # Restrict to cells we have kept, if we dropped some
+                cells = cell_freq[cell_freq.index.isin(cells)]\
+                    .sort_values("value", ascending=False)\
+                    .iloc[:n, :].index.to_list()
+            else:
+                # Random sampling
+                if not force_random:
+                    log.warning("You requested frequency sampling but no frequencies "
+                                "were available for the cells. Falling back to random "
+                                "sampling. You could set force_random=True.")
+                if n > len(cells):
+                    log.warning(f"You requested more cells than I can offer (sample={n})."
+                                f"Using all available cells ({len(cells)})")
+                    cells = cells
+                else:
+                    random.seed(seed)
+                    cells = random.sample(cells, n)
+        return cells
+
+    def _filter_cells(self, paradigms, cells, column):
+        """ Keeps only the provided cells.
         Performs security check before dropping.
 
         Arguments:
