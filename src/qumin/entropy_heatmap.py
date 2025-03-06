@@ -15,6 +15,7 @@ import logging
 logging.getLogger('matplotlib.font_manager').disabled = True
 log = logging.getLogger("Qumin")
 
+
 def get_zones(df, threshold=0):
     """ Cluster cells into 'zones' of inter-predictibility.
 
@@ -28,7 +29,8 @@ def get_zones(df, threshold=0):
     Returns:
         a dictionary of cells to zone indexes (clusters).
     """
-    df = df[df["measure"] == "cond_entropy"].pivot_table(index="predictor", columns="predicted", values="value")
+    df = df[df["measure"] == "cond_entropy"].pivot_table(index="predictor",
+                                                         columns="predicted", values="value")
     clusters = {x: None for x in df.index}
     n_clusters = 1
     for x in clusters:
@@ -83,12 +85,11 @@ def zones_heatmap(results, md, features, cell_order=None, cols=None):
         table = table.sort_values("cell", key=lambda s: s.apply(cell_order.index))
         maxi = table["zones"].max()
         table = table.pivot_table(index="rows", columns="cols", values="zones", sort=False)
-        palette =  sns.color_palette(n_colors=maxi)
-        g =  sns.heatmap(table, cmap=palette, square=True, xticklabels=True, yticklabels=True,
+        palette = sns.color_palette(n_colors=maxi)
+        g = sns.heatmap(table, cmap=palette, square=True, xticklabels=True, yticklabels=True,
                         cbar=False, annot=True, linewidths=0, ax=ax)
         g.set_title(f"Entropy threshold: {t} ({maxi} zones)")
         g.set_facecolor('white')
-
 
     dataset = results["dataset"].iloc[0]
 
@@ -107,7 +108,8 @@ def zones_heatmap(results, md, features, cell_order=None, cols=None):
 
     log.info("Writing zones table to: " + name)
     plt.savefig(name, pad_inches=0.1)
-    return clusters # this is the last computed: with 0 entropy threshold
+    return clusters  # this is the last computed: with 0 entropy threshold
+
 
 def decompose(features, cells):
     """ Decompose a set of cells to separate each of their feature-value by feature.
@@ -128,6 +130,7 @@ def decompose(features, cells):
             df_c.loc[c, f] = v
     return df_c
 
+
 def get_features_order(features, results, sort_order=False):
     """Returns an ordered list of the cells from a Paralex compliant
     cell file."""
@@ -140,7 +143,7 @@ def get_features_order(features, results, sort_order=False):
         cells = sorted(set(sum([x.split('&') for x in cells], [])))
 
         df_c = decompose(features, list(cells))
-        df_c = df_c.applymap(lambda f: features.loc[f, 'canonical_order'] if not pd.isna(f) else f)
+        df_c = df_c.map(lambda f: features.loc[f, 'canonical_order'] if not pd.isna(f) else f)
         if not sort_order:
             sort_order = list(df_c.columns)
         return df_c.sort_values(by=[x for x in sort_order], axis=0).index.to_list()

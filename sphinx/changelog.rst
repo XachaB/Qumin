@@ -6,13 +6,14 @@ Qumin follows the `semver <https://semver.org/>`_ principles for versioning. Thi
 Version 3.0
 ~~~~~~~~~~~
 
-- Add a `pos` keyword to filter paradigms on POS and improve the behaviour of `cells`.
+- Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
+- Switch patterns management to long format everywhere
+- Add a visualisation of interpredictability zones.
 - Usage of frequencies:
     - Read frequencies from as much sources as possible in the Paralex package (Frequencies class).
     - Weight cells based on the predictor-target pair frequency.
+- Add a `pos` keyword to filter paradigms on POS and improve the behaviour of `cells`.
 - Prevent Matplotlib font manager from spamming the log in debug mode.
-- Switch patterns management to long format everywhere
-- Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
 - Change management of sampling:
     - `most_freq=False` replaced by `force_random=True`.
     - Addition of a seed option to determinise sampling.  By default, sample by frequency.
