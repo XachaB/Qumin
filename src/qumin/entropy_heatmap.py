@@ -73,7 +73,7 @@ def zones_heatmap(results, md, features, cell_order=None, cols=None):
 
     def zone_table_one(clusters, ax):
         table = pd.DataFrame(clusters.items(), columns=["cell", "zones"])
-        if cols is not None:
+        if cols:
             decomposed = decompose(features, list(table["cell"]))
             table["cols"] = table["cell"].apply(lambda c: partial_cell(c, decomposed, cols))
             rows = [f for f in decomposed.columns if f not in cols]
@@ -336,12 +336,12 @@ def ent_heatmap_command(cfg, md):
             distillation.append(c)
 
 
-    log.info("Drawing a heatmap of a distillation of the results...")
-    print(results)
-    result_subset = results.loc[results.index.isin(distillation, level=0) & results.index.isin(distillation, level=1)]
-    entropy_heatmap(result_subset, md,
-                    cmap_name=cfg.heatmap.cmap,
-                    feat_order=distillation,
-                    dense=cfg.heatmap.dense,
-                    annotate=cfg.heatmap.annotate,
-                    filename="entropyHeatmap_distillation.png")
+    if len(distillation) > 1:
+        log.info("Drawing a heatmap of a distillation of the results...")
+        result_subset = results.loc[results.index.isin(distillation, level=0) & results.index.isin(distillation, level=1)]
+        entropy_heatmap(result_subset, md,
+                        cmap_name=cfg.heatmap.cmap,
+                        feat_order=distillation,
+                        dense=cfg.heatmap.dense,
+                        annotate=cfg.heatmap.annotate,
+                        filename="entropyHeatmap_distillation.png")
