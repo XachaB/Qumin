@@ -4,12 +4,15 @@
 
 Author: Jules Bouton.
 """
-from matplotlib import pyplot as plt
-from frictionless.exception import FrictionlessException
-import pandas as pd
-import numpy as np
-import seaborn as sns
 import logging
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from frictionless.exception import FrictionlessException
+from matplotlib import pyplot as plt
+
+from .representations.frequencies import Frequencies
 
 # Prevent matplotlib font manager from spamming the log
 logging.getLogger('matplotlib.font_manager').disabled = True
@@ -32,7 +35,7 @@ def get_zones(df, threshold=0):
     is_cond_ent = df["measure"] == "cond_entropy"
     is_one_pred = df["n_preds"] == 1
     df = df[is_cond_ent & is_one_pred].pivot_table(index="predictor",
-                                                         columns="predicted", values="value")
+                                                   columns="predicted", values="value")
     clusters = {x: None for x in df.index}
     n_clusters = 1
     for x in clusters:
@@ -160,7 +163,6 @@ def get_features_order(features, results, sort_order=False):
 
 def entropy_heatmap(results, md, cmap_name=False,
                     feat_order=None, dense=False, annotate=False, filename="entropyHeatmap.png"):
-
     """Make a FacetGrid heatmap of all metrics
 
     Arguments:
@@ -184,8 +186,15 @@ def entropy_heatmap(results, md, cmap_name=False,
     log.info("Drawing...")
 
     df = results[['measure', 'value', 'n_pairs', 'n_preds']
-                 ].set_index(['measure', 'n_preds'], append=True
-                             ).stack().reset_index()
+    ].set_index(['measure', 'n_preds'], append=True
+                ).stack().reset_index()
+
+    freqs = Frequencies(md.dataset)
+    cell_freqs = None
+    if not freqs.source['cells'] == "empty":
+        cell_freqs = freqs._filter_frequencies(data="cells")["value"]
+        cell_freqs.name = "frequency"
+        cmap_freqs = sns.color_palette("mako_r", as_cmap=True)
 
     df.rename(columns={"level_4": "type", 0: "value"}, inplace=True)
     df.loc[:, 'type'] = df.type.replace({'value': 'Result', 'n_pairs': 'Number of pairs'})
@@ -194,28 +203,29 @@ def entropy_heatmap(results, md, cmap_name=False,
         df.measure += df.n_preds.apply(lambda x: f" (n={x})")
 
     # Compute a suitable size for the heatmaps
-    height = 4 + round(len(df['predictor'].unique())/4)
+    height = 4 + round(len(df['predictor'].unique()) / 4)
 
     def _draw_heatmap(*args, **kwargs):
         """ Draws a heatmap in a FacetGrid with custom parameters
         """
-
         df = kwargs.pop('data')
         annot = kwargs.pop('annotate')
 
         types = df["type"].unique()
+        df = df.pivot(index=args[0], columns=args[1], values=args[2])
         df.index.name = 'predictor'
         df.columns.name = 'predicted'
-        df = df.pivot(index=args[0], columns=args[1], values=args[2])
 
         # For n_pairs, we want a specific set of parameters.
         if 'Number of pairs' in types:
             hm_cmap = "gray_r"
             annot = df.shape[0] < 10
             fmt = ".0f"
+            cell_colors = False
         else:
             hm_cmap = cmap
             fmt = ".2f"
+            cell_colors = cell_freqs is not None
 
         if feat_order:
 
@@ -242,24 +252,54 @@ def entropy_heatmap(results, md, cmap_name=False,
             df.index = pd.Index(df.index.to_series().map(shorten))
             df.columns = pd.Index(df.columns.to_series().map(shorten))
 
+        freqs_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
+
+        if cell_colors:
+            row_freqs = cell_freqs.loc[df.index]
+            col_freqs = pd.DataFrame(0, columns=["frequency"] + list(df.columns), index=["frequency"])
+            col_freqs.loc["frequency", df.columns] = cell_freqs.loc[df.columns]
+            df = pd.concat([row_freqs, df], axis=1)
+            df = pd.concat([col_freqs, df], axis=0)
+            df.index.name = 'predictor'
+            df.columns.name = 'predicted'
+            freqs_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
+            freqs_mask.iloc[:, 0] = True
+            freqs_mask.iloc[0, :] = True
+
         # Annotations on the heatmap
         if annot:
             annot = df.copy().round(2)
 
         # Mask (diagonal)
-        df_m = pd.DataFrame(columns=df.columns, index=df.index)
+        diag_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
         for col in df.columns:
-            tmp = df_m.index.to_frame().predictor.str.split('&').apply(lambda x: col in x)
-            df_m.loc[tmp, [col]] = True
+            tmp = diag_mask.index.to_frame().predictor.str.split('&').apply(lambda x: col in x)
+            diag_mask.loc[tmp, [col]] = True
 
         # Drawing each individual heatmap
         sns.heatmap(df,
                     annot=annot,
-                    mask=df_m,
+                    mask=diag_mask | freqs_mask,
                     cmap=hm_cmap,
                     fmt=fmt,
                     linewidths=1,
+                    cbar=True,
+                    cbar_kws=dict(location='bottom',
+                                  shrink=0.6,
+                                  pad=0.075),  # Spacing between colorbar and hm
                     **kwargs)
+
+        if cell_colors:
+            # Plotting first rows & columns (frequency) in a different cmap
+            sns.heatmap(df,
+                        annot=annot,
+                        mask=diag_mask | ~freqs_mask,
+                        cmap=cmap_freqs,
+                        fmt=fmt,
+                        vmin=0,
+                        vmax=cell_freqs.max(),
+                        linewidths=1,
+                        **kwargs)
 
     # Plotting the heatmap
     cg = sns.FacetGrid(df, row='measure', col='type', height=height, margin_titles=True,
@@ -267,10 +307,7 @@ def entropy_heatmap(results, md, cmap_name=False,
     cg.set_titles(row_template='{row_name}', col_template='{col_name}')
 
     cg.map_dataframe(_draw_heatmap, 'predictor', 'predicted', 'value',
-                     annotate=annotate, square=True, cbar=True,
-                     cbar_kws=dict(location='bottom',
-                                   shrink=0.6,
-                                   pad=0.075))  # Spacing between colorbar and hm
+                     annotate=annotate, square=True)
 
     # Setting labels
     rotate = 0 if dense else 90
@@ -312,7 +349,8 @@ def ent_heatmap_command(cfg, md):
         features_file_name = md.get_table_path("features-values")
     except FrictionlessException:
         features_file_name = None
-        log.warning("Your package doesn't contain any features-values file. You should provide an ordered list of cells in command line.")
+        log.warning("Your package doesn't contain any features-values file. "
+                    "You should provide an ordered list of cells in command line.")
 
     features = None
     if features_file_name:
@@ -337,10 +375,11 @@ def ent_heatmap_command(cfg, md):
             cl_found.add(clusters[c])
             distillation.append(c)
 
-
     if len(distillation) > 1:
         log.info("Drawing a heatmap of a distillation of the results...")
-        result_subset = results.loc[results.index.isin(distillation, level=0) & results.index.isin(distillation, level=1)]
+        distil_index = results.index.isin(distillation, level=0)
+        distil_col = results.index.isin(distillation, level=1)
+        result_subset = results.loc[distil_index & distil_col]
         entropy_heatmap(result_subset, md,
                         cmap_name=cfg.heatmap.cmap,
                         feat_order=distillation,
