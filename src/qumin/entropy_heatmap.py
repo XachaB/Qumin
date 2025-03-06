@@ -29,7 +29,9 @@ def get_zones(df, threshold=0):
     Returns:
         a dictionary of cells to zone indexes (clusters).
     """
-    df = df[df["measure"] == "cond_entropy"].pivot_table(index="predictor",
+    is_cond_ent = df["measure"] == "cond_entropy"
+    is_one_pred = df["n_preds"] == 1
+    df = df[is_cond_ent & is_one_pred].pivot_table(index="predictor",
                                                          columns="predicted", values="value")
     clusters = {x: None for x in df.index}
     n_clusters = 1
