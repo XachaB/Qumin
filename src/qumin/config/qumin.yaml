@@ -15,6 +15,7 @@ hydra:
         class: logging.FileHandler
         mode: w
         formatter: raw
+        encoding: utf-8
         delay: true
       console:
         class: logging.StreamHandler
