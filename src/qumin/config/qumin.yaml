@@ -65,6 +65,7 @@ heatmap:
                            # it should contain an ordered list of the cells to display.
   cols: False              # List of features to show in columns (for zones heatmap)
                            # ex: [Mode, Tense]). All other features will constitute rows.
+  freq_margins: True       # Set to False to inhibit frequency margins for heatmaps.
 
 entropy:
   vis: True           # Whether to create a heatmap of the metrics and of interpredictability zones.

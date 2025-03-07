@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from frictionless.exception import FrictionlessException
+from hydra.core.hydra_config import HydraConfig
 from matplotlib import pyplot as plt
 
 from .representations.frequencies import Frequencies
@@ -161,7 +162,7 @@ def get_features_order(features, results, sort_order=False):
             return sorted(list(df.predictor.unique()))
 
 
-def entropy_heatmap(results, md, cmap_name=False,
+def entropy_heatmap(results, md, cmap_name=False, freq_margins=True,
                     feat_order=None, dense=False, annotate=False, filename="entropyHeatmap.png"):
     """Make a FacetGrid heatmap of all metrics
 
@@ -176,6 +177,7 @@ def entropy_heatmap(results, md, cmap_name=False,
         dense (bool): whether to use short cell names or not.
         annotate (bool): whether to add an annotation overlay.
         filename (str): filename to save the heatmap.
+        freq_margins (bool):  whether to add cell frequency margins to dataframe.
     """
 
     if not cmap_name:
@@ -191,7 +193,7 @@ def entropy_heatmap(results, md, cmap_name=False,
 
     freqs = Frequencies(md.dataset)
     cell_freqs = None
-    if not freqs.source['cells'] == "empty":
+    if freq_margins and not freqs.source['cells'] == "empty":
         cell_freqs = freqs._filter_frequencies(data="cells")["value"]
         cell_freqs.name = "frequency"
         cmap_freqs = sns.color_palette("mako_r", as_cmap=True)
@@ -277,29 +279,37 @@ def entropy_heatmap(results, md, cmap_name=False,
             diag_mask.loc[tmp, [col]] = True
 
         # Drawing each individual heatmap
-        sns.heatmap(df,
-                    annot=annot,
-                    mask=diag_mask | freqs_mask,
-                    cmap=hm_cmap,
-                    fmt=fmt,
-                    linewidths=1,
-                    cbar=True,
-                    cbar_kws=dict(location='bottom',
-                                  shrink=0.6,
-                                  pad=0.075),  # Spacing between colorbar and hm
-                    **kwargs)
+        ax = sns.heatmap(df,
+                         annot=annot,
+                         mask=diag_mask | freqs_mask,
+                         cmap=hm_cmap,
+                         fmt=fmt,
+                         linewidths=1,
+                         vmin=0,
+                         cbar=True,
+                         cbar_kws=dict(location='bottom',
+                                       shrink=0.6,
+                                       pad=0.075),  # Spacing between colorbar and hm
+                         **kwargs)
+
+        ax.tick_params(axis='x', labelbottom=False, labeltop=True,
+                       bottom=False, top=False,
+                       labelrotation=0 if dense else 90)
 
         if cell_colors:
             # Plotting first rows & columns (frequency) in a different cmap
-            sns.heatmap(df,
-                        annot=annot,
-                        mask=diag_mask | ~freqs_mask,
-                        cmap=cmap_freqs,
-                        fmt=fmt,
-                        vmin=0,
-                        vmax=cell_freqs.max(),
-                        linewidths=1,
-                        **kwargs)
+            ax = sns.heatmap(df,
+                             annot=annot,
+                             mask=diag_mask | ~freqs_mask,
+                             cmap=cmap_freqs,
+                             fmt=fmt,
+                             vmin=0,
+                             vmax=cell_freqs.max(),
+                             linewidths=1,
+                             **kwargs)
+            ax.tick_params(axis='x', labelbottom=False, labeltop=True,
+                           bottom=False, top=False,
+                           labelrotation=0 if dense else 90)
 
     # Plotting the heatmap
     cg = sns.FacetGrid(df, row='measure', col='type', height=height, margin_titles=True,
@@ -309,24 +319,8 @@ def entropy_heatmap(results, md, cmap_name=False,
     cg.map_dataframe(_draw_heatmap, 'predictor', 'predicted', 'value',
                      annotate=annotate, square=True)
 
-    # Setting labels
-    rotate = 0 if dense else 90
-
-    cg.tick_params(axis='x', labelbottom=False, labeltop=True,
-                   bottom=False, top=True,
-                   labelrotation=rotate)
     cg.tick_params(axis='y',
                    labelrotation=0)
-
-    # Override general tick settings.
-    for row in cg.axes:
-        for hm in row:
-            cb = hm.collections[-1].colorbar
-            cb.outline.set_visible(True)
-            cb.outline.set_linewidth(0.5)
-            cb.ax.tick_params(labelbottom=True, labeltop=False,
-                              bottom=True, top=False,
-                              labelrotation=0)
 
     cg.set_axis_labels(x_var="Predicted", y_var="Predictor")
     cg.fig.suptitle(f"Measured on the {md.dataset.name} dataset, version {md.dataset.version}")
@@ -344,7 +338,12 @@ def entropy_heatmap(results, md, cmap_name=False,
 def ent_heatmap_command(cfg, md):
     r"""Draw a heatmap of results similarities and a plot of zones.
     """
+    verbose = HydraConfig.get().verbose is not False
     results = pd.read_csv(cfg.entropy.importFile, index_col=[0, 1])
+
+    if not verbose:  # Remove debug results
+        is_debug = results["measure"].str.endswith("_debug")
+        results = results[~is_debug]
     try:
         features_file_name = md.get_table_path("features-values")
     except FrictionlessException:
@@ -363,7 +362,8 @@ def ent_heatmap_command(cfg, md):
                     cmap_name=cfg.heatmap.cmap,
                     feat_order=feat_order,
                     dense=cfg.heatmap.dense,
-                    annotate=cfg.heatmap.annotate)
+                    annotate=cfg.heatmap.annotate,
+                    freq_margins=cfg.heatmap.freq_margins)
 
     log.info("Drawing zones of interpredictibility...")
     clusters = zones_heatmap(results, md, features, cell_order=feat_order, cols=cfg.heatmap.cols)
@@ -385,4 +385,5 @@ def ent_heatmap_command(cfg, md):
                         feat_order=distillation,
                         dense=cfg.heatmap.dense,
                         annotate=cfg.heatmap.annotate,
+                        freq_margins=cfg.heatmap.freq_margins,
                         filename="entropyHeatmap_distillation.png")
