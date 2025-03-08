@@ -925,16 +925,17 @@ class ParadigmPatterns(dict):
             patterns = self[pair]['pattern'].unique()
             pattern_list.update([repr(pat) for pat in patterns])
         pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
-        filename = md.register_file("patterns_map.csv")
         s = pd.Series({n: pat for pat, n in pattern_map.items()}, name="patterns")
-        s.to_csv(filename)
+
+        s.to_csv(md.get_path("patterns/patterns_map.csv"))
+        md.register_file("patterns/patterns_map.csv")
 
         # Save regular patterns
-        folder = "patterns"
-        md.register_folder(folder, description="Compact machine readable patterns.")
-        log.info("Writing patterns (importable by other scripts) to %s", folder)
+        rel_path = "patterns/machine_readable/"
+        abs_path = md.get_path(rel_path)
+        log.info("Writing patterns (importable by other scripts) to %s", abs_path)
         for pair in self.keys():
-            self.to_csv(md, pair, folder, kind, pretty=optim_mem,
+            self.to_csv(md, pair, abs_path, rel_path, kind, "machine", pretty=optim_mem,
                         only_id=True, pattern_map=pattern_map)
 
         # Save human readable patterns
@@ -942,19 +943,23 @@ class ParadigmPatterns(dict):
             log.warning("Since you asked for args.optim_mem,"
                         "I will not export the human_readable file.")
         else:
-            folder = "patterns_human_readable"
-            md.register_folder(folder, description="Pretty patterns (for manual examination)")
-            log.info("Writing pretty patterns (for manual examination) to %s", folder)
+            rel_path = "patterns/human_readable/"
+            abs_path = md.get_path("patterns/human_readable/")
+            log.info("Writing pretty patterns (for manual examination) to %s", abs_path)
             for pair in self.keys():
-                self.to_csv(md, pair, folder, kind,
+                self.to_csv(md, pair, abs_path, rel_path, kind, "human",
                             pretty=True)
         return md.prefix
 
-    def to_csv(self, md, pair, folder, kind,
+    def to_csv(self, md, pair, abs_path, rel_path, algorithm, kind,
                pretty=False, only_id=False, pattern_map=None):
+
         """Export a Patterns DataFrame to csv."""
         a, b = pair
-        filename = md.register_file(f"{kind}_{a}-{b}.csv", folder=folder)
+        name = f"pat_{kind}_{algorithm}_{a}-{b}.csv"
+        rel_path = rel_path + name
+        abs_path = abs_path + "/" + name
+
         export_fun = str if pretty else repr
         export = self[pair].copy()
         export.pattern = export.pattern.map(export_fun)
@@ -965,41 +970,48 @@ class ParadigmPatterns(dict):
 
             # Replace patterns by ids
             export.pattern = export.pattern.map(pattern_map)
-        export.drop(["lexeme"], axis=1).to_csv(filename, sep=",", index=False)
+        export.drop(["lexeme"], axis=1).to_csv(abs_path, sep=",", index=False)
+        md.register_file(rel_path,
+                         custom=dict(cells=pair,
+                                     kind=kind + "_readable",
+                                     algorithm=algorithm),
+                         description=f"Patterns for {kind}s between cells '{a}' and '{b}', "
+                                     f"with the '{algorithm}' algorithm.")
 
-    def from_file(self, folder, *args, force=False, cells=None, **kwargs):
+    def from_file(self, patterns_md, *args, force=False, cells=None, **kwargs):
         """Read pattern data from a previous export.
 
         Arguments:
-            folder (str): path to the folder
+            patterns_md (Metadata): metadata handler from a previous run.
             cells (List[str]): a list of cell names to read.
-
-
         """
         collection = defaultdict(lambda: defaultdict(str))
-        folder = Path(folder)
 
         # Read patterns map
-        patterns_map = pd.read_csv(folder / 'patterns_map.csv', index_col=0).patterns
+        patterns_map = pd.read_csv(patterns_md.get_resource_path('patterns_map'),
+                                   index_col=0).patterns
+
+        # Get available patterns and their path
+        pattern_files = {}
+        for r in patterns_md.package.resources:
+            if 'cells' in r.custom and 'kind' in r.custom and r.custom['kind'] == "machine_readable":
+                pattern_files[tuple(sorted(r.custom['cells']))] = patterns_md.get_resource_path(r.name)
 
         # Parse patterns for each pair of cells
-        first = True
         log.info('Reading patterns...')
-        for path in tqdm((folder / "patterns").iterdir()):
-            reg = re.compile(r"[^_]+_(.+)-(.+)\.csv")
-            pair = tuple(reg.match(path.name).groups())
-            if cells is None or (set(pair) <= set(cells)):
-                self.from_csv(path, pair, patterns_map, collection, *args, **kwargs)
-                if first:
-                    n_files = len(list(folder.iterdir()))
-                    memory_check(list(self.values())[0], n_files, force=force)
-                    first = False
+        cell_pairs = [tuple(sorted(p)) for p in combinations(cells, 2)] \
+            if cells else pattern_files.keys()
 
-        # Raise error if cell was not found.
-        if cells is not None and (set(cells) != set(self.cells)):
-            raise ValueError("Couldn't find patterns for the following cells: "
-                             f"{', '.join(list(set(cells) - set(self.cells)))}. "
-                             "Check your patterns.")
+        first = True
+        for pair in tqdm(cell_pairs):
+            if pair not in pattern_files.keys():
+                raise ValueError("Couldn't find patterns for the following cell: "
+                                 f"{pair[0]}~{pair[1]}. Check your patterns.")
+            self.from_csv(pattern_files[pair], pair, patterns_map, collection,
+                          *args, **kwargs)
+            if first:
+                memory_check(list(self.values())[0], len(cell_pairs), force=force)
+                first = False
 
     def from_csv(self, path, pair, patterns_map, collection,
                  paradigms, defective=True, overabundant=True,
@@ -1008,12 +1020,13 @@ class ParadigmPatterns(dict):
         Read a patterns dataframe for a specific pair of cells
 
         Arguments:
-            paradigms (pandas.DataFrame): a paradigms dataframe, with form id's as index.
+            paradigms (pandas.DataFrame): a paradigms table, with form id's as index.
             defective (bool): whether to consider defective lexemes.
             overabundant (bool): whether to consider overabundance.
             collection (defaultdict): a defaultdict to avoid recomputing
                 patterns from strings.
             pair (tuple) a tuple of cells to read.
+            patterns_map (pandas.DataFrame): a DataFrame of patterns and pattern ids.
         """
 
         def read_pattern(string):

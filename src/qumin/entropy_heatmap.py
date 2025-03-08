@@ -185,17 +185,14 @@ def entropy_heatmap(results, md, cmap_name=False,
                               labelrotation=0)
 
     cg.set_axis_labels(x_var="Predicted", y_var="Predictor")
-    cg.fig.suptitle(f"Measured on the {md.dataset.name} dataset, version {md.dataset.version}")
+    cg.fig.suptitle(f"Measured on the {md.paralex.name} dataset, version {md.paralex.version}")
 
     cg.tight_layout()
 
-    name = md.register_file("entropyHeatmap.png",
-                            {"computation": "entropy_heatmap",
-                             "content": "figure"})
-
-    log.info("Writing heatmap to: " + name)
-
-    cg.savefig(name, pad_inches=0.1)
+    path = md.get_path("vis/entropyHeatmap.png")
+    log.info("Writing heatmap to: " + path)
+    cg.savefig(path, pad_inches=0.1)
+    md.register_file("vis/entropyHeatmap.png", description="Entropy heatmap")
 
 
 def ent_heatmap_command(cfg, md):

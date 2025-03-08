@@ -38,11 +38,11 @@ def microclass_heatmap(distances, md, labels=None, cmap_name="BuPu", exhaustive_
     else:
         sns.clustermap(distances, method="average", xticklabels=tick_value, yticklabels=tick_value,
                        linewidths=0, cmap=plt.get_cmap(cmap_name), rasterized=True)
-    name = md.register_file("microclassHeatmap.pdf",
-                            {"computation": "microclass_heatmap",
-                             "content": "figure"})
+
+    name = md.get_path('microclassHeatmap.pdf')
     log.info("Saving file to: " + name)
     plt.savefig(name, bbox_inches='tight', pad_inches=0, transparent=True)
+    md.register_file("microclassHeatmap.pdf", "Microclass heatmap")
 
 
 def distance_matrix(pat_table, microclasses, **kwargs):
