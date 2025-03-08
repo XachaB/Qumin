@@ -54,7 +54,7 @@ class Metadata():
         if path is None:
             self.start = datetime.datetime.now()
             self.paralex = Package(cfg.data)
-            self.package.name = f"qumin_results_{self.start.strftime("%Hh%M_%Y%m%d")}"
+            self.package.name = self.start.strftime("qumin_results_%Hh%M_%Y%m%d")
             self.package.title = "Qumin Computation Results"
             self.package.homepage = "https://qumin.readthedocs.io/"
             self.package.description = "This package contains the output of a Qumin run. " \
