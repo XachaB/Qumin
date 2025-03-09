@@ -918,24 +918,11 @@ class ParadigmPatterns(dict):
             kind (str): type of patterns (phon or edits).
             optim_mem (bool): Whether to not export human readable patterns too. Defaults to False.
         """
-
-        # Create pattern map
-        pattern_list = set()
-        for pair in self:
-            patterns = self[pair]['pattern'].unique()
-            pattern_list.update([repr(pat) for pat in patterns])
-        pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
-        filename = md.register_file("patterns_map.csv")
-        s = pd.Series({n: pat for pat, n in pattern_map.items()}, name="patterns")
-        s.to_csv(filename)
-
-        # Save regular patterns
+        # Save machine readable patterns
         folder = "patterns"
         md.register_folder(folder, description="Compact machine readable patterns.")
         log.info("Writing patterns (importable by other scripts) to %s", folder)
-        for pair in self.keys():
-            self.to_csv(md, pair, folder, kind, pretty=optim_mem,
-                        only_id=True, pattern_map=pattern_map)
+        self.to_csv(md, folder, kind)
 
         # Save human readable patterns
         if optim_mem:
@@ -946,26 +933,53 @@ class ParadigmPatterns(dict):
             md.register_folder(folder, description="Pretty patterns (for manual examination)")
             log.info("Writing pretty patterns (for manual examination) to %s", folder)
             for pair in self.keys():
-                self.to_csv(md, pair, folder, kind,
-                            pretty=True)
+                self.to_md(md, pair, folder, kind)
         return md.prefix
 
-    def to_csv(self, md, pair, folder, kind,
-               pretty=False, only_id=False, pattern_map=None):
-        """Export a Patterns DataFrame to csv."""
+    def to_md(self, md, pair, folder, kind):
+        """Export a Patterns DataFrame as a pretty markdown file"""
         a, b = pair
-        filename = md.register_file(f"{kind}_{a}-{b}.csv", folder=folder)
-        export_fun = str if pretty else repr
-        export = self[pair].copy()
-        export.pattern = export.pattern.map(export_fun)
-        if only_id:
+        filename = md.register_file(f"{kind}_{a}-{b}.md", folder=folder)
+        export_data = self[pair]
+        template = "\n## Pattern {p_str}\nPairs of forms instantiating this pattern: {n}\nFull pattern:{p_repr}\nExamples:\n{pair_table}\n"
+        with open(filename, "w", encoding="utf-8") as f:
+            grouped = export_data.groupby("pattern")
+            for pattern, group in sorted(grouped, key=lambda x: x[1].shape[0], reverse=True):
+                table = group[["lexeme", 'form_x', 'form_y']]
+                f.write(template.format(
+                    n=group.shape[0],
+                    p_str=str(pattern),
+                    p_repr=repr(pattern),
+                    pair_table=table.to_markdown(index=False, headers=["lexeme", a, b])
+                ))
+
+    def to_csv(self, md, folder, kind):
+        """Export a Patterns DataFrame to csv."""
+
+        # Patterns map
+        pattern_list = set()
+        for pair in self:
+            patterns = self[pair]['pattern'].unique()
+            pattern_list.update([repr(pat) for pat in patterns])
+        pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
+        filename = md.register_file("patterns_map.csv")
+        s = pd.Series({n: pat for pat, n in pattern_map.items()}, name="patterns")
+        s.to_csv(filename)
+
+        # One csv per pair of cells
+        for (a, b) in self.keys():
+            filename = md.register_file(f"{kind}_{a}-{b}.csv", folder=folder)
+            export = self[pair].copy()
+            if type(export.pattern.iloc[0]) != str:
+                export.pattern = export.pattern.map(repr)
+
             # Replace forms by ids
             export[['form_x', 'form_y']] = \
                 export[['form_x', 'form_y']].map(lambda x: x.id)
 
             # Replace patterns by ids
             export.pattern = export.pattern.map(pattern_map)
-        export.drop(["lexeme"], axis=1).to_csv(filename, sep=",", index=False)
+            export.drop(["lexeme"], axis=1).to_csv(filename, sep=",", index=False)
 
     def from_file(self, folder, *args, force=False, cells=None, **kwargs):
         """Read pattern data from a previous export.
