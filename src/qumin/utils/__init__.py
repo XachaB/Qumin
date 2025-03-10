@@ -95,15 +95,19 @@ class Metadata():
             path.mkdir(parents=True, exist_ok=True)
         return str(path)
 
-    def register_file(self, rel_path, custom=None, **kwargs):
+    def register_file(self, rel_path, name=None, custom=None, **kwargs):
         """ Add a file as a frictionless resource.
 
         Arguments:
             rel_path (str): the relative path to the file.
+            name (str): name of the resource. By default, this will be the name
+                of the file without the extension.
             custom (dict): Custom properties to save.
             **kwargs (dict): Optional keyword arguments passed to Resource,
                 e.g. `description`.
         """
+        if isinstance(name, str):
+            kwargs['name'] = name
         res = Resource(path=rel_path, **kwargs)
         if custom is not None:
             res.custom = custom

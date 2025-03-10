@@ -918,25 +918,8 @@ class ParadigmPatterns(dict):
             kind (str): type of patterns (phon or edits).
             optim_mem (bool): Whether to not export human readable patterns too. Defaults to False.
         """
-
-        # Create pattern map
-        pattern_list = set()
-        for pair in self:
-            patterns = self[pair]['pattern'].unique()
-            pattern_list.update([repr(pat) for pat in patterns])
-        pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
-        s = pd.Series({n: pat for pat, n in pattern_map.items()}, name="patterns")
-
-        s.to_csv(md.get_path("patterns/patterns_map.csv"))
-        md.register_file("patterns/patterns_map.csv")
-
-        # Save regular patterns
-        rel_path = "patterns/machine_readable/"
-        abs_path = md.get_path(rel_path)
-        log.info("Writing patterns (importable by other scripts) to %s", abs_path)
-        for pair in self.keys():
-            self.to_csv(md, pair, abs_path, rel_path, kind, "machine", pretty=optim_mem,
-                        only_id=True, pattern_map=pattern_map)
+        # Save machine readable patterns
+        self.to_csv(md, kind)
 
         # Save human readable patterns
         if optim_mem:
@@ -947,42 +930,87 @@ class ParadigmPatterns(dict):
             abs_path = md.get_path("patterns/human_readable/")
             log.info("Writing pretty patterns (for manual examination) to %s", abs_path)
             for pair in self.keys():
-                self.to_csv(md, pair, abs_path, rel_path, kind, "human",
-                            pretty=True)
+                self.to_md(md, pair, rel_path, abs_path, kind)
         return md.prefix
 
-    def to_csv(self, md, pair, abs_path, rel_path, algorithm, kind,
-               pretty=False, only_id=False, pattern_map=None):
+    def to_md(self, md, pair, rel_path, abs_path, kind):
+        """Export a Patterns DataFrame as a pretty markdown file
 
-        """Export a Patterns DataFrame to csv."""
+        Arguments:
+            md (qumin.utils.Metadata): Metadata handler.
+            pair (Tuple[str, str]): cell names
+            folder (str):
+            kind (str):
+
+        """
         a, b = pair
-        name = f"pat_{kind}_{algorithm}_{a}-{b}.csv"
-        rel_path = rel_path + name
-        abs_path = abs_path + "/" + name
+        name = f"pat_{kind}_{a}-{b}"
+        export_data = self[pair]
+        template = "\n## Pattern {p_str}\n\nPairs of forms instantiating this pattern: "\
+                   "{n}\nFull pattern: {p_repr}\nExamples:\n\n{pair_table}\n"
 
-        export_fun = str if pretty else repr
-        export = self[pair].copy()
-        export.pattern = export.pattern.map(export_fun)
-        if only_id:
+        with open(f"{abs_path}/{name}.md", "w", encoding="utf-8") as f:
+            grouped = export_data.groupby("pattern")
+            for pattern, group in sorted(grouped, key=lambda x: x[1].shape[0], reverse=True):
+                table = group[["lexeme", 'form_x', 'form_y']]
+                f.write(template.format(
+                    n=group.shape[0],
+                    p_str=str(pattern),
+                    p_repr=repr(pattern),
+                    pair_table=table.to_markdown(index=False, headers=["lexeme", a, b])
+                ))
+
+        md.register_file(f"{rel_path}{name}.md",
+                         name="human_" + name,
+                         custom=dict(cells=pair,
+                                     kind="human_readable",
+                                     algorithm=kind),
+                         description=f"Human-readable patterns between cells '{a}' and '{b}', "
+                                     f"with the '{kind}' algorithm.")
+
+    def to_csv(self, md, kind, path="patterns/machine_readable/"):
+        """Export a Patterns DataFrame to csv."""
+
+        # Path settings
+        abs_path = md.get_path(path)
+        log.info("Writing patterns (importable by other scripts) to %s", abs_path)
+
+        # Patterns map
+        pattern_list = set()
+        for pair in self:
+            patterns = self[pair]['pattern'].unique()
+            pattern_list.update([repr(pat) for pat in patterns])
+        pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
+        s = pd.Series({n: pat for pat, n in pattern_map.items()}, name="patterns")
+        s.to_csv(abs_path + "/patterns_map.csv")
+        md.register_file(path + "patterns_map.csv")
+
+        # One csv per pair of cells
+        for (a, b) in self.keys():
+            name = f"pat_{kind}_{kind}_{a}-{b}.csv"
+            export = self[pair].copy()
+
+            if not isinstance(export.pattern.iloc[0], str):
+                export.pattern = export.pattern.map(repr)
+
             # Replace forms by ids
             export[['form_x', 'form_y']] = \
                 export[['form_x', 'form_y']].map(lambda x: x.id)
-
             # Replace patterns by ids
             export.pattern = export.pattern.map(pattern_map)
-        export.drop(["lexeme"], axis=1).to_csv(abs_path, sep=",", index=False)
-        md.register_file(rel_path,
-                         custom=dict(cells=pair,
-                                     kind=kind + "_readable",
-                                     algorithm=algorithm),
-                         description=f"Patterns for {kind}s between cells '{a}' and '{b}', "
-                                     f"with the '{algorithm}' algorithm.")
+            export.drop(["lexeme"], axis=1).to_csv(abs_path + "/" + name, sep=",", index=False)
+            md.register_file(path + name,
+                             custom=dict(cells=pair,
+                                         kind="machine_readable",
+                                         algorithm=kind),
+                             description=f"Machine-readable patterns between cells '{a}' and '{b}', "
+                                         f"with the '{kind}' algorithm.")
 
     def from_file(self, patterns_md, *args, force=False, cells=None, **kwargs):
         """Read pattern data from a previous export.
 
         Arguments:
-            patterns_md (Metadata): metadata handler from a previous run.
+            patterns_md (qumin.utils.Metadata): metadata handler from a previous run.
             cells (List[str]): a list of cell names to read.
         """
         collection = defaultdict(lambda: defaultdict(str))

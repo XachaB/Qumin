@@ -12,6 +12,7 @@ Version 3.0
     - Weight cells based on the predictor-target pair frequency.
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Switch patterns management to long format everywhere
+- Change the format of human readable patterns to a more readable markdown export
 - Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
 - Change management of Metadata class. Outputs from Qumin are now shipped as a `Frictionless DataPackage <https://datapackage.org/>`_.
 - Change management of sampling:
