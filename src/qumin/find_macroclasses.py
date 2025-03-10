@@ -39,7 +39,7 @@ def macroclasses_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Loading paradigms
-    paradigms = Paradigms(md.dataset, defective=defective, overabundant=overabundant,
+    paradigms = Paradigms(md.paralex, defective=defective, overabundant=overabundant,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
                           cells=cfg.cells,
@@ -70,13 +70,10 @@ def macroclasses_command(cfg, md):
     DL = "Min :" + str(find_min_attribute(node, "DL"))
     experiment_id = " ".join(["Bottom-up DL clustering on ", DL])
 
-    computation = "macroclasses"
     # Saving png figure
     if MATPLOTLIB_LOADED:
         fig = plt.figure(figsize=(10, 20))
-        figname = md.register_file("figure.png",
-                                   {"computation": computation,
-                                    "content": "figure"})
+        figname = md.get_path("macroclass/figure.png")
         log.info("Drawing figure to: {}".format(figname))
         node.draw(horizontal=True,
                   square=True,
@@ -88,13 +85,13 @@ def macroclasses_command(cfg, md):
         fig.suptitle(experiment_id)
         fig.savefig(figname,
                     bbox_inches='tight', pad_inches=.5)
+        md.register_file("figure.png", description="Macroclass figure")
 
     # Saving text tree
-    treename = md.register_file("tree.txt",
-                                {"computation": computation,
-                                 "content": "tree"})
+    treename = md.get_path('macroclass/tree.txt')
     log.info("Printing tree to: {}".format(treename))
     flow = open(treename, "w", encoding="utf8")
     flow.write(node.tree_string())
     flow.write("\n" + experiment_id)
     flow.close()
+    md.register_file("macroclass/tree.txt", description="Macroclass tree")
