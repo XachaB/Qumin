@@ -988,7 +988,7 @@ class ParadigmPatterns(dict):
         # One csv per pair of cells
         for (a, b) in self.keys():
             name = f"pat_{kind}_{kind}_{a}-{b}.csv"
-            export = self[pair].copy()
+            export = self[(a,b)].copy()
 
             if not isinstance(export.pattern.iloc[0], str):
                 export.pattern = export.pattern.map(repr)
@@ -1102,7 +1102,7 @@ class ParadigmPatterns(dict):
                 and table.pattern.notna().all()
         ):
             raise ValueError("It looks like you ignored defective rows"
-                             "when computing patterns. Set defective=False.")
+                             f"when computing patterns. Set defective=False. Occured when reading cellpair {pair}")
 
         self[pair] = table
 
