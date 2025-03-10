@@ -11,8 +11,8 @@ from hydra.core.hydra_config import HydraConfig
 
 from .entropy.distribution import PatternDistribution
 from .representations import segments, create_features
-from .representations.patterns import ParadigmPatterns
 from .representations.paradigms import Paradigms
+from .representations.patterns import ParadigmPatterns
 
 log = logging.getLogger()
 
@@ -35,7 +35,7 @@ def H_command(cfg, md):
     # Inflectional paradigms: rows are forms, with lexeme and cell..
     paradigms = Paradigms(md.dataset,
                           defective=defective,
-                          overabundant=False,
+                          overabundant=cfg.pats.overabundant,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
                           cells=cfg.cells,
@@ -51,7 +51,7 @@ def H_command(cfg, md):
                        paradigms.data,
                        cells=cfg.cells,
                        defective=defective,
-                       overabundant=False,
+                       overabundant=cfg.pats.overabundant.keep,
                        force=cfg.force,
                        )
 

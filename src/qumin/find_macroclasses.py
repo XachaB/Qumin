@@ -56,7 +56,7 @@ def macroclasses_command(cfg, md):
     patterns.from_file(patterns_folder_path,
                        paradigms.data,
                        defective=defective,
-                       overabundant=False,
+                       overabundant=cfg.pats.overabundant.keep,
                        force=cfg.force,
                        )
 

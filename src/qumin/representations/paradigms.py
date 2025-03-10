@@ -152,7 +152,8 @@ class Paradigms(object):
         if not overabundant.keep:
             log.info("Dropping overabundant entries according to policy: {}".format(overabundant))
             overab_order = paradigms.apply(form_sorter, axis=1).sort_values()
-            paradigms = paradigms.loc[overab_order.index, :]
+            paradigms = paradigms.loc[overab_order.index, :] # this is difficult to do in place, sorry :(
+            self.data = paradigms
             paradigms.drop_duplicates([lexemes, cell_col], keep="first", inplace=True)
         else:
             log.info("Keeping overabundant entries  (if any exist)")
@@ -178,7 +179,8 @@ class Paradigms(object):
                 raise ValueError(alert)
 
         # Create Form() objects from strings representations.
-        paradigms = paradigms[["form_id"] + list(self.default_cols)]
+        keep_cols = ["form_id"] + list(self.default_cols)
+        paradigms.drop([c for c in paradigms.columns if c not in keep_cols], axis=1, inplace=True)
         paradigms[form_col] = paradigms[['form_id', form_col]].apply(
             lambda x: Form(x[form_col], x.form_id), axis=1)
 
