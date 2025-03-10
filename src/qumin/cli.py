@@ -29,7 +29,7 @@ def qumin_command(cfg):
         pat_command(cfg, md)
 
     if cfg.action == "H":
-        cfg.entropy.importFile = H_command(cfg, md)
+        H_command(cfg, md)
     elif cfg.action == "macroclasses":
         macroclasses_command(cfg, md)
     elif cfg.action == "lattice":

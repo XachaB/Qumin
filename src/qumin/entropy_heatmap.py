@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import logging
+from .utils import Metadata
 
 # Prevent matplotlib font manager from spamming the log
 logging.getLogger('matplotlib.font_manager').disabled = True
@@ -199,12 +200,14 @@ def ent_heatmap_command(cfg, md):
     r"""Draw a heatmap of results similarities using seaborn.
     """
     log.info("Drawing a heatmap of the results...")
-    results = pd.read_csv(cfg.entropy.importFile, index_col=[0, 1])
+    entropy_md = Metadata(path=cfg.entropy.importResults) if cfg.entropy.importResults else md
+    results = pd.read_csv(entropy_md.get_resource_path('entropies'), index_col=[0, 1])
     try:
         features_file_name = md.get_table_path("features-values")
     except FrictionlessException:
         features_file_name = None
-        log.warning("Your package doesn't contain any features-values file. You should provide an ordered list of cells in command line.")
+        log.warning("Your package doesn't contain any features-values file. "
+                    "You should provide an ordered list of cells in command line.")
 
     feat_order = get_features_order(features_file_name, results, cfg.heatmap.order)
 

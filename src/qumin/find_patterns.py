@@ -71,4 +71,4 @@ def pat_command(cfg, md):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
     md.register_file("microclasses.txt", description="Microclass computation")
 
-    return patterns.export(md, kind, optim_mem=cfg.pats.optim_mem)
+    patterns.export(md, kind, optim_mem=cfg.pats.optim_mem)

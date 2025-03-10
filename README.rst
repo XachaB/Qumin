@@ -45,7 +45,7 @@ Qumin works from full paradigm data in phonemic transcription.
 
 The package expects `Paralex datasets <http://www.paralex-standard.org>`_, containing at least a `forms` and a `sounds` table. Note that the sounds files may sometimes require edition, as Qumin imposes more constraints on sound definitions than paralex does.
 
-Computation results are provided as a `Frictionless DataPackage <https://datapackage.org/>`_. In addition to the output files, Qumin also writes in the output directory a `metadata.json` file, which contains:
+Computation results are provided as a `Frictionless DataPackage <https://datapackage.org/>`_. In addition to the output files, Qumin also writes in the output directory a ``metadata.json`` file, which contains:
 
 - A description of each file in the output directory.
 - Timestamps for the beginning and the end of the run.
@@ -53,7 +53,7 @@ Computation results are provided as a `Frictionless DataPackage <https://datapac
 - The description of the Paralex package used for the computations.
 
 .. warning::
-    Patterns computed with Qumin 2.0 are not importable in Qumin 3.0 due to a breaking change in the output format. When importing patterns, Qumin 3.0 now expects a path to a ``metadata.json`` file.
+    Patterns and entropies computed with Qumin 2.0 are not importable in Qumin 3.0 due to a breaking change in the output format. When importing computation results, Qumin 3.0 now expects a path to the ``metadata.json`` file, which contains relative paths to the output files.
 
 Scripts
 -------
@@ -146,7 +146,7 @@ The config file contains the following keys, which can be set through the comman
         - 1
       features: null      # Feature column in the Lexeme table.
                           # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
-      importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
+      importResults: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
       merged: False       # Whether identical columns are merged in the input.
 
 Visualizing results
@@ -170,7 +170,7 @@ To facilitate a quick general glance at the results, we output an entropy heatma
 
 It is also possible to draw an entropy heatmap without running entropy computations: ::
 
-    /$ qumin action=ent_heatmap entropy.importFile=<entropies.csv>
+    /$ qumin action=ent_heatmap entropy.importResults=<metadata.json>
 
 The config file contains the following keys, which can be set through the command line: ::
 

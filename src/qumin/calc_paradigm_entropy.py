@@ -81,8 +81,8 @@ def H_command(cfg, md):
         log.info("Mean H(c1 -> c2) = %s ", mean)
 
     if preds:
-        if cfg.entropy.importFile:
-            distrib.import_file(cfg.entropy.importFile)
+        if cfg.entropy.importResults:
+            distrib.import_file(cfg.entropy.importResults)
         for n in preds:
             if verbose:
                 distrib.n_preds_entropy(n, paradigms, debug=verbose)
@@ -94,5 +94,3 @@ def H_command(cfg, md):
     log.info("Writing to: {}".format(ent_file))
     distrib.export_file(ent_file, tokens=cfg.entropy.token_freq.cells)
     md.register_file('entropies.csv', description="Entropy computation results")
-
-    return ent_file
