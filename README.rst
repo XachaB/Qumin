@@ -24,30 +24,39 @@ For more detail, you can refer to Sacha's dissertation (in French, `Beniamine 20
 
 
 Citing
-============
+======
 
 If you use Qumin in your research, please cite Sacha's dissertation (`Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_), as well as the relevant paper for the specific actions used (see below). To appear in the publications list, send Sacha an email with the reference of your publication at s.<last name>@surrey.ac.uk
 
 Quick Start
-============
+===========
 
 Install
---------
+-------
 
 Install the Qumin package using pip: ::
 
     pip install qumin
 
 Data
------
+----
 
 Qumin works from full paradigm data in phonemic transcription.
 
 The package expects `Paralex datasets <http://www.paralex-standard.org>`_, containing at least a `forms` and a `sounds` table. Note that the sounds files may sometimes require edition, as Qumin imposes more constraints on sound definitions than paralex does.
 
+Computation results are provided as a `Frictionless DataPackage <https://datapackage.org/>`_. In addition to the output files, Qumin also writes in the output directory a ``metadata.json`` file, which contains:
+
+- A description of each file in the output directory.
+- Timestamps for the beginning and the end of the run.
+- The command-line arguments passed to the script.
+- The description of the Paralex package used for the computations.
+
+.. warning::
+    Patterns and entropies computed with Qumin 2.0 are not importable in Qumin 3.0 due to a breaking change in the output format. When importing computation results, Qumin 3.0 now expects a path to the ``metadata.json`` file, which contains relative paths to the output files.
 
 Scripts
---------
+-------
 
 .. note::
     We now rely on `hydra <https://hydra.cc/>`_ to manage CLI interface and configurations. Hydra will create a folder ``outputs/<yyyy-mm-dd>/<hh-mm-ss>/`` containing all results. A subfolder ``outputs/<yyyy-mm-dd>/<hh-mm-ss>/.hydra/`` contains details of the configuration as it was when the script was run. Hydra permits a lot more configuration. For example, any of the following scripts can accept a verbose argument of the form ``hydra.verbose=Qumin``, and the output directory can be customized with ``hydra.run.dir="./path/to/output/dir"``.
@@ -57,7 +66,7 @@ Scripts
     /$ qumin --help
 
 Patterns
-^^^^^^^^^
+^^^^^^^^
 
 Alternation patterns serve as a basis for all the other scripts. An early version of the patterns algorithm is described in `Beniamine (2017) <https://halshs.archives-ouvertes.fr/hal-01615899>`_. An updated description figures in `Beniamine, Bonami and  Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_.
 
@@ -76,20 +85,22 @@ For inflection class lattices, both can be kept: ::
 
     /$ qumin pats.defective=True pats.overabundant.keep=True data=<dataset.package.json>
 
+:doc:`patterns` provides more details on patterns.
+
 Microclasses
-^^^^^^^^^^^^^
+^^^^^^^^^^^^
 
 To visualize the microclasses and their similarities, one can compute a **microclass heatmap**::
 
     /$ qumin action=heatmap data=<dataset.package.json>
 
-This will compute patterns, then the heatmap. To pass pre-computed patterns, pass the file path: ::
+This will compute patterns, then the heatmap. To pass pre-computed patterns, pass the patterns computation metadata path: ::
 
-    /$ qumin action=heatmap patterns=<path/to/patterns.csv> data=<dataset.package.json>
+    /$ qumin action=heatmap patterns=<path/to/metadata.json> data=<dataset.package.json>
 
 It is also possible to pass class labels to facilitate comparisons with another classification: ::
 
-    /$ qumin.heatmap label=inflection_class patterns=<path/to/patterns.csv> data=<dataset.package.json>
+    /$ qumin.heatmap label=inflection_class patterns=<path/to/metadata.json> data=<dataset.package.json>
 
 The label key is the name of the column in the Paralex `lexemes` table to use as labels.
 
@@ -103,11 +114,11 @@ A few more parameters can be changed: ::
 
 
 Paradigm entropy
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 An early version of this software was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_, and a more recent one in `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
 
-By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
+By default, this will start by computing patterns. To work with pre-computed patterns, pass the path to the pattern computation metadata with ``patterns=<path/to/metadata.json>``.
 
 **Computing entropies from one cell** ::
 
@@ -123,8 +134,8 @@ By default, this will start by computing patterns. To work with pre-computed pat
 
 Predicting with known lexeme-wise features (such as gender or inflection class) is also possible. This feature was used in `Pellegrini (2023) <https://doi.org/10.1007/978-3-031-24844-3>`_. To use features, pass the name of any column(s) from the ``lexemes`` table: ::
 
-    /$ qumin.H  feature=inflection_class patterns=<patterns.csv> data=<dataset.package.json>
-    /$ qumin.H  feature="[inflection_class,gender]" patterns=<patterns.csv> data=<dataset.package.json>
+    /$ qumin.H  feature=inflection_class patterns=<metadata.json> data=<dataset.package.json>
+    /$ qumin.H  feature="[inflection_class,gender]" patterns=<metadata.json> data=<dataset.package.json>
 
 
 The config file contains the following keys, which can be set through the command line: ::
@@ -135,7 +146,7 @@ The config file contains the following keys, which can be set through the comman
         - 1
       features: null      # Feature column in the Lexeme table.
                           # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
-      importFile: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
+      importResults: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
       merged: False       # Whether identical columns are merged in the input.
 
 Visualizing results
@@ -159,7 +170,7 @@ To facilitate a quick general glance at the results, we output an entropy heatma
 
 It is also possible to draw an entropy heatmap without running entropy computations: ::
 
-    /$ qumin action=ent_heatmap entropy.importFile=<entropies.csv>
+    /$ qumin action=ent_heatmap entropy.importResults=<metadata.json>
 
 The config file contains the following keys, which can be set through the command line: ::
 
@@ -178,11 +189,11 @@ The config file contains the following keys, which can be set through the comman
 
 
 Macroclass inference
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 Our work on automatical inference of macroclasses was published in `Beniamine, Bonami and Sagot (2018) <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_".
 
-By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
+By default, this will start by computing patterns. To work with pre-computed patterns, pass the path to the pattern computation metadata with ``patterns=<path/to/metadata.json>``.
 
 **Inferring macroclasses** ::
 
@@ -190,9 +201,9 @@ By default, this will start by computing patterns. To work with pre-computed pat
 
 
 Lattices
-^^^^^^^^^
+^^^^^^^^
 
-By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
+By default, this will start by computing patterns. To work with pre-computed patterns, pass the path to the pattern computation metadata with ``patterns=<path/to/metadata.json>``.
 
 This software was used in `Beniamine (2021) <https://langsci-press.org/catalog/book/262>`_".
 

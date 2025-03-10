@@ -27,68 +27,69 @@ hydra:
 
 disable_existing_loggers: false
 
-action: patterns      # Action, one of: patterns, H, lattice, eval, macroclasses, heatmap, ent_heatmap
-data: null            # path to paralex.package.json paradigms, segments
-cells: null           # List of cells to use (subset)
-pos: null             # List of parts of speech to use (subset)
-patterns: null        # path to pre-computed patterns. If null, will compute patterns.
+action: patterns      # (str) Action, one of: patterns, H, lattice, eval, macroclasses, heatmap, ent_heatmap
+data: null            # (path) Path to paralex.package.json paradigms, segments
+cells: null           # (list) Cells to use (subset)
+pos: null             # (list) Parts of speech to use (subset)
+patterns: null        # (path) Path to pattern computation metadata. If null, will compute patterns.
 sample_lexemes: null  # (int) A number of lexemes to sample, for debug purposes.
 sample_cells: null    # (int) A number of lexemes to sample, for debug purposes.
                       # Samples by frequency if possible, otherwise randomly.
-force_random: False   # Whether to force random sampling.
-seed: 1               # Random seed for reproducible random effects.
-force: False          # Whether to overpass RAM usage security (2GB)
-cpus: null            # Number of cpus to use for big computations
+force_random: False   # (bool) Whether to force random sampling.
+seed: 1               # (int) Random seed for reproducible random effects.
+force: False          # (bool) Whether to overpass RAM usage security (2GB)
+cpus: null            # (int) Number of cpus to use for big computations
                       # (defaults to the number of available cpus - 2).
 
 lattice:
-  shorten: False      # Drop redundant columns altogether.
-                      #  Useful for big contexts, but loses information.
+  shorten: False      # (bool) Drop redundant columns altogether.
+                      # Useful for big contexts, but loses information.
                       # The lattice shape and stats will be the same.
                       # Avoid using with --html
-  aoc: False          # Only attribute and object concepts
-  html: False         # Export to html
-  ctxt: False         # Export as a context
-  stat: False         # Output stats about the lattice
-  pdf: True           # Export as pdf
-  png: False          # Export as png
+  aoc: False          # (bool) Only attribute and object concepts
+  html: False         # (bool) Export to html
+  ctxt: False         # (bool) Export as a context
+  stat: False         # (bool) Output stats about the lattice
+  pdf: True           # (bool) Export as pdf
+  png: False          # (bool) Export as png
 
 heatmap:
-  label: null              # lexeme column to use as label (for microclass heatmap, eg. inflection_class)
-  cmap: null               # colormap name
-  exhaustive_labels: False # by default, seaborn shows only some labels on
+  label: null              # (str) Lexeme column to use as label (for microclass heatmap, eg. inflection_class)
+  cmap: null               # (str) Colormap name
+  exhaustive_labels: False # (bool) by default, seaborn shows only some labels on
                            # the heatmap for readability.
                            # This forces seaborn to print all labels.
-  dense: False             # Use initials instead of full labels (only for entropy heatmap)
-  annotate: False          # Display values on the heatmap. (only for entropy heatmap)
-  order: False             # Priority list for sorting features (for entropy heatmap)
+  dense: False             # (bool) Use initials instead of full labels (only for entropy heatmap)
+  annotate: False          # (bool) Display values on the heatmap. (only for entropy heatmap)
+  order: False             # (list) Priority list for sorting features (for entropy heatmap)
                            # ex: [number, case]). If no features-values file available,
                            # it should contain an ordered list of the cells to display.
 
 entropy:
-  heatmap: True       # Whether to draw a heatmap.
-  n:                  # Compute entropy for prediction from with n predictors.
+  heatmap: True       # (bool )Whether to draw a heatmap.
+  n:                  # (list) Compute entropy for prediction from with n predictors.
     - 1
-  features: null      # Feature column in the Lexeme table.
+  features: null      # (str) Feature column in the Lexeme table.
                       # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
-  importFile: null    # Import entropy file
+  importResults: null # (path) Import previous entropy computation results.
                       # with any file, use to compute entropy heatmap
                       # with n-1 predictors, allows for acceleration on nPreds entropy computation.
-  merged: False       # Whether identical columns are merged in the input.
-  token_freq:             # Whether to use token frequencies for weighting...
-    cells: False      # Cell frequencies
+  merged: False       # (bool) Whether identical columns are merged in the input.
+  token_freq:         # Whether to use token frequencies for weighting...
+    cells: False      # (bool) Cell frequencies
 
 eval:
-  iter: 10            # How many 90/10 train/test folds to do.
-  workers: 1          # Number of threads for multithreading
+  iter: 10            # (int) How many 90/10 train/test folds to do.
+  workers: 1          # (int) Number of threads for multithreading
 
 pats:
-  kind: phon              # Options are (see docs): phon, edits
-  defective: False        # Whether to keep defective entries
+  kind: phon              # (str) Options are (see docs): phon, edits
+  defective: False        # (bool) Whether to keep defective entries
+  overabundant: False     # (bool) Whether to keep overabundant entries
   overabundant:
-    keep: False           # Whether to keep overabundant entries
-    freq: True            # Prioritize by frequency when dropping overabundance. If false: prioritize first in file.
-    tags: null            # Tags to prefer when dropping overabundance. Then fallback on freq.
-  gap_proportion: .4      # Proportion of the median score used to set the gap score
-  optim_mem: False        # Attempt to use a little bit less memory
-  merged: False           # Whether to merge identical columns in the data
+    keep: False           # (bool) Whether to keep overabundant entries
+    freq: True            # (bool) Whether to prioritize overabundant forms by frequency (fallback on file order)
+    tags: null            # (list) Tags to prefer when dropping overabundance (fallback on freq)
+  gap_proportion: .4      # (float) Proportion of the median score used to set the gap score
+  optim_mem: False        # (bool) Attempt to use a little bit less memory
+  merged: False           # (bool) Whether to merge identical columns in the data

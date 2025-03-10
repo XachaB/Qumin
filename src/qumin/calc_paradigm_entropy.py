@@ -11,8 +11,9 @@ from hydra.core.hydra_config import HydraConfig
 
 from .entropy.distribution import PatternDistribution
 from .representations import segments, create_features
-from .representations.paradigms import Paradigms
 from .representations.patterns import ParadigmPatterns
+from .representations.paradigms import Paradigms
+from .utils import Metadata
 
 log = logging.getLogger()
 
@@ -20,7 +21,7 @@ log = logging.getLogger()
 def H_command(cfg, md):
     r"""Compute entropies of flexional paradigms' distributions."""
     verbose = HydraConfig.get().verbose is not False
-    patterns_folder_path = cfg.patterns
+    patterns_run_md = Metadata(path=cfg.patterns) if cfg.patterns else md
     sounds_file_name = md.get_table_path("sounds")
     defective = cfg.pats.defective
 
@@ -33,7 +34,7 @@ def H_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Inflectional paradigms: rows are forms, with lexeme and cell..
-    paradigms = Paradigms(md.dataset,
+    paradigms = Paradigms(md.paralex,
                           defective=defective,
                           overabundant=cfg.pats.overabundant,
                           merge_cols=cfg.entropy.merged,
@@ -47,7 +48,7 @@ def H_command(cfg, md):
                                           seed=cfg.seed),
                           )
     patterns = ParadigmPatterns()
-    patterns.from_file(patterns_folder_path,
+    patterns.from_file(patterns_run_md,
                        paradigms.data,
                        cells=cfg.cells,
                        defective=defective,
@@ -69,7 +70,7 @@ def H_command(cfg, md):
     patterns.info()
 
     distrib = PatternDistribution(patterns,
-                                  md.dataset,
+                                  md.paralex,
                                   features=features)
 
     if onePred:
@@ -80,8 +81,8 @@ def H_command(cfg, md):
         log.info("Mean H(c1 -> c2) = %s ", mean)
 
     if preds:
-        if cfg.entropy.importFile:
-            distrib.import_file(cfg.entropy.importFile)
+        if cfg.entropy.importResults:
+            distrib.import_file(cfg.entropy.importResults)
         for n in preds:
             if verbose:
                 distrib.n_preds_entropy(n, paradigms, debug=verbose)
@@ -89,11 +90,7 @@ def H_command(cfg, md):
             mean = distrib.get_mean(n=n, tokens=cfg.entropy.token_freq.cells)
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
-    ent_file = md.register_file('entropies.csv',
-                                {'computation': 'entropies',
-                                 'content': 'results'})
-
+    ent_file = md.get_path('entropies.csv')
     log.info("Writing to: {}".format(ent_file))
     distrib.export_file(ent_file, tokens=cfg.entropy.token_freq.cells)
-
-    return ent_file
+    md.register_file('entropies.csv', description="Entropy computation results")
