@@ -77,7 +77,7 @@ def H_command(cfg, md):
         if verbose:
             distrib.one_pred_entropy(debug=verbose)
         distrib.one_pred_entropy()
-        mean = distrib.get_mean(tokens=cfg.entropy.tokens.cells)
+        mean = distrib.get_mean(tokens=cfg.entropy.token_freq.cells)
         log.info("Mean H(c1 -> c2) = %s ", mean)
 
     if preds:
@@ -87,12 +87,12 @@ def H_command(cfg, md):
             if verbose:
                 distrib.n_preds_entropy(n, paradigms, debug=verbose)
             distrib.n_preds_entropy(n, paradigms)
-            mean = distrib.get_mean(n=n, tokens=cfg.entropy.tokens.cells)
+            mean = distrib.get_mean(n=n, tokens=cfg.entropy.token_freq.cells)
             log.info(f"Mean H(c1, ..., c{n} -> c) = {mean}")
 
     ent_file = md.get_path('entropies.csv')
     log.info("Writing to: {}".format(ent_file))
-    distrib.export_file(ent_file, tokens=cfg.entropy.tokens.cells)
+    distrib.export_file(ent_file, tokens=cfg.entropy.token_freq.cells)
     md.register_file('entropies.csv', description="Entropy computation results")
 
     return ent_file
