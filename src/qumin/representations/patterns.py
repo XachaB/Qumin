@@ -910,16 +910,15 @@ class ParadigmPatterns(dict):
             return "ParadigmPatterns(empty)"
         return f"ParadigmPatterns({', '.join([a + '~' + b for a, b in dict.keys(self)])})"
 
-    def export(self, md, kind, optim_mem=False):
+    def export(self, md, *args, optim_mem=False):
         """
         Export dataframes to a folder for later use.
 
         Arguments:
-            kind (str): type of patterns (phon or edits).
             optim_mem (bool): Whether to not export human readable patterns too. Defaults to False.
         """
         # Save machine readable patterns
-        self.to_csv(md, kind)
+        self.to_csv(md, *args)
 
         # Save human readable patterns
         if optim_mem:
@@ -930,7 +929,7 @@ class ParadigmPatterns(dict):
             abs_path = md.get_path("patterns/human_readable/")
             log.info("Writing pretty patterns (for manual examination) to %s", abs_path)
             for pair in self.keys():
-                self.to_md(md, pair, rel_path, abs_path, kind)
+                self.to_md(md, pair, rel_path, abs_path, *args)
         return md.prefix
 
     def to_md(self, md, pair, rel_path, abs_path, kind):
@@ -938,10 +937,11 @@ class ParadigmPatterns(dict):
 
         Arguments:
             md (qumin.utils.Metadata): Metadata handler.
-            pair (Tuple[str, str]): cell names
-            folder (str):
-            kind (str):
-
+            pair (Tuple[str, str]): pair of cells for which a pattern file should
+                be exported.
+            rel_path (str): Relative path to the folder.
+            abs_path (str): Absolute path to the folder.
+            kind (str): type of patterns (phon or edits).
         """
         a, b = pair
         name = f"pat_{kind}_{a}-{b}"
@@ -969,8 +969,13 @@ class ParadigmPatterns(dict):
                                      f"with the '{kind}' algorithm.")
 
     def to_csv(self, md, kind, path="patterns/machine_readable/"):
-        """Export a Patterns DataFrame to csv."""
+        """Export a Patterns DataFrame to csv.
 
+        Arguments:
+            md (qumin.utils.Metadata): Metadata handler.
+            kind (str): type of patterns (phon or edits).
+            path (str): Relative path to the folder.
+        """
         # Path settings
         abs_path = md.get_path(path)
         log.info("Writing patterns (importable by other scripts) to %s", abs_path)
@@ -988,7 +993,7 @@ class ParadigmPatterns(dict):
         # One csv per pair of cells
         for (a, b) in self.keys():
             name = f"pat_{kind}_{kind}_{a}-{b}.csv"
-            export = self[(a,b)].copy()
+            export = self[(a, b)].copy()
 
             if not isinstance(export.pattern.iloc[0], str):
                 export.pattern = export.pattern.map(repr)
