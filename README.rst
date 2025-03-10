@@ -45,13 +45,15 @@ Qumin works from full paradigm data in phonemic transcription.
 
 The package expects `Paralex datasets <http://www.paralex-standard.org>`_, containing at least a `forms` and a `sounds` table. Note that the sounds files may sometimes require edition, as Qumin imposes more constraints on sound definitions than paralex does.
 
-Computation results are provided as a `Frictionless DataPackage <https://datapackage.org/>`_. In addition to the files provided in the output directory, Qumin also writes a `metadata.json` file, which contains:
+Computation results are provided as a `Frictionless DataPackage <https://datapackage.org/>`_. In addition to the output files, Qumin also writes in the output directory a `metadata.json` file, which contains:
 
 - A description of each file in the output directory.
 - Timestamps for the beginning and the end of the run.
 - The command-line arguments passed to the script.
 - The description of the Paralex package used for the computations.
 
+.. warning::
+    Patterns computed with Qumin 2.0 are not importable in Qumin 3.0 due to a breaking change in the output format. When importing patterns, Qumin 3.0 now expects a path to a ``metadata.json`` file.
 
 Scripts
 -------
@@ -82,6 +84,8 @@ For paradigm entropy, it is possible to explicitly keep defective lexemes: ::
 For inflection class lattices, both can be kept: ::
 
     /$ qumin pats.defective=True pats.overabundant=True data=<dataset.package.json>
+
+:doc:`patterns` provides more details on patterns.
 
 Microclasses
 ^^^^^^^^^^^^

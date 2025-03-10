@@ -926,7 +926,7 @@ class ParadigmPatterns(dict):
                         "I will not export the human_readable file.")
         else:
             rel_path = "patterns/human_readable/"
-            abs_path = md.get_path("patterns/human_readable/")
+            abs_path = md.get_path(rel_path)
             log.info("Writing pretty patterns (for manual examination) to %s", abs_path)
             for pair in self.keys():
                 self.to_md(md, pair, rel_path, abs_path, *args)
@@ -944,12 +944,12 @@ class ParadigmPatterns(dict):
             kind (str): type of patterns (phon or edits).
         """
         a, b = pair
-        name = f"pat_{kind}_{a}-{b}"
+        name = f"pat_{kind}_{a}-{b}.md"
         export_data = self[pair]
         template = "\n## Pattern {p_str}\n\nPairs of forms instantiating this pattern: "\
                    "{n}\nFull pattern: {p_repr}\nExamples:\n\n{pair_table}\n"
 
-        with open(f"{abs_path}/{name}.md", "w", encoding="utf-8") as f:
+        with open(abs_path / name, "w", encoding="utf-8") as f:
             grouped = export_data.groupby("pattern")
             for pattern, group in sorted(grouped, key=lambda x: x[1].shape[0], reverse=True):
                 table = group[["lexeme", 'form_x', 'form_y']]
@@ -959,25 +959,26 @@ class ParadigmPatterns(dict):
                     p_repr=repr(pattern),
                     pair_table=table.to_markdown(index=False, headers=["lexeme", a, b])
                 ))
-
-        md.register_file(f"{rel_path}{name}.md",
-                         name="human_" + name,
+        file_path = Path(rel_path) / name
+        md.register_file(file_path,
+                         name="human_" + str(file_path.with_suffix('').name),
                          custom=dict(cells=pair,
                                      kind="human_readable",
                                      algorithm=kind),
                          description=f"Human-readable patterns between cells '{a}' and '{b}', "
                                      f"with the '{kind}' algorithm.")
 
-    def to_csv(self, md, kind, path="patterns/machine_readable/"):
+    def to_csv(self, md, kind, rel_path="patterns/machine_readable/"):
         """Export a Patterns DataFrame to csv.
 
         Arguments:
             md (qumin.utils.Metadata): Metadata handler.
             kind (str): type of patterns (phon or edits).
-            path (str): Relative path to the folder.
+            rel_path (str): Relative path to the folder.
         """
         # Path settings
-        abs_path = md.get_path(path)
+        abs_path = md.get_path(rel_path)
+        rel_path = Path(rel_path)
         log.info("Writing patterns (importable by other scripts) to %s", abs_path)
 
         # Patterns map
@@ -987,8 +988,8 @@ class ParadigmPatterns(dict):
             pattern_list.update([repr(pat) for pat in patterns])
         pattern_map = {pat: n for n, pat in enumerate(pattern_list)}
         s = pd.Series({n: pat for pat, n in pattern_map.items()}, name="patterns")
-        s.to_csv(abs_path + "/patterns_map.csv")
-        md.register_file(path + "patterns_map.csv")
+        s.to_csv(abs_path / "patterns_map.csv")
+        md.register_file(rel_path / "patterns_map.csv")
 
         # One csv per pair of cells
         for (a, b) in self.keys():
@@ -1003,8 +1004,8 @@ class ParadigmPatterns(dict):
                 export[['form_x', 'form_y']].map(lambda x: x.id)
             # Replace patterns by ids
             export.pattern = export.pattern.map(pattern_map)
-            export.drop(["lexeme"], axis=1).to_csv(abs_path + "/" + name, sep=",", index=False)
-            md.register_file(path + name,
+            export.drop(["lexeme"], axis=1).to_csv(abs_path / name, sep=",", index=False)
+            md.register_file(rel_path / name,
                              custom=dict(cells=pair,
                                          kind="machine_readable",
                                          algorithm=kind),

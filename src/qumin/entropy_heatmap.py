@@ -190,7 +190,7 @@ def entropy_heatmap(results, md, cmap_name=False,
     cg.tight_layout()
 
     path = md.get_path("vis/entropyHeatmap.png")
-    log.info("Writing heatmap to: " + path)
+    log.info("Writing heatmap to: %s", path)
     cg.savefig(path, pad_inches=0.1)
     md.register_file("vis/entropyHeatmap.png", description="Entropy heatmap")
 

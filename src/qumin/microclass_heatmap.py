@@ -40,7 +40,7 @@ def microclass_heatmap(distances, md, labels=None, cmap_name="BuPu", exhaustive_
                        linewidths=0, cmap=plt.get_cmap(cmap_name), rasterized=True)
 
     name = md.get_path('microclassHeatmap.pdf')
-    log.info("Saving file to: " + name)
+    log.info("Saving file to: %s", name)
     plt.savefig(name, bbox_inches='tight', pad_inches=0, transparent=True)
     md.register_file("microclassHeatmap.pdf", "Microclass heatmap")
 

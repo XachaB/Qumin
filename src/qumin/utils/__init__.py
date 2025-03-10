@@ -87,25 +87,33 @@ class Metadata():
         self.package.to_json(self.prefix / 'metadata.json')
 
     def get_path(self, rel_path):
-        """ Return an absolute path to a file and create parent directories. """
+        """ Return an absolute path to a file and create parent directories.
+
+        Arguments:
+            rel_path (str): relative path to the file or folder.
+
+        Returns:
+            pathlib.Path: absolute path to the file or folder.
+        """
         path = Path(self.prefix) / rel_path
         if rel_path[-1] != "/":
             path.parent.mkdir(parents=True, exist_ok=True)
         else:
             path.mkdir(parents=True, exist_ok=True)
-        return str(path)
+        return path
 
     def register_file(self, rel_path, name=None, custom=None, **kwargs):
         """ Add a file as a frictionless resource.
 
         Arguments:
-            rel_path (str): the relative path to the file.
+            rel_path (str or pathlib.Path): the relative path to the file.
             name (str): name of the resource. By default, this will be the name
                 of the file without the extension.
             custom (dict): Custom properties to save.
             **kwargs (dict): Optional keyword arguments passed to Resource,
                 e.g. `description`.
         """
+        rel_path = str(rel_path)
         if isinstance(name, str):
             kwargs['name'] = name
         res = Resource(path=rel_path, **kwargs)
