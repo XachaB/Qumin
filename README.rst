@@ -24,22 +24,22 @@ For more detail, you can refer to Sacha's dissertation (in French, `Beniamine 20
 
 
 Citing
-============
+======
 
 If you use Qumin in your research, please cite Sacha's dissertation (`Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_), as well as the relevant paper for the specific actions used (see below). To appear in the publications list, send Sacha an email with the reference of your publication at s.<last name>@surrey.ac.uk
 
 Quick Start
-============
+===========
 
 Install
---------
+-------
 
 Install the Qumin package using pip: ::
 
     pip install qumin
 
 Data
------
+----
 
 Qumin works from full paradigm data in phonemic transcription.
 
@@ -47,13 +47,14 @@ The package expects `Paralex datasets <http://www.paralex-standard.org>`_, conta
 
 Computation results are provided as a `Frictionless DataPackage <https://datapackage.org/>`_. In addition to the files provided in the output directory, Qumin also writes a `metadata.json` file, which contains:
 
-- A description of each file in the output directory
+- A description of each file in the output directory.
 - Timestamps for the beginning and the end of the run.
-- The arguments passed to the script
+- The command-line arguments passed to the script.
+- The description of the Paralex package used for the computations.
 
 
 Scripts
---------
+-------
 
 .. note::
     We now rely on `hydra <https://hydra.cc/>`_ to manage CLI interface and configurations. Hydra will create a folder ``outputs/<yyyy-mm-dd>/<hh-mm-ss>/`` containing all results. A subfolder ``outputs/<yyyy-mm-dd>/<hh-mm-ss>/.hydra/`` contains details of the configuration as it was when the script was run. Hydra permits a lot more configuration. For example, any of the following scripts can accept a verbose argument of the form ``hydra.verbose=Qumin``, and the output directory can be customized with ``hydra.run.dir="./path/to/output/dir"``.
@@ -63,7 +64,7 @@ Scripts
     /$ qumin --help
 
 Patterns
-^^^^^^^^^
+^^^^^^^^
 
 Alternation patterns serve as a basis for all the other scripts. An early version of the patterns algorithm is described in `Beniamine (2017) <https://halshs.archives-ouvertes.fr/hal-01615899>`_. An updated description figures in `Beniamine, Bonami and  Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_.
 
@@ -83,7 +84,7 @@ For inflection class lattices, both can be kept: ::
     /$ qumin pats.defective=True pats.overabundant=True data=<dataset.package.json>
 
 Microclasses
-^^^^^^^^^^^^^
+^^^^^^^^^^^^
 
 To visualize the microclasses and their similarities, one can compute a **microclass heatmap**::
 
@@ -109,7 +110,7 @@ A few more parameters can be changed: ::
 
 
 Paradigm entropy
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 An early version of this software was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_, and a more recent one in `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
 
@@ -184,7 +185,7 @@ The config file contains the following keys, which can be set through the comman
 
 
 Macroclass inference
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 Our work on automatical inference of macroclasses was published in `Beniamine, Bonami and Sagot (2018) <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_".
 
@@ -196,7 +197,7 @@ By default, this will start by computing patterns. To work with pre-computed pat
 
 
 Lattices
-^^^^^^^^^
+^^^^^^^^
 
 By default, this will start by computing patterns. To work with pre-computed patterns, pass the path to the pattern computation metadata with ``patterns=<path/to/metadata.json>``.
 
