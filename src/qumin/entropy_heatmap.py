@@ -13,8 +13,6 @@ from frictionless.exception import FrictionlessException
 from hydra.core.hydra_config import HydraConfig
 from matplotlib import pyplot as plt
 
-from .representations.frequencies import Frequencies
-
 # Prevent matplotlib font manager from spamming the log
 logging.getLogger('matplotlib.font_manager').disabled = True
 log = logging.getLogger("Qumin")
@@ -175,7 +173,6 @@ def _draw_heatmap(*args, cmap=None, cmap_freqs=None, cell_freqs=None,
     """
     df = kwargs.pop('data')
     annot = kwargs.pop('annotate')
-
     types = df["type"].unique()
     df = df.pivot(index=args[0], columns=args[1], values=args[2])
     df.index.name = 'predictor'
@@ -193,7 +190,6 @@ def _draw_heatmap(*args, cmap=None, cmap_freqs=None, cell_freqs=None,
         cell_colors = cell_freqs is not None
 
     if feat_order:
-
         # Sorting for multiple predictors.
         def sorting(x):
             return x.apply(lambda cell: feat_order.index(cell))
@@ -221,8 +217,8 @@ def _draw_heatmap(*args, cmap=None, cmap_freqs=None, cell_freqs=None,
 
     if cell_colors:
         row_freqs = cell_freqs.loc[df.index]
-        col_freqs = pd.DataFrame(0, columns=["frequency"] + list(df.columns), index=["frequency"])
-        col_freqs.loc["frequency", df.columns] = cell_freqs.loc[df.columns]
+        col_freqs = pd.DataFrame(cell_freqs.loc[df.columns]).T
+        col_freqs.insert(0, "frequency", 0)
         df = pd.concat([row_freqs, df], axis=1)
         df = pd.concat([col_freqs, df], axis=0)
         df.index.name = 'predictor'
@@ -306,11 +302,10 @@ def entropy_heatmap(results, md, cmap_name=False, freq_margins=True,
 
     df.rename(columns={"level_4": "type", 0: "value"}, inplace=True)
 
-    freqs = Frequencies(md.dataset)
     cell_freqs = None
     cmap_freqs = None
-    if freq_margins and not freqs.source['cells'] == "empty":
-        cell_freqs = freqs._filter_frequencies(data="cells")["value"]
+    if freq_margins and (results.probability_source == "tokens").all():
+        cell_freqs = results.reset_index('predicted').pred_probability.drop_duplicates()
         cell_freqs.name = "frequency"
         cmap_freqs = sns.color_palette("mako_r", as_cmap=True)
 
@@ -340,6 +335,9 @@ def entropy_heatmap(results, md, cmap_name=False, freq_margins=True,
 
     # Rename metric types
     df.loc[:, 'type'] = df.type.replace({'value': 'Result', 'n_pairs': 'Number of pairs'})
+
+    if len(df.n_preds.unique()) > 1:
+        df.measure += df.n_preds.apply(lambda x: f" (n={x})")
 
     # Compute a suitable size for the heatmaps
     height = 4 + round(len(df['predictor'].unique()) / 4)

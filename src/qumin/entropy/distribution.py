@@ -91,25 +91,18 @@ class PatternDistribution(object):
         """ Returns the average measures from the current run.
 
         Arguments:
+            **kwargs: Keyword arguments are passed to `get_results()`
             tokens (boolean): Whether the cell token frequencies should be used for weighting.
                 Defaults to False.
-            **kwargs: Keyword arguments are passed to `get_results()`
 
         Returns: mean (float)
         """
 
         results = self.get_results(**kwargs)
+        weights = self.get_weights(results, tokens=False)
+        return (weights.value * weights.pair_probability).sum()
 
-        # Try to weight
-        if tokens:
-            data = self.get_weights(results)
-            # Check that we got weight
-            if data is not None:
-                return (data.weight * data.value).sum()
-
-        return results.loc[:, "value"].mean()
-
-    def get_weights(self, data):
+    def get_weights(self, data, tokens=False):
         r""" Returns weights computed from cell frequencies for pairs of cells.
 
         *The probability of a pair of cells is the product of the probability of the predictors
@@ -190,14 +183,15 @@ class PatternDistribution(object):
         be computed for the predictors beforehand. We then compute the product of this with
         the relative frequency of the target cell.
 
-        Returns:
-            an array of weights (:class:`numpy:numpy.ndarray`)
-        """
-        if self.frequencies.source['cells'] == "empty":
-            log.warning("Couldn't find cell frequencies. "
-                        "Falling back on weighting by the number of pairs.")
-            return None
+        Arguments:
+            data (pandas.DataFrame): the full computation results.
+            tokens (boolean): Whether the cell token frequencies should be used for weighting.
+                Defaults to False.
 
+        Returns:
+            two arrays containing the probability of the pairs and the
+                probability of the predictors (:class:`numpy:numpy.ndarray`)
+        """
         def compute_weight(x, freq):
             """
             For each group of predictors, compute the constant value.
@@ -213,11 +207,24 @@ class PatternDistribution(object):
             # Constant part for predictor
             constant = pred_product / (C_sum * (1 - freq.loc[is_pred, 'result'].sum()))
             # Vectorized computation for the target
-            x['weight'] = (freq.loc[x.predicted] * constant).values
+            x['pair_probability'] = (freq.loc[x.predicted] * constant).values
+            x['pred_probability'] = pred_product / C_sum
+            x['probability_source'] = "tokens"
             return x
 
-        cell_freq = self.frequencies.get_relative_freq(data="cells")
-        data = data.groupby('predictor').apply(compute_weight, cell_freq).reset_index(drop=True)
+        data = data.copy()
+        if tokens:
+            if self.frequencies.source['cells'] != "empty":
+                cell_freq = self.frequencies.get_relative_freq(data="cells")
+                return data.groupby('predictor').apply(
+                    compute_weight, cell_freq).reset_index(drop=True)
+            else:
+                log.warning("Couldn't find cell frequencies. "
+                            "Falling back on weighting by the number of pairs.")
+
+        data.loc[:, 'pair_probability'] = 1 / data.shape[0]
+        data.loc[:, 'pred_probability'] = 1 / data.predictor.nunique()
+        data.loc[:, 'probability_source'] = "uniform"
         return data
 
     def export_file(self, filename, tokens=False):
@@ -225,7 +232,7 @@ class PatternDistribution(object):
 
         Arguments:
             filename: the file's path.
-             tokens (boolean): Whether weights should be returned from cell token frequencies.
+            tokens (bool): Whether weights should be returned from cell token frequencies.
                 Defaults to False.
         """
 
@@ -235,21 +242,20 @@ class PatternDistribution(object):
             return preds
 
         data = self.data.copy()
-        if tokens:
-            weight = self.get_weights(data)
-            if weight is not None:
-                data.loc[:, 'weight'] = weight.weight.round(5)
+
+        # Get weights from token frequencies if possible
+        data = self.get_weights(data, tokens=True)
+        # Format multiple predictors
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(join_if_multiple)
-        if "entropy" in data.columns:
-            # Rounding at 10 significant digits, ensuring positive zeros.
-            data.loc[:, "entropy"] = data.loc[:, "entropy"].map(lambda x: round(x, 10)) + 0
+        # Rounding at 10 significant digits, ensuring positive zeros.
+        data.loc[:, "value"] = data.loc[:, "value"].map(lambda x: round(x, 10)) + 0
         data.to_csv(filename, index=False)
 
     def import_file(self, filename):
         """Read already computed entropies from a file.
 
         Arguments:
-            filename: the file's path.
+            filename (str): the file's path.
         """
 
         def split_if_multiple(preds):
