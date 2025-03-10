@@ -13,6 +13,7 @@ Version 3.0
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Switch patterns management to long format everywhere
 - Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
+- Change management of Metadata class. Outputs from Qumin are now shipped as a `Frictionless DataPackage <https://datapackage.org/>`_.
 - Change management of sampling:
     - `most_freq=False` replaced by `force_random=True`.
     - Addition of a seed option to determinise sampling.  By default, sample by frequency.

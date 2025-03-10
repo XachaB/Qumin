@@ -45,6 +45,12 @@ Qumin works from full paradigm data in phonemic transcription.
 
 The package expects `Paralex datasets <http://www.paralex-standard.org>`_, containing at least a `forms` and a `sounds` table. Note that the sounds files may sometimes require edition, as Qumin imposes more constraints on sound definitions than paralex does.
 
+Computation results are provided as a `Frictionless DataPackage <https://datapackage.org/>`_. In addition to the files provided in the output directory, Qumin also writes a `metadata.json` file, which contains:
+
+- A description of each file in the output directory
+- Timestamps for the beginning and the end of the run.
+- The arguments passed to the script
+
 
 Scripts
 --------
@@ -83,13 +89,13 @@ To visualize the microclasses and their similarities, one can compute a **microc
 
     /$ qumin action=heatmap data=<dataset.package.json>
 
-This will compute patterns, then the heatmap. To pass pre-computed patterns, pass the file path: ::
+This will compute patterns, then the heatmap. To pass pre-computed patterns, pass the patterns computation metadata path: ::
 
-    /$ qumin action=heatmap patterns=<path/to/patterns.csv> data=<dataset.package.json>
+    /$ qumin action=heatmap patterns=<path/to/metadata.json> data=<dataset.package.json>
 
 It is also possible to pass class labels to facilitate comparisons with another classification: ::
 
-    /$ qumin.heatmap label=inflection_class patterns=<path/to/patterns.csv> data=<dataset.package.json>
+    /$ qumin.heatmap label=inflection_class patterns=<path/to/metadata.json> data=<dataset.package.json>
 
 The label key is the name of the column in the Paralex `lexemes` table to use as labels.
 
@@ -107,7 +113,7 @@ Paradigm entropy
 
 An early version of this software was used in `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_, and a more recent one in `Beniamine, Bonami and Luís (2021) <https://doi.org/10.5565/rev/isogloss.109>`_
 
-By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
+By default, this will start by computing patterns. To work with pre-computed patterns, pass the path to the pattern computation metadata with ``patterns=<path/to/metadata.json>``.
 
 **Computing entropies from one cell** ::
 
@@ -123,8 +129,8 @@ By default, this will start by computing patterns. To work with pre-computed pat
 
 Predicting with known lexeme-wise features (such as gender or inflection class) is also possible. This feature was used in `Pellegrini (2023) <https://doi.org/10.1007/978-3-031-24844-3>`_. To use features, pass the name of any column(s) from the ``lexemes`` table: ::
 
-    /$ qumin.H  feature=inflection_class patterns=<patterns.csv> data=<dataset.package.json>
-    /$ qumin.H  feature="[inflection_class,gender]" patterns=<patterns.csv> data=<dataset.package.json>
+    /$ qumin.H  feature=inflection_class patterns=<metadata.json> data=<dataset.package.json>
+    /$ qumin.H  feature="[inflection_class,gender]" patterns=<metadata.json> data=<dataset.package.json>
 
 
 The config file contains the following keys, which can be set through the command line: ::
@@ -182,7 +188,7 @@ Macroclass inference
 
 Our work on automatical inference of macroclasses was published in `Beniamine, Bonami and Sagot (2018) <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_".
 
-By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
+By default, this will start by computing patterns. To work with pre-computed patterns, pass the path to the pattern computation metadata with ``patterns=<path/to/metadata.json>``.
 
 **Inferring macroclasses** ::
 
@@ -192,7 +198,7 @@ By default, this will start by computing patterns. To work with pre-computed pat
 Lattices
 ^^^^^^^^^
 
-By default, this will start by computing patterns. To work with pre-computed patterns, pass their path with ``patterns=<path/to/patterns.csv>``.
+By default, this will start by computing patterns. To work with pre-computed patterns, pass the path to the pattern computation metadata with ``patterns=<path/to/metadata.json>``.
 
 This software was used in `Beniamine (2021) <https://langsci-press.org/catalog/book/262>`_".
 
