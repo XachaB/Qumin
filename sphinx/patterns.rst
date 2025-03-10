@@ -1,8 +1,7 @@
 Alternation patterns
-=================================
+====================
 
-.. note::
-    This script generates a human readable file `human_readable_<kind>.csv` which is only intended for manual inspection, as well as a file `<kind>.csv`, eg `phon.csv`, which is intended to be passed to further Qumin scripts.
+This script generates alternation patterns. They can be consumed by further Qumin scripts by passing the path to the ``metadata.json`` file produced by a computation. It also writes human readable patterns in the ``patterns/human_readable`` folder, which are intended for manual inspection.
 
 The patterns can be further configured, modifying the following keys: ::
 
@@ -15,7 +14,7 @@ The patterns can be further configured, modifying the following keys: ::
     force_random: False       # Whether to force random sampling.
     seed: 1                   # Random seed for reproducible random effects.
     pats:
-      kind: phon   # Options are (see docs): phon, edits
+      kind: phon              # Options are (see docs): phon, edits
       defective: False        # Whether to keep defective entries
       overabundant: False     # Whether to keep overabundant entries
       gap_proportion: .4      # Proportion of the median score used to set the gap score
@@ -28,7 +27,7 @@ values for these keys can be given through the command line, eg::
 
 
 Patterns kinds
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
 
 Qumin can compute various kinds of patterns that can be used for entropy calculations. They have alternations and generalized contexts:
 

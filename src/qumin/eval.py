@@ -179,7 +179,7 @@ def predict_two_directions(test_items, train_items, method, features=None):
 
 def prepare_data(cfg, md):
     """Create a multi-index paradigm table and if given a path, a features table."""
-    paradigms = Paradigms(md.dataset,
+    paradigms = Paradigms(md.paralex,
                           segcheck=True,
                           fillna=False,
                           merge_cols=cfg.pats.merged,
@@ -265,19 +265,13 @@ def eval_command(cfg, md):
     for info in general_infos:
         results[info] = general_infos[info]
 
-    computation = 'evalPatterns'
-    filename = md.register_file("eval_patterns.csv",
-                                {"computation": computation,
-                                 "content": "scores",
-                                 "source": paradigms_file_path})
+    filename = md.get_path('eval_patterns.csv')
     results.to_csv(filename)
+    md.register_file("eval_patterns.csv", description="Scores from patterns evaluation.")
 
     print_summary(results, general_infos)
     figs = to_heatmap(results, paradigms.columns.tolist())
     for name, fig in figs:
-        figname = md.register_file("eval_patterns_{}.png".format(name),
-                                   {"computation": computation,
-                                    "content": "heatmap",
-                                    "name": name,
-                                    "source": paradigms_file_path})
+        figname = md.get_path(f"eval_patterns_{name}.png")
         fig.savefig(figname, dpi=300, bbox_inches='tight', pad_inches=0.5)
+        md.register_file(f"eval_patterns_{name}.png", description="Heatmap of patterns evaluation.")

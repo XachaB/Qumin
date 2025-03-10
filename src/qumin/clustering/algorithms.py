@@ -18,9 +18,7 @@ def choose(iterable):
 
 
 def log_classes(classes, md, suffix):
-    filename = md.register_file(suffix + ".txt",
-                                {"computation": "macroclasses",
-                                 "content": "log"})
+    filename = md.get_path(suffix + ".txt")
     log.info("Found %s %s", len(classes), suffix)
     log.info("Printing log to %s", filename)
     with open(filename, "w", encoding="utf-8") as flow:
@@ -28,6 +26,8 @@ def log_classes(classes, md, suffix):
             flow.write("\n\n{} ({}) \n\t".format(m,
                                                  len(classes[m]))
                        + ", ".join(classes[m]))
+
+    md.register_file(suffix + ".txt", description="Log of the macroclass computation")
 
 
 def hierarchical_clustering(patterns, paradigms, Clusters, **kwargs):

@@ -8,12 +8,13 @@ Encloses distribution of patterns on paradigms.
 import logging
 from collections import Counter, defaultdict
 from functools import reduce
-from itertools import combinations, permutations
+from itertools import combinations
 from operator import mul
 import pandas as pd
 
 from ..representations.frequencies import Frequencies
 from . import cond_entropy, entropy
+from ..utils import Metadata
 
 log = logging.getLogger("Qumin")
 
@@ -257,7 +258,8 @@ class PatternDistribution(object):
                 return tuple(preds.split("&"))
             return preds
 
-        data = pd.read_csv(filename)
+        entropy_md = Metadata(path=filename)
+        data = pd.read_csv(entropy_md.get_resource_path('entropies'))
         data.loc[:, "predictor"] = data.loc[:, "predictor"].apply(split_if_multiple)
         self.add_measures(data)
 

@@ -29,7 +29,7 @@ def pat_command(cfg, md):
 
     merge_cols = True
 
-    paradigms = Paradigms(md.dataset,
+    paradigms = Paradigms(md.paralex,
                           defective=defective,
                           overabundant=overabundant,
                           merge_cols=merge_cols,
@@ -51,9 +51,6 @@ def pat_command(cfg, md):
                            gap_prop=cfg.pats.gap_proportion,
                            cpus=cfg.cpus or min(1, cpu_count() - 2))
 
-    # Concatenate the patterns as a dict. Cell names are turned into columns.
-    # patterns_df = pd.concat([df for df in patterns_dfs.values()]).reset_index(drop=True)
-
     if merge_cols and not cfg.pats.merged:  # Re-build duplicate columns
         paradigms.unmerge_columns()
         patterns.unmerge_columns(paradigms)
@@ -67,11 +64,11 @@ def pat_command(cfg, md):
                     "Please report this as a bug !")
 
     microclasses = find_microclasses(paradigms, patterns)
-    filename = md.register_file("microclasses.txt",
-                                {'computation': cfg.pats.kind, 'content': 'microclasses'})
+    filename = md.get_path("microclasses.txt")
     log.info("Found %s microclasses. Printing microclasses to %s", len(microclasses), filename)
     with open(filename, "w", encoding="utf-8") as flow:
         for m in sorted(microclasses, key=lambda m: len(microclasses[m])):
             flow.write("\n\n{} ({}) \n\t".format(m, len(microclasses[m])) + ", ".join(microclasses[m]))
+    md.register_file("microclasses.txt", description="Microclass computation")
 
-    return patterns.export(md, kind, optim_mem=cfg.pats.optim_mem)
+    patterns.export(md, kind, optim_mem=cfg.pats.optim_mem)
