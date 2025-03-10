@@ -162,8 +162,122 @@ def get_features_order(features, results, sort_order=False):
             return sorted(list(df.predictor.unique()))
 
 
+def _draw_heatmap(*args, cmap=None, cmap_freqs=None, cell_freqs=None,
+                  feat_order=None, dense=False, **kwargs):
+    """
+    Draws a heatmap in a FacetGrid with custom parameters
+
+    Arguments:
+        cmap: Colormap used for the metrics heatmap.
+        cmap_freqs: Colormap used for the frequencies scale.
+        feat_order (List[str]): an ordered list of each cell name.
+            Used to sort the labels.
+    """
+    df = kwargs.pop('data')
+    annot = kwargs.pop('annotate')
+
+    types = df["type"].unique()
+    df = df.pivot(index=args[0], columns=args[1], values=args[2])
+    df.index.name = 'predictor'
+    df.columns.name = 'predicted'
+
+    # For n_pairs, we want a specific set of parameters.
+    if 'Number of pairs' in types:
+        hm_cmap = "gray_r"
+        annot = df.shape[0] < 10
+        fmt = ".0f"
+        cell_colors = False
+    else:
+        hm_cmap = cmap
+        fmt = ".2f"
+        cell_colors = cell_freqs is not None
+
+    if feat_order:
+
+        # Sorting for multiple predictors.
+        def sorting(x):
+            return x.apply(lambda cell: feat_order.index(cell))
+
+        sort = df.index.to_frame().predictor.str.split('&', expand=True)
+        sort = sort.sort_values(by=list(sort.columns), key=sorting, axis=0)
+        df = df.reindex(sort.index)
+        df = df[feat_order]
+
+    else:
+        df = df.reindex(list(df.columns))
+
+    df = df.replace([np.nan], 0)
+
+    # Additional options for rendering.
+    # Extra short labels
+    if dense:
+        def shorten(x):
+            return ".".join([f[0].capitalize() for f in x.split('.')])
+
+        df.index = pd.Index(df.index.to_series().map(shorten))
+        df.columns = pd.Index(df.columns.to_series().map(shorten))
+
+    freqs_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
+
+    if cell_colors:
+        row_freqs = cell_freqs.loc[df.index]
+        col_freqs = pd.DataFrame(0, columns=["frequency"] + list(df.columns), index=["frequency"])
+        col_freqs.loc["frequency", df.columns] = cell_freqs.loc[df.columns]
+        df = pd.concat([row_freqs, df], axis=1)
+        df = pd.concat([col_freqs, df], axis=0)
+        df.index.name = 'predictor'
+        df.columns.name = 'predicted'
+        freqs_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
+        freqs_mask.iloc[:, 0] = True
+        freqs_mask.iloc[0, :] = True
+
+    # Annotations on the heatmap
+    if annot:
+        annot = df.copy().round(2)
+
+    # Mask (diagonal)
+    diag_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
+    for col in df.columns:
+        tmp = diag_mask.index.to_frame().predictor.str.split('&').apply(lambda x: col in x)
+        diag_mask.loc[tmp, [col]] = True
+
+    # Drawing each individual heatmap
+    ax = sns.heatmap(df,
+                     annot=annot,
+                     mask=diag_mask | freqs_mask,
+                     cmap=hm_cmap,
+                     fmt=fmt,
+                     linewidths=1,
+                     vmin=0,
+                     cbar=True,
+                     cbar_kws=dict(location='bottom',
+                                   shrink=0.6,
+                                   pad=0.075),  # Spacing between colorbar and hm
+                     **kwargs)
+
+    ax.tick_params(axis='x', labelbottom=False, labeltop=True,
+                   bottom=False, top=False,
+                   labelrotation=0 if dense else 90)
+
+    if cell_colors:
+        # Plotting first rows & columns (frequency) in a different cmap
+        ax = sns.heatmap(df,
+                         annot=annot,
+                         mask=diag_mask | ~freqs_mask,
+                         cmap=cmap_freqs,
+                         fmt=fmt,
+                         vmin=0,
+                         vmax=cell_freqs.max(),
+                         linewidths=1,
+                         **kwargs)
+        ax.tick_params(axis='x', labelbottom=False, labeltop=True,
+                       bottom=False, top=False,
+                       labelrotation=0 if dense else 90)
+
+
 def entropy_heatmap(results, md, cmap_name=False, freq_margins=True,
-                    feat_order=None, dense=False, annotate=False, filename="entropyHeatmap.png"):
+                    dense=False, annotate=False,
+                    n_pairs=False, debug=False, filename="entropyHeatmap.png", **kwargs):
     """Make a FacetGrid heatmap of all metrics
 
     Arguments:
@@ -172,12 +286,13 @@ def entropy_heatmap(results, md, cmap_name=False, freq_margins=True,
         md (qumin.utils.Metadata): MetaData handler to get access to file location.
         cmap_name (str): name of the cmap to use. Defaults to the following cubehelix
             map, `sns.cubehelix_palette(start=2, rot=0.5, dark=0, light=1, as_cmap=True)`.
-        feat_order (List[str]): an ordered list of each cell name.
-            Used to sort the labels.
         dense (bool): whether to use short cell names or not.
         annotate (bool): whether to add an annotation overlay.
         filename (str): filename to save the heatmap.
         freq_margins (bool):  whether to add cell frequency margins to dataframe.
+        n_pairs (bool): whether to display a heatmap of the number of pairs.
+        debug (bool): whether to display a heatmap with debug results.
+        **kwargs: Optional arguments are passed to `_draw_heatmap()`
     """
 
     if not cmap_name:
@@ -185,142 +300,63 @@ def entropy_heatmap(results, md, cmap_name=False, freq_margins=True,
     else:
         cmap = plt.get_cmap(cmap_name)
 
-    log.info("Drawing...")
-
     df = results[['measure', 'value', 'n_pairs', 'n_preds']
-    ].set_index(['measure', 'n_preds'], append=True
-                ).stack().reset_index()
+                 ].set_index(['measure', 'n_preds'], append=True
+                             ).stack().reset_index()
+
+    df.rename(columns={"level_4": "type", 0: "value"}, inplace=True)
 
     freqs = Frequencies(md.dataset)
     cell_freqs = None
+    cmap_freqs = None
     if freq_margins and not freqs.source['cells'] == "empty":
         cell_freqs = freqs._filter_frequencies(data="cells")["value"]
         cell_freqs.name = "frequency"
         cmap_freqs = sns.color_palette("mako_r", as_cmap=True)
 
-    df.rename(columns={"level_4": "type", 0: "value"}, inplace=True)
+    # Clean debug info
+    df['debug'] = df.measure.str.endswith('_debug')
+    df.loc[df.debug, 'measure'] = df.loc[df.debug].measure.str.replace('_debug', '')
+
+    # Rename measures
+    names = {'cond_entropy': 'Conditional entropy'}
+    df.loc[:, 'measure'] = df.measure.map(names)
+
+    # Drop unnecessary rows
+    if not n_pairs:
+        df.drop(df[df.type == "n_pairs"].index, axis=0, inplace=True)
+    if not debug:
+        df.drop(df.loc[df.debug].index, axis=0, inplace=True)
+
+    # Decide layout
+    if not n_pairs and not debug:
+        orient_param = dict(col="measure")
+    elif not n_pairs:
+        orient_param = dict(col="measure", row="debug")
+        df.debug = df.debug.replace({True: "debug value", False: "normal value"})
+    else:
+        orient_param = dict(row="measure", col="type")
+        df.loc[df.debug, "measure"] = df.loc[df.debug, "measure"] + " (debug)"
+
+    # Rename metric types
     df.loc[:, 'type'] = df.type.replace({'value': 'Result', 'n_pairs': 'Number of pairs'})
-    df.loc[:, 'measure'] = df.measure.replace({'cond_entropy': 'Conditional entropy'})
-    if len(df.n_preds.unique()) > 1:
-        df.measure += df.n_preds.apply(lambda x: f" (n={x})")
 
     # Compute a suitable size for the heatmaps
     height = 4 + round(len(df['predictor'].unique()) / 4)
 
-    def _draw_heatmap(*args, **kwargs):
-        """ Draws a heatmap in a FacetGrid with custom parameters
-        """
-        df = kwargs.pop('data')
-        annot = kwargs.pop('annotate')
-
-        types = df["type"].unique()
-        df = df.pivot(index=args[0], columns=args[1], values=args[2])
-        df.index.name = 'predictor'
-        df.columns.name = 'predicted'
-
-        # For n_pairs, we want a specific set of parameters.
-        if 'Number of pairs' in types:
-            hm_cmap = "gray_r"
-            annot = df.shape[0] < 10
-            fmt = ".0f"
-            cell_colors = False
-        else:
-            hm_cmap = cmap
-            fmt = ".2f"
-            cell_colors = cell_freqs is not None
-
-        if feat_order:
-
-            # Sorting for multiple predictors.
-            def sorting(x):
-                return x.apply(lambda cell: feat_order.index(cell))
-
-            sort = df.index.to_frame().predictor.str.split('&', expand=True)
-            sort = sort.sort_values(by=list(sort.columns), key=sorting, axis=0)
-            df = df.reindex(sort.index)
-            df = df[feat_order]
-
-        else:
-            df = df.reindex(list(df.columns))
-
-        df = df.replace([np.nan], 0)
-
-        # Additional options for rendering.
-        # Extra short labels
-        if dense:
-            def shorten(x):
-                return ".".join([f[0].capitalize() for f in x.split('.')])
-
-            df.index = pd.Index(df.index.to_series().map(shorten))
-            df.columns = pd.Index(df.columns.to_series().map(shorten))
-
-        freqs_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
-
-        if cell_colors:
-            row_freqs = cell_freqs.loc[df.index]
-            col_freqs = pd.DataFrame(0, columns=["frequency"] + list(df.columns), index=["frequency"])
-            col_freqs.loc["frequency", df.columns] = cell_freqs.loc[df.columns]
-            df = pd.concat([row_freqs, df], axis=1)
-            df = pd.concat([col_freqs, df], axis=0)
-            df.index.name = 'predictor'
-            df.columns.name = 'predicted'
-            freqs_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
-            freqs_mask.iloc[:, 0] = True
-            freqs_mask.iloc[0, :] = True
-
-        # Annotations on the heatmap
-        if annot:
-            annot = df.copy().round(2)
-
-        # Mask (diagonal)
-        diag_mask = pd.DataFrame(False, columns=df.columns, index=df.index)
-        for col in df.columns:
-            tmp = diag_mask.index.to_frame().predictor.str.split('&').apply(lambda x: col in x)
-            diag_mask.loc[tmp, [col]] = True
-
-        # Drawing each individual heatmap
-        ax = sns.heatmap(df,
-                         annot=annot,
-                         mask=diag_mask | freqs_mask,
-                         cmap=hm_cmap,
-                         fmt=fmt,
-                         linewidths=1,
-                         vmin=0,
-                         cbar=True,
-                         cbar_kws=dict(location='bottom',
-                                       shrink=0.6,
-                                       pad=0.075),  # Spacing between colorbar and hm
-                         **kwargs)
-
-        ax.tick_params(axis='x', labelbottom=False, labeltop=True,
-                       bottom=False, top=False,
-                       labelrotation=0 if dense else 90)
-
-        if cell_colors:
-            # Plotting first rows & columns (frequency) in a different cmap
-            ax = sns.heatmap(df,
-                             annot=annot,
-                             mask=diag_mask | ~freqs_mask,
-                             cmap=cmap_freqs,
-                             fmt=fmt,
-                             vmin=0,
-                             vmax=cell_freqs.max(),
-                             linewidths=1,
-                             **kwargs)
-            ax.tick_params(axis='x', labelbottom=False, labeltop=True,
-                           bottom=False, top=False,
-                           labelrotation=0 if dense else 90)
-
     # Plotting the heatmap
-    cg = sns.FacetGrid(df, row='measure', col='type', height=height, margin_titles=True,
+    cg = sns.FacetGrid(df, **orient_param,
+                       height=height, margin_titles=True,
                        sharex=False, sharey=False)
     cg.set_titles(row_template='{row_name}', col_template='{col_name}')
 
-    cg.map_dataframe(_draw_heatmap, 'predictor', 'predicted', 'value',
-                     annotate=annotate, square=True)
+    cg.map_dataframe(_draw_heatmap, 'predictor', 'predicted', 'value', 'reverse',
+                     annotate=annotate, cmap=cmap,
+                     cmap_freqs=cmap_freqs, cell_freqs=cell_freqs,
+                     dense=dense, square=True,
+                     **kwargs)
 
-    cg.tick_params(axis='y',
-                   labelrotation=0)
+    cg.tick_params(axis='y', labelrotation=0)
 
     cg.set_axis_labels(x_var="Predicted", y_var="Predictor")
     cg.fig.suptitle(f"Measured on the {md.dataset.name} dataset, version {md.dataset.version}")
@@ -363,7 +399,9 @@ def ent_heatmap_command(cfg, md):
                     feat_order=feat_order,
                     dense=cfg.heatmap.dense,
                     annotate=cfg.heatmap.annotate,
-                    freq_margins=cfg.heatmap.freq_margins)
+                    n_pairs=cfg.heatmap.display.n_pairs,
+                    debug=cfg.heatmap.display.debug,
+                    freq_margins=cfg.heatmap.display.freq_margins)
 
     log.info("Drawing zones of interpredictibility...")
     clusters = zones_heatmap(results, md, features, cell_order=feat_order, cols=cfg.heatmap.cols)
@@ -385,5 +423,7 @@ def ent_heatmap_command(cfg, md):
                         feat_order=distillation,
                         dense=cfg.heatmap.dense,
                         annotate=cfg.heatmap.annotate,
-                        freq_margins=cfg.heatmap.freq_margins,
+                        n_pairs=cfg.heatmap.display.n_pairs,
+                        debug=cfg.heatmap.display.debug,
+                        freq_margins=cfg.heatmap.display.freq_margins,
                         filename="entropyHeatmap_distillation.png")
