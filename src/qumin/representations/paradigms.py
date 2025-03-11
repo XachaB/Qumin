@@ -125,22 +125,21 @@ class Paradigms(object):
         # This handles cases where the orth_form is different and has two records.
         # For actual handling of truly overabundant phon_form, see below
         subset_cols = ["lexeme", "cell", "phon_form"]
-        dup = self.data.duplicated(subset=subset_cols, keep=False)
+        dup = paradigms.duplicated(subset=subset_cols, keep=False)
         if dup.any():
-            if "frequency" in self.data.columns:
-                self.data.loc[dup, 'frequency'] = (
-                    self.data.loc[dup].groupby(subset_cols).sum("frequency"))
-            self.data.drop_duplicates(subset=subset_cols, inplace=True)
+            if "frequency" in paradigms.columns:
+                paradigms.loc[dup, 'frequency'] = (
+                    paradigms.loc[dup].groupby(subset_cols).sum("frequency"))
+            paradigms.drop_duplicates(subset=subset_cols, inplace=True)
 
         # Remove overabundance if asked
         if not overabundant.keep:
-            self._drop_overabundant(paradigms, overabundant)
+            paradigms = self._drop_overabundant(paradigms, overabundant)
             paradigms = self.data # Needed because there was one change I couldn't do in place
 
         # Sample lexemes
         if sample_lexemes:
             self._sample_paradigms(paradigms, lexeme_col=lexemes, n=sample_lexemes, **sample_kws)
-
         paradigms[form_col] = paradigms[form_col].fillna(value="")
 
         # Check segment definitionskwargs
@@ -162,21 +161,26 @@ class Paradigms(object):
         paradigms.drop([c for c in paradigms.columns if c not in keep_cols], axis=1, inplace=True)
         paradigms[form_col] = paradigms[['form_id', form_col]].apply(
             lambda x: Form(x[form_col], x.form_id), axis=1)
-
         paradigms.rename(columns={form_col: "form"}, inplace=True)
         paradigms.set_index('form_id', inplace=True)
+
+        self.data = paradigms
 
         # Merge identical columns
         if merge_cols:
             self.merge_duplicate_columns(sep="#")
 
         # Save data
-        log.debug(paradigms)
-        memory_check(paradigms, 2, **kwargs)
-        self.data = paradigms
+        log.debug(self.data)
+        memory_check(self.data, 2, **kwargs)
         self._update_cell()
 
     def _drop_overabundant(self, paradigms, overabundant):
+        """
+        Drop overabundant forms in a non-random way:
+            - Check first for tags
+            - Then use the most frequent form
+        """
         log.info("Dropping overabundant entries according to policy: {}".format(overabundant))
         tag_cols = [c for c in paradigms.columns if c.endswith("_tag")]
 
@@ -202,8 +206,8 @@ class Paradigms(object):
         overab_order = paradigms.apply(form_sorter, axis=1).sort_values()
         # this is difficult to do in place, hence assigning to self.data
         paradigms = paradigms.loc[overab_order.index, :]
-        self.data = paradigms
         paradigms.drop_duplicates([lexemes, cell_col], keep="first", inplace=True)
+        return paradigms
 
     def _filter_pos(self, paradigms, pos):
         """
