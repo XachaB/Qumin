@@ -38,7 +38,7 @@ def qumin_command(cfg):
     elif cfg.action == "lattice":
         lattice_command(cfg, md, patterns_md)
     elif cfg.action == "heatmap":
-        heatmap_command(cfg, md)
+        heatmap_command(cfg, md, patterns_md)
     elif cfg.action == "eval":
         eval_command(cfg, md)
 

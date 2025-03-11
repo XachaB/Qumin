@@ -6,11 +6,16 @@ Author: Sacha Beniamine.
 """
 from matplotlib import pyplot as plt
 from scipy.spatial.distance import pdist, squareform
-from .clustering import find_microclasses
 import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
 import logging
+
+# Our scripts
+from .clustering import find_microclasses
+from .representations import segments
+from .representations.paradigms import Paradigms
+from .representations.patterns import ParadigmPatterns
 
 log = logging.getLogger()
 
@@ -57,21 +62,59 @@ def distance_matrix(pat_table, microclasses, **kwargs):
     return distances
 
 
-def heatmap_command(cfg, md):
+def heatmap_command(cfg, md, patterns_md):
     r"""Draw a clustermap of microclass similarities using seaborn.
+
+    Arguments:
+        cfg (omegaconf.dictconfig.DictConfig): Configuration for this run.
+        md (qumin.utils.Metadata): Metadata handler for this run.
+        patterns_md (qumin.utils.Metadata): Metadata handler for the patterns run.
     """
+
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-    log.info(cfg)
     log.info("Reading files")
 
     categories = None
     if cfg.heatmap.label:
         categories = pd.read_csv(md.get_table_path("lexemes"), index_col=0)[cfg.heatmap.label]
-    pat_table = pd.read_csv(cfg.patterns, index_col=0)
+
+    # Loading files and paths
+    defective = cfg.pats.defective
+    overabundant = cfg.pats.overabundant
+
+    # Initializing segments
+    sounds_file_name = md.get_table_path("sounds")
+    segments.Inventory.initialize(sounds_file_name)
+
+    # Loading paradigms
+    paradigms = Paradigms(md.paralex, defective=defective, overabundant=overabundant,
+                          merge_cols=cfg.entropy.merged,
+                          segcheck=True,
+                          cells=cfg.cells,
+                          pos=cfg.pos,
+                          force=cfg.force,
+                          sample_lexemes=cfg.sample_lexemes,
+                          sample_cells=cfg.sample_cells,
+                          sample_kws=dict(force_random=cfg.force_random,
+                                          seed=cfg.seed),
+                          )
+
+    # Loading Patterns
+    patterns = ParadigmPatterns()
+    patterns.from_file(patterns_md,
+                       paradigms.data,
+                       defective=defective,
+                       overabundant=False,
+                       force=cfg.force,
+                       )
+
     log.info("Looking for microclasses")
-    microclasses = find_microclasses(pat_table)
+    microclasses = find_microclasses(paradigms, patterns)
+    breakpoint()
+
     log.info("Computing distances")
-    distances = distance_matrix(pat_table, microclasses)
+    distances = distance_matrix(patterns, microclasses)
+
     log.info("Drawing")
     microclass_heatmap(distances, md, labels=categories,
                        cmap_name=cfg.heatmap.cmap,
