@@ -133,33 +133,8 @@ class Paradigms(object):
             self.data.drop_duplicates(subset=subset_cols, inplace=True)
 
         # Remove overabundance if asked
-        tag_cols = [c for c in paradigms.columns if c.endswith("_tag")]
-        def form_sorter(row):
-            tag_sorter = []
-            freq_sorter = []
-            if overabundant.tags:
-                tags = [t for col in tag_cols for t in row[col].split(";")]
-                s = []
-                for i, t in enumerate(overabundant.tags):
-                    if t in tags:
-                        s.append(i)
-                if not s:
-                    s.append(len(overabundant.tags))
-                tag_sorter = [tuple(s)]
-
-            if overabundant.freq and "frequency" in row:
-                freq_sorter = [-int(row["frequency"]) if not pd.isna(row["frequency"]) else 0]
-
-            return tag_sorter + freq_sorter + [row.name]
-
         if not overabundant.keep:
-            log.info("Dropping overabundant entries according to policy: {}".format(overabundant))
-            overab_order = paradigms.apply(form_sorter, axis=1).sort_values()
-            paradigms = paradigms.loc[overab_order.index, :] # this is difficult to do in place, sorry :(
-            self.data = paradigms
-            paradigms.drop_duplicates([lexemes, cell_col], keep="first", inplace=True)
-        else:
-            log.info("Keeping overabundant entries  (if any exist)")
+            self._drop_overabundant(paradigms, overabundant)
 
         # Sample lexemes
         if sample_lexemes:
@@ -199,6 +174,35 @@ class Paradigms(object):
         memory_check(paradigms, 2, **kwargs)
         self.data = paradigms
         self._update_cell()
+
+    def _drop_overabundant(self, paradigms, overabundant):
+        log.info("Dropping overabundant entries according to policy: {}".format(overabundant))
+        tag_cols = [c for c in paradigms.columns if c.endswith("_tag")]
+
+        def form_sorter(row):
+            tag_sorter = []
+            freq_sorter = []
+            if overabundant.tags:
+                tags = [t for col in tag_cols for t in row[col].split(";")]
+                s = []
+                for i, t in enumerate(overabundant.tags):
+                    if t in tags:
+                        s.append(i)
+                if not s:
+                    s.append(len(overabundant.tags))
+                tag_sorter = [tuple(s)]
+
+            if overabundant.freq and "frequency" in row:
+                freq_sorter = [-int(row["frequency"]) if not pd.isna(row["frequency"]) else 0]
+
+            return tag_sorter + freq_sorter + [row.name]
+
+        lexemes, cell_col, form_col = self.default_cols
+        overab_order = paradigms.apply(form_sorter, axis=1).sort_values()
+        # this is difficult to do in place, hence assigning to self.data
+        paradigms = paradigms.loc[overab_order.index, :]
+        self.data = paradigms
+        paradigms.drop_duplicates([lexemes, cell_col], keep="first", inplace=True)
 
     def _filter_pos(self, paradigms, pos):
         """
