@@ -12,8 +12,8 @@ Version 3.0
     - Weight cells based on the predictor-target pair frequency.
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Switch patterns management to long format everywhere
-- Change the format of human readable patterns to a more readable markdown export
 - Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
+- Change the format of human readable patterns to a more readable markdown export
 - Change management of imports/exports. Outputs from Qumin are now shipped as a `Frictionless DataPackage <https://datapackage.org/>`_. To import them, a path to the computation ``metadata.json`` must be provided.
 - Change management of sampling:
     - ``most_freq=False`` replaced by ``force_random=True``.
@@ -25,6 +25,7 @@ Version 3.0
     - Support for sound table "Seg." column.
     - Bipartite entropy computations
     - All alternation algorithms except ``phon`` and ``edits`` (former ``patternsPhonsim`` and ``patternsLevenshtein``).
+    - Patterns evaluation with ``action=eval``.
     
 Version 2.0
 ~~~~~~~~~~~
