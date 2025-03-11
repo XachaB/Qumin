@@ -127,6 +127,9 @@ class Paradigms(object):
         subset_cols = ["lexeme", "cell", "phon_form"]
         dup = self.data.duplicated(subset=subset_cols, keep=False)
         if dup.any():
+            if "frequency" in self.data.columns:
+                self.data.loc[dup, 'frequency'] = (
+                    self.data.loc[dup].groupby(subset_cols).sum("frequency"))
             self.data.drop_duplicates(subset=subset_cols, inplace=True)
 
         # Remove overabundance if asked
