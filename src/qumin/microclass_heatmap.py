@@ -44,13 +44,13 @@ def microclass_heatmap(distances, md, labels=None, cmap_name="BuPu", exhaustive_
         sns.clustermap(distances, method="average", xticklabels=tick_value, yticklabels=tick_value,
                        linewidths=0, cmap=plt.get_cmap(cmap_name), rasterized=True)
 
-    name = md.get_path('microclassHeatmap.pdf')
+    name = md.get_path('vis/microclassHeatmap.pdf')
     log.info("Saving file to: %s", name)
     plt.savefig(name, bbox_inches='tight', pad_inches=0, transparent=True)
-    md.register_file("microclassHeatmap.pdf", "Microclass heatmap")
+    md.register_file("vis/microclassHeatmap.pdf", description="Microclass heatmap")
 
 
-def distance_matrix(pat_table, microclasses, **kwargs):
+def distance_matrix(patterns, microclasses, **kwargs):
     """Returns a similarity matrix from a pattern dataframe and microclasses"""
     poplist = list(microclasses)
     dists = squareform(pdist(pat_table.loc[poplist, :], metric=lambda x, y: sum((a != b) for a, b in zip(x, y))))
@@ -110,7 +110,6 @@ def heatmap_command(cfg, md, patterns_md):
 
     log.info("Looking for microclasses")
     microclasses = find_microclasses(paradigms, patterns)
-    breakpoint()
 
     log.info("Computing distances")
     distances = distance_matrix(patterns, microclasses)
