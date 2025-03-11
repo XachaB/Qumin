@@ -85,7 +85,6 @@ eval:
 pats:
   kind: phon              # (str) Options are (see docs): phon, edits
   defective: False        # (bool) Whether to keep defective entries
-  overabundant: False     # (bool) Whether to keep overabundant entries
   overabundant:
     keep: False           # (bool) Whether to keep overabundant entries
     freq: True            # (bool) Whether to prioritize overabundant forms by frequency (fallback on file order)
