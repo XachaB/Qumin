@@ -67,10 +67,6 @@ jobs:
       run: | 
         rm -rf tests/scripts/test_run_ent
         qumin hydra.run.dir=tests/scripts/test_run_ent $data $patterns action=H
-    - name: Run lattices
-      run: |
-        rm -rf tests/scripts/test_run_lat
-        qumin hydra.run.dir=tests/scripts/test_run_lat $data $patterns action=lattice
     - name: Run macroclasses
       run: |
         rm -rf tests/scripts/test_run_mac
@@ -79,3 +75,11 @@ jobs:
       run: |
         rm -rf tests/scripts/test_run_hmap
         qumin hydra.run.dir=tests/scripts/test_run_hmap  $data $patterns action=heatmap
+    - name: Run patterns, with overabundance and defectivity
+      run: |
+        rm -rf tests/scripts/test_run_pat
+        qumin hydra.run.dir=tests/scripts/test_run_pat pats.overabundant.keep=True pats.defective=True $data action=patterns
+    - name: Run lattices
+      run: |
+        rm -rf tests/scripts/test_run_lat
+        qumin hydra.run.dir=tests/scripts/test_run_lat pats.overabundant.keep=True pats.defective=True $data $patterns action=lattice
