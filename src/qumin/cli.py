@@ -28,12 +28,15 @@ def qumin_command(cfg):
         assert not_defect or not for_m, "For this calculation, defective must be False"
         pat_command(cfg, md)
 
+    if cfg.action in ['H', 'macroclasses', 'lattice', 'heatmap']:
+        patterns_md = Metadata(path=cfg.patterns) if cfg.patterns else md
+
     if cfg.action == "H":
-        H_command(cfg, md)
+        H_command(cfg, md, patterns_md)
     elif cfg.action == "macroclasses":
-        macroclasses_command(cfg, md)
+        macroclasses_command(cfg, md, patterns_md)
     elif cfg.action == "lattice":
-        lattice_command(cfg, md)
+        lattice_command(cfg, md, patterns_md)
     elif cfg.action == "heatmap":
         heatmap_command(cfg, md)
     elif cfg.action == "eval":

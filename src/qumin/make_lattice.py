@@ -16,10 +16,16 @@ from .representations.patterns import ParadigmPatterns
 log = logging.getLogger()
 
 
-def lattice_command(cfg, md):
-    r"""Infer Inflection classes as a lattice from alternation patterns."""
+def lattice_command(cfg, md, patterns_md):
+    r"""Infer Inflection classes as a lattice from alternation patterns.
+
+    Arguments:
+        cfg (omegaconf.dictconfig.DictConfig): Configuration for this run.
+        md (qumin.utils.Metadata): Metadata handler for this run.
+        patterns_md (qumin.utils.Metadata): Metadata handler for the patterns run.
+    """
+
     # Loading files and paths
-    patterns_folder_path = cfg.patterns
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
 
@@ -44,7 +50,7 @@ def lattice_command(cfg, md):
 
     # Loading Patterns
     patterns = ParadigmPatterns()
-    patterns.from_file(patterns_folder_path,
+    patterns.from_file(patterns_md,
                        paradigms.data,
                        defective=defective,
                        overabundant=overabundant,

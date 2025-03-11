@@ -13,15 +13,20 @@ from .entropy.distribution import PatternDistribution
 from .representations import segments, create_features
 from .representations.patterns import ParadigmPatterns
 from .representations.paradigms import Paradigms
-from .utils import Metadata
 
 log = logging.getLogger()
 
 
-def H_command(cfg, md):
-    r"""Compute entropies of flexional paradigms' distributions."""
+def H_command(cfg, md, patterns_md):
+    r"""Compute entropies of flexional paradigms' distributions.
+
+    Arguments:
+        cfg (omegaconf.dictconfig.DictConfig): Configuration for this run.
+        md (qumin.utils.Metadata): Metadata handler for this run.
+        patterns_md (qumin.utils.Metadata): Metadata handler for the patterns run.
+    """
+
     verbose = HydraConfig.get().verbose is not False
-    patterns_run_md = Metadata(path=cfg.patterns) if cfg.patterns else md
     sounds_file_name = md.get_table_path("sounds")
     defective = cfg.pats.defective
 
@@ -48,7 +53,7 @@ def H_command(cfg, md):
                                           seed=cfg.seed),
                           )
     patterns = ParadigmPatterns()
-    patterns.from_file(patterns_run_md,
+    patterns.from_file(patterns_md,
                        paradigms.data,
                        cells=cfg.cells,
                        defective=defective,

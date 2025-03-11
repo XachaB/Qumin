@@ -27,10 +27,16 @@ from .representations.patterns import ParadigmPatterns
 log = logging.getLogger()
 
 
-def macroclasses_command(cfg, md):
-    r"""Cluster lexemes in macroclasses according to alternation patterns."""
+def macroclasses_command(cfg, md, patterns_md):
+    r"""Cluster lexemes in macroclasses according to alternation patterns.
+
+    Arguments:
+        cfg (omegaconf.dictconfig.DictConfig): Configuration for this run.
+        md (qumin.utils.Metadata): Metadata handler for this run.
+        patterns_md (qumin.utils.Metadata): Metadata handler for the patterns run.
+    """
+
     # Loading files and paths
-    patterns_folder_path = cfg.patterns
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
 
@@ -53,7 +59,7 @@ def macroclasses_command(cfg, md):
 
     # Loading Patterns
     patterns = ParadigmPatterns()
-    patterns.from_file(patterns_folder_path,
+    patterns.from_file(patterns_md,
                        paradigms.data,
                        defective=defective,
                        overabundant=False,
@@ -85,7 +91,7 @@ def macroclasses_command(cfg, md):
         fig.suptitle(experiment_id)
         fig.savefig(figname,
                     bbox_inches='tight', pad_inches=.5)
-        md.register_file("figure.png", description="Macroclass figure")
+        md.register_file("macroclass/figure.png", description="Macroclass figure")
 
     # Saving text tree
     treename = md.get_path('macroclass/tree.txt')
