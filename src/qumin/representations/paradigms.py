@@ -135,7 +135,6 @@ class Paradigms(object):
         # Remove overabundance if asked
         if not overabundant.keep:
             paradigms = self._drop_overabundant(paradigms, overabundant)
-            paradigms = self.data # Needed because there was one change I couldn't do in place
 
         # Sample lexemes
         if sample_lexemes:
