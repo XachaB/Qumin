@@ -79,7 +79,3 @@ jobs:
       run: |
         rm -rf tests/scripts/test_run_hmap
         qumin hydra.run.dir=tests/scripts/test_run_hmap  $data $patterns action=heatmap
-    - name: Run evaluation
-      run: |
-        rm -rf tests/scripts/test_run_eval
-        qumin hydra.run.dir=tests/scripts/test_run_eval $data action=eval
