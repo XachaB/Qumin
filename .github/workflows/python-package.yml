@@ -59,29 +59,29 @@ jobs:
     - name: Set variables
       run: |
         export HYDRA_FULL_ERROR=1
-        data=data=tests/data/TestPackage/test.package.json
-        patterns=patterns=tests/scripts/test_run_pat/metadata.json
+        data="data=tests/data/TestPackage/test.package.json"
+        patterns="patterns=tests/scripts/test_run_pat/metadata.json"
     - name: Run patterns
       run: |
         rm -rf tests/scripts/test_run_pat
-        qumin hydra.run.dir=tests/scripts/test_run_pat $(data) action=patterns
+        qumin hydra.run.dir=tests/scripts/test_run_pat $data action=patterns
     - name: Run entropies
       run: | 
         rm -rf tests/scripts/test_run_ent
-        qumin hydra.run.dir=tests/scripts/test_run_ent $(data) $(patterns) action=H
+        qumin hydra.run.dir=tests/scripts/test_run_ent $data $patterns action=H
     - name: Run lattices
       run: |
         rm -rf tests/scripts/test_run_lat
-        qumin hydra.run.dir=tests/scripts/test_run_lat $(data) $(patterns) action=lattice
+        qumin hydra.run.dir=tests/scripts/test_run_lat $data $patterns action=lattice
     - name: Run macroclasses
       run: |
         rm -rf tests/scripts/test_run_mac
-        qumin hydra.run.dir=tests/scripts/test_run_mac  $(data) $(patterns) action=macroclasses
+        qumin hydra.run.dir=tests/scripts/test_run_mac  $data $patterns action=macroclasses
     - name: Run class heatmap
       run: |
         rm -rf tests/scripts/test_run_hmap
-        qumin hydra.run.dir=tests/scripts/test_run_hmap  $(data) $(patterns) action=heatmap
+        qumin hydra.run.dir=tests/scripts/test_run_hmap  $data $patterns action=heatmap
     - name: Run evaluation
       run: |
         rm -rf tests/scripts/test_run_eval
-        qumin hydra.run.dir=tests/scripts/test_run_eval $(data) action=eval
+        qumin hydra.run.dir=tests/scripts/test_run_eval $data action=eval
