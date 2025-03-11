@@ -259,7 +259,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     ('index', 'Qumin', 'Qumin Documentation',
-     'Sacha Beniamine, Jules Bouton', 'Qumin', 'One line description of project.',
+     'Sacha Beniamine, Jules Bouton', 'Qumin', 'Qumin (QUantitative Modelling of INflection) is a package for the computational modelling of the inflectional morphology of languages.',
      'Miscellaneous'),
 ]
 
