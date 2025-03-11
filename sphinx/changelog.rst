@@ -19,6 +19,8 @@ Version 3.0
     - ``most_freq=False`` replaced by ``force_random=True``.
     - Addition of a seed option to determinise sampling.  By default, sample by frequency.
     - Change ``sample`` for ``sample_lexemes`` and add ``sample_cells`` with the same behaviour for cells.
+    - Removal of overabundant forms is now by default done by frequency (``pats.overabundant.freq=True``),
+    and can optionally prioritize some tags (``pats.overabudant.tags="[standard_form,preferred_form]"``).
 - Removal:
     - Support for sound table "Seg." column.
     - Bipartite entropy computations
