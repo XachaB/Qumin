@@ -86,6 +86,10 @@ pats:
   kind: phon              # (str) Options are (see docs): phon, edits
   defective: False        # (bool) Whether to keep defective entries
   overabundant: False     # (bool) Whether to keep overabundant entries
+  overabundant:
+    keep: False           # (bool) Whether to keep overabundant entries
+    freq: True            # (bool) Whether to prioritize overabundant forms by frequency (fallback on file order)
+    tags: null            # (list) Tags to prefer when dropping overabundance (fallback on freq)
   gap_proportion: .4      # (float) Proportion of the median score used to set the gap score
   optim_mem: False        # (bool) Attempt to use a little bit less memory
   merged: False           # (bool) Whether to merge identical columns in the data

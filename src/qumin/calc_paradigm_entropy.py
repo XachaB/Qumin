@@ -41,7 +41,7 @@ def H_command(cfg, md, patterns_md):
     # Inflectional paradigms: rows are forms, with lexeme and cell..
     paradigms = Paradigms(md.paralex,
                           defective=defective,
-                          overabundant=False,
+                          overabundant=cfg.pats.overabundant,
                           merge_cols=cfg.entropy.merged,
                           segcheck=True,
                           cells=cfg.cells,
@@ -57,7 +57,7 @@ def H_command(cfg, md, patterns_md):
                        paradigms.data,
                        cells=cfg.cells,
                        defective=defective,
-                       overabundant=False,
+                       overabundant=cfg.pats.overabundant.keep,
                        force=cfg.force,
                        )
 

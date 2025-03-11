@@ -16,7 +16,10 @@ The patterns can be further configured, modifying the following keys: ::
     pats:
       kind: phon              # Options are (see docs): phon, edits
       defective: False        # Whether to keep defective entries
-      overabundant: False     # Whether to keep overabundant entries
+      overabundant:
+        keep: False           # Whether to keep overabundant entries
+        freq: True            # Prioritize by frequency when dropping overabundance. If false: prioritize first in file.
+        tags: null            # Tags to prefer when dropping overabundance. Then fallback on freq.
       gap_proportion: .4      # Proportion of the median score used to set the gap score
       optim_mem: False        # Attempt to use a little bit less memory
       merged: False           # Whether to merge identical columns in the data
