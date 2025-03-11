@@ -15,6 +15,8 @@ Qumin (QUantitative Modelling of INflection) is a package for the computational 
 
 **Documentation**: https://qumin.readthedocs.io/
 
+**Pypi**: https://pypi.org/project/qumin/
+
 **Github**: https://github.com/XachaB/Qumin
 
 
@@ -26,7 +28,19 @@ For more detail, you can refer to Sacha's dissertation (in French, `Beniamine 20
 Citing
 ======
 
-If you use Qumin in your research, please cite Sacha's dissertation (`Beniamine 2018 <https://tel.archives-ouvertes.fr/tel-01840448>`_), as well as the relevant paper for the specific actions used (see below). To appear in the publications list, send Sacha an email with the reference of your publication at s.<last name>@surrey.ac.uk
+If you use Qumin in your research, please cite the Qumin Zenodo deposit as well as the relevant paper for the specific actions used (see below).
+
+- Beniamine & Bouton. (2025). Qumin (v3.0.0). [Python package]. doi: `10.5281/zenodo.15008374 <https://doi.org/10.5281/zenodo.15008374>`_ `https://pypi.org/project/qumin/ <https://pypi.org/project/qumin/>`_
+
+- For alternation patterns, please cite `Beniamine (2018) <https://tel.archives-ouvertes.fr/tel-01840448>`_.
+- For entropy calculations, please also cite `Bonami and Beniamine 2016 <http://www.llf.cnrs.fr/fr/node/4789>`_.
+- For macroclass inference, please also cite `Beniamine, Bonami and Sagot (2018) <http://jlm.ipipan.waw.pl/index.php/JLM/article/view/184>`_
+- For lattice inference, please also cite `Beniamine (2021) <https://langsci-press.org/catalog/book/262>`_.
+
+For reproducibility, mentioning the exact current revision is important.
+
+To appear in the publications list, send Sacha an email with the reference of your publication at s.<last name>@surrey.ac.uk
+
 
 Quick Start
 ===========
