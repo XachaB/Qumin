@@ -72,7 +72,8 @@ class Paradigms(object):
 
     def preprocess(self, fillna=True, segcheck=False,
                    defective=False, overabundant=False, merge_cols=False,
-                   cells=None, sample_lexemes=None, sample_cells=None, sample_kws=None, pos=None, **kwargs):
+                   cells=None, sample_lexemes=None, sample_cells=None, sample_kws=None,
+                   pos=None, **kwargs):
         """
         Preprocess a Paralex paradigms table to meet the requirements of Qumin:
             - Filter by POS and by cells

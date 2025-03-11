@@ -4,10 +4,7 @@
 
 Author: Sacha Beniamine.
 """
-from .entropy import cond_P, P
 import numpy as np
-from .representations import segments, patterns, create_features
-from .representations.paradigms import Paradigms
 import pandas as pd
 from itertools import combinations, chain
 from multiprocessing import Pool
@@ -15,6 +12,12 @@ from tqdm import tqdm
 import seaborn as sns
 from matplotlib import pyplot as plt
 import logging
+
+from . import __version__
+from .entropy import cond_P, P
+from .representations import segments, patterns, create_features
+from .representations.paradigms import Paradigms
+
 
 log = logging.getLogger()
 sns.set()
@@ -185,10 +188,12 @@ def prepare_data(cfg, md):
                           merge_cols=cfg.pats.merged,
                           overabundant=cfg.pats.overabundant,
                           defective=cfg.pats.defective,
-                          sample=cfg.sample,
-                          force_random=cfg.force_random
+                          sample_lexemes=cfg.sample_lexemes,
+                          sample_cells=cfg.sample_cells,
+                          sample_kws=dict(force_random=cfg.force_random,
+                                          seed=cfg.seed),
                           )
-    indexes = paradigms.index
+    indexes = paradigms.data.index
     features = None
 
     if cfg.entropy.features is not None:
@@ -232,9 +237,14 @@ def to_heatmap(results, cells):
 
 
 def eval_command(cfg, md):
-    r"""Evaluate pattern's accuracy with 10 folds."""
-    now = md.day + "_" + md.now
-    np.random.seed(0)  # make random generator determinist
+    r"""Evaluate pattern's accuracy with 10 folds.
+
+    Arguments:
+        cfg (omegaconf.dictconfig.DictConfig): Configuration for this run.
+        md (qumin.utils.Metadata): Metadata handler for this run.
+    """
+
+    np.random.seed(cfg.seed)  # make random generator determinist
 
     sounds_file_name = md.get_table_path("sounds")
     paradigms_file_path = md.get_table_path("forms")
@@ -242,20 +252,20 @@ def eval_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
     paradigms, features = prepare_data(cfg, md)
 
-    general_infos = {"Qumin_version": md.version,
-                     "lexemes": paradigms.shape[0],
+    general_infos = {"Qumin_version": __version__,
+                     "lexemes": paradigms.data.lexeme.nunique(),
                      "paradigms": paradigms_file_path,
-                     "day_time": now}
+                     "day_time": str(md.start)}
 
     tasks = prepare_arguments(paradigms,
                               cfg.eval.iter,
                               cfg.pats.kind,
                               features)
 
-    l = cfg.eval.iter * len(list(combinations(range(paradigms.shape[1]), 2)))
+    iterations = cfg.eval.iter * len(list(combinations(range( paradigms.data.cell.nunique()), 2)))
 
     if cfg.eval.workers == 1:
-        results = list(chain(*(evaluate(t) for t in tqdm(tasks, total=l))))
+        results = list(chain(*(evaluate(t) for t in tqdm(tasks, total=iterations))))
     else:
         pool = Pool(cfg.eval.workers)
         results = list(chain(*tqdm(pool.imap_unordered(evaluate, tasks), total=l)))
