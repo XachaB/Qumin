@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 # !/usr/bin/python3
-import json
 import logging
-import os
-import time
+import datetime
+from omegaconf import OmegaConf
 from pathlib import Path
 
 import hydra
-from frictionless import Package
+from frictionless import Package, Resource
 
 from .. import __version__
 
@@ -15,129 +14,112 @@ log = logging.getLogger()
 
 
 class Metadata():
-    """Metadata manager for Qumin scripts. Basic usage :
+    """Metadata manager for Qumin scripts. Wrapper around the Frictionless Package class.
+    Basic usage :
 
         1. Register Metadata manager;
-        2. Before writing any important file, register it with a short name;
-        3. Save all metadata in a secure place
+        2. Get an absolute path to the metadata folder;
+        3. Write to that path;
+        4. After writing a file, register it and set metadata (description, custom dict);
+        3. Export the JSON descriptor.
 
     Examples:
         .. code-block:: python
 
             md = Metadata(args, __file__)
-            filename = md.register_file(name, suffix)
-            # Now, you can open an IO stream and write to ``filename``.
+            name = 'path/myfile.txt'
+            filename = md.get_path(name)
+            # Open an IO stream and write to ``filename``.
+            md.register_file(name, description="My nice file", custom={"property": "value"})
             md.save_metadata(path)
 
     Arguments:
         cfg (:class:`pandas:pandas.DataFrame`):
             arguments passed to the script
-        filename (str): name of the main script, passing __file__ is fine.
+        path (str): name of the main script, passing __file__ is fine.
 
     Attributes:
-        now (str)
-        day (str)
-        version (str) : svn/git version or '' if unknown
-        prefix (str) : normalized prefix for the output files
-        arguments (dict): all arguments passed to the python script
-        output (dict) : all output files produced by the script.
-        dataset (tuple): a (directory path, Package) tuple representing a dataset.
+        start (datetime) : timestamp at the beginning of the run.
+        prefix (Path) : normalized prefix for the output files
+        cfg (OmegaConf): all arguments passed to the python script
+        paralex (frictionless.Package): a frictionless Package representing a dataset.
     """
 
-    def __init__(self, cfg, filename):
-        # Basic information
-        self.now = time.strftime("%Hh%M")
-        self.day = time.strftime("%Y%m%d")
-        self.version = get_version()
-        self.script = filename
-        self.working_dir = os.getcwd()
+    def __init__(self, path=None, cfg=None, **kwargs):
+        self.package = Package(path) if path else Package()
+        self.cfg = cfg
+        self.prefix = Path(self.package.basepath if path else
+                           hydra.core.hydra_config.HydraConfig.get().runtime.output_dir)
 
-        # Check directory
-        self.prefix = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir + "/"
-
-        # Make it robust to multiple
-        if "data" in cfg:
-            data = cfg.data
-            self.dataset = Package(data)
-
-        # Additional CLI arguments
-        self.arguments = dict(cfg)
-        self.output = []
+        if path is None:
+            self.start = datetime.datetime.now()
+            self.paralex = Package(cfg.data)
+            self.package.name = self.start.strftime("qumin_results_%Hh%M_%Y%m%d")
+            self.package.title = "Qumin Computation Results"
+            self.package.homepage = "https://qumin.readthedocs.io/"
+            self.package.description = "This package contains the output of a Qumin run. " \
+                                       "It can be imported by other Qumin scripts."
+            self.package.created = datetime.datetime.now().isoformat()
+            self.package.custom['qumin_version'] = __version__
+            if cfg:
+                self.package.custom['omega_conf'] = OmegaConf.to_container(cfg)
+            self.package.custom['paralex_dataset'] = self.paralex.to_dict()
 
     def get_table_path(self, table_name):
-        dataset = self.dataset
+        """ Return the path to a dataset table """
+        dataset = self.paralex
         basepath = Path(dataset.basepath or "./")
         return basepath / dataset.get_resource(table_name).path
 
+    def get_resource_path(self, resource):
+        """ Return the full path to a resource """
+        return self.prefix / self.package.get_resource(resource).path
+
     def save_metadata(self):
         """ Save the metadata as a JSON file."""
+        end = datetime.datetime.now()
+        self.package.custom['duration'] = {"start": str(self.start),
+                                           "end": str(end),
+                                           "delta": str(end - self.start)
+                                           }
+        self.package._basepath = str(self.prefix)
+        self.package.infer()
+        self.package.to_json(self.prefix / 'metadata.json')
 
-        def default_serializer(x):
-            if type(x) is Package:
-                return x.to_dict()
-            return str(x)
-
-        path = self.prefix + "metadata.json"
-        log.info("Writing metadata to %s", path)
-
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(self.__dict__, f, ensure_ascii=False, indent=4, default=default_serializer)
-
-    def register_file(self, suffix, properties=None, folder=None):
-        """ Register a file to save. Returns a normalized name.
+    def get_path(self, rel_path):
+        """ Return an absolute path to a file and create parent directories.
 
         Arguments:
-            suffix (str): the suffix to append to the normalized prefix
-            properties (dict): optional set of properties to keep along
-            folder (str): name of a registered subdirectory where the file should be saved.
+            rel_path (str): relative path to the file or folder.
 
         Returns:
-            (str): the full registered path"""
-
-        # Always check if the folder still exists.
-        if folder:
-            filename = Path(self.prefix) / folder / suffix
-            folder_mds = [entity for entity in self.output if entity.get('folder') == folder]
-            if len(folder_mds) == 0:
-                raise ValueError('This folder should first be registered')
-            else:
-                parent = folder_mds[0]['files']
+            pathlib.Path: absolute path to the file or folder.
+        """
+        path = Path(self.prefix) / rel_path
+        if rel_path[-1] != "/":
+            path.parent.mkdir(parents=True, exist_ok=True)
         else:
-            filename = Path(self.prefix) / suffix
-            parent = self.output
+            path.mkdir(parents=True, exist_ok=True)
+        return path
 
-        parent.append({'filename': str(filename),
-                       'properties': properties})
-        return str(filename)
-
-    def register_folder(self, name, description=None):
-        """ Register a folder of data. Returns a normalized name.
+    def register_file(self, rel_path, name=None, custom=None, **kwargs):
+        """ Add a file as a frictionless resource.
 
         Arguments:
-            name (str): the name of the folder
-            description (str): a description of the content of the folder
-
-        Returns:
-            (str): the full registered path"""
-
-        # Always check if the folder still exists.
-        foldername = Path(self.prefix) / name
-        foldername.mkdir(parents=True, exist_ok=True)
-        self.output.append({'folder': name,
-                            'description': description,
-                            'files': []})
-        return str(foldername)
-
-
-def get_version():
-    """Return an ID for the current git or svn revision.
-
-    If the directory isn't under git or svn, the function returns an empty str.
-
-    Returns:
-        (str): svn/git version or ''.
-     """
-    return __version__
+            rel_path (str or pathlib.Path): the relative path to the file.
+            name (str): name of the resource. By default, this will be the name
+                of the file without the extension.
+            custom (dict): Custom properties to save.
+            **kwargs (dict): Optional keyword arguments passed to Resource,
+                e.g. `description`.
+        """
+        rel_path = str(rel_path)
+        if isinstance(name, str):
+            kwargs['name'] = name
+        res = Resource(path=rel_path, **kwargs)
+        if custom is not None:
+            res.custom = custom
+        self.package.add_resource(res)
 
 
 def memory_check(df, factor, max_gb=2, force=False):

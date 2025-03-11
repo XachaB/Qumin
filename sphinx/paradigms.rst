@@ -61,6 +61,14 @@ In long format, overabundant forms give rise to two (or more) distinct rows, key
    slink       ppart     s l ɪ ŋ k t
  =========== ========= ===========
 
+It is possible to pass an ordered list of tags to prefer when selecting overabundant forms. ::
+
+    /$ qumin pats.defective=True pats.overabundant.tags="[standard_variant,ayer_aye]" data=<dataset.package.json>
+
+If no tags are given, or if no tags are available for a specific lexeme, Qumin will fallback on frequencies to pick a form to keep.
+If there are no frequencies or if `pats.overabundant.freq` is set to False, then Qumin will pick the first row among overabundant rows.
+
+
 Defectivity
 ~~~~~~~~~~~
 

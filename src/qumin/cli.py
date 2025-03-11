@@ -16,25 +16,27 @@ log = logging.getLogger()
 @hydra.main(version_base=None, config_path="config", config_name="qumin")
 def qumin_command(cfg):
     log.info(cfg)
-    md = Metadata(cfg, __file__)
+    md = Metadata(cfg=cfg)
 
     if (cfg.patterns is None or cfg.action == "patterns") and \
             cfg.action != 'ent_heatmap':
-        not_overab = cfg.pats.overabundant is False
-        not_defect = cfg.pats.defective is False
+        not_overab = not cfg.pats.overabundant.keep
+        not_defect = not cfg.pats.defective
         for_H = cfg.action == "H"
         for_m = cfg.action == "macroclasses"
         assert not_overab or not (for_H or for_m), "For this calculation, overabundant must be False"
         assert not_defect or not for_m, "For this calculation, defective must be False"
-        patterns_file = pat_command(cfg, md)
-        cfg.patterns = patterns_file
+        pat_command(cfg, md)
+
+    if cfg.action in ['H', 'macroclasses', 'lattice', 'heatmap']:
+        patterns_md = Metadata(path=cfg.patterns) if cfg.patterns else md
 
     if cfg.action == "H":
-        cfg.entropy.importFile = H_command(cfg, md)
+        H_command(cfg, md, patterns_md)
     elif cfg.action == "macroclasses":
-        macroclasses_command(cfg, md)
+        macroclasses_command(cfg, md, patterns_md)
     elif cfg.action == "lattice":
-        lattice_command(cfg, md)
+        lattice_command(cfg, md, patterns_md)
     elif cfg.action == "heatmap":
         heatmap_command(cfg, md)
     elif cfg.action == "eval":

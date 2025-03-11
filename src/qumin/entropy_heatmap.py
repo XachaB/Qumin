@@ -11,6 +11,7 @@ import pandas as pd
 import seaborn as sns
 from frictionless.exception import FrictionlessException
 from hydra.core.hydra_config import HydraConfig
+from .utils import Metadata
 from matplotlib import pyplot as plt
 
 # Prevent matplotlib font manager from spamming the log
@@ -106,12 +107,10 @@ def zones_heatmap(results, md, features, cell_order=None, cols=None):
     fig.suptitle(f"Zones of inter-predictibility for {dataset}")
     plt.tight_layout()
 
-    name = md.register_file("zonesTable.png",
-                            {"computation": "zone_table",
-                             "content": "figure"})
-
-    log.info("Writing zones table to: " + name)
+    name = md.get_path("vis/zonesTable.png")
+    log.info("Writing zones table to: %s", name)
     plt.savefig(name, pad_inches=0.1)
+    md.register_file("vis/zonesTable.png", description="Table of interpredictibility zones")
     return clusters  # this is the last computed: with 0 entropy threshold
 
 
@@ -357,23 +356,22 @@ def entropy_heatmap(results, md, cmap_name=False, freq_margins=True,
     cg.tick_params(axis='y', labelrotation=0)
 
     cg.set_axis_labels(x_var="Predicted", y_var="Predictor")
-    cg.fig.suptitle(f"Measured on the {md.dataset.name} dataset, version {md.dataset.version}")
+    cg.fig.suptitle(f"Measured on the {md.paralex.name} dataset, version {md.paralex.version}")
 
     cg.tight_layout()
 
-    name = md.register_file(filename,
-                            {"computation": "entropy_heatmap",
-                             "content": "figure"})
-
-    log.info("Writing heatmap to: " + name)
-    cg.savefig(name, pad_inches=0.1)
+    path = md.get_path("vis/entropyHeatmap.png")
+    log.info("Writing heatmap to: %s", path)
+    cg.savefig(path, pad_inches=0.1)
+    md.register_file("vis/entropyHeatmap.png", description="Entropy heatmap")
 
 
 def ent_heatmap_command(cfg, md):
     r"""Draw a heatmap of results similarities and a plot of zones.
     """
     verbose = HydraConfig.get().verbose is not False
-    results = pd.read_csv(cfg.entropy.importFile, index_col=[0, 1])
+    entropy_md = Metadata(path=cfg.entropy.importResults) if cfg.entropy.importResults else md
+    results = pd.read_csv(entropy_md.get_resource_path('entropies'), index_col=[0, 1])
 
     if not verbose:  # Remove debug results
         is_debug = results["measure"].str.endswith("_debug")

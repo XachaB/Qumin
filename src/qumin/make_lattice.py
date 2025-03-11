@@ -7,8 +7,6 @@ Author: Sacha Beniamine.
 
 import logging
 
-import pandas as pd
-
 from .clustering import find_microclasses
 from .lattice.lattice import ICLattice
 from .representations import segments
@@ -18,10 +16,16 @@ from .representations.patterns import ParadigmPatterns
 log = logging.getLogger()
 
 
-def lattice_command(cfg, md):
-    r"""Infer Inflection classes as a lattice from alternation patterns."""
+def lattice_command(cfg, md, patterns_md):
+    r"""Infer Inflection classes as a lattice from alternation patterns.
+
+    Arguments:
+        cfg (omegaconf.dictconfig.DictConfig): Configuration for this run.
+        md (qumin.utils.Metadata): Metadata handler for this run.
+        patterns_md (qumin.utils.Metadata): Metadata handler for the patterns run.
+    """
+
     # Loading files and paths
-    patterns_folder_path = cfg.patterns
     defective = cfg.pats.defective
     overabundant = cfg.pats.overabundant
 
@@ -30,7 +34,7 @@ def lattice_command(cfg, md):
     segments.Inventory.initialize(sounds_file_name)
 
     # Loading paradigms
-    paradigms = Paradigms(md.dataset,
+    paradigms = Paradigms(md.paralex,
                           defective=defective,
                           overabundant=overabundant,
                           merge_cols=cfg.entropy.merged,
@@ -46,7 +50,7 @@ def lattice_command(cfg, md):
 
     # Loading Patterns
     patterns = ParadigmPatterns()
-    patterns.from_file(patterns_folder_path,
+    patterns.from_file(patterns_md,
                        paradigms.data,
                        defective=defective,
                        overabundant=overabundant,
@@ -64,33 +68,33 @@ def lattice_command(cfg, md):
                         keep_names=(not cfg.lattice.shorten))
 
     if cfg.lattice.stat:
-        statname = md.register_file('stats.txt', {"computation": cfg.action,
-                                                  "content": "stats"})
+        statname = md.get_path('lattice/stats.txt')
         with open(statname, "w", encoding="utf-8") as flow:
             flow.write(lattice.stats().to_frame().T.to_latex())
             log.info(lattice.stats().to_frame().T.to_latex())
+        md.register_file('lattice/stats.txt',  description="Lattice statistics")
 
     if cfg.lattice.png:
-        lattpng = md.register_file('lattice.png', {'computation': cfg.action,
-                                                   'content': 'figure'})
+        lattpng = md.get_path('lattice/lattice.png')
         lattice.draw(lattpng, figsize=(20, 10), title=None, point=True)
+        md.register_file('lattice/lattice.png',  description="Lattice PNG figure")
 
     if cfg.lattice.pdf:
-        lattpdf = md.register_file('lattice.pdf', {'computation': cfg.action,
-                                                   'content': 'figure'})
+        lattpdf = md.get_path('lattice/lattice.pdf')
         lattice.draw(lattpdf, figsize=(20, 10), title=None, point=True)
+        md.register_file('lattice/lattice.pdf',  description="Lattice PDF figure")
 
     if cfg.lattice.html:
-        latthtml = md.register_file('lattice.html', {'computation': cfg.action,
-                                                     'content': 'figure'})
+        latthtml = md.get_path('lattice/lattice.html')
         log.info("Exporting to html: " + latthtml)
         lattice.to_html(latthtml)
+        md.register_file('lattice/lattice.html',  description="Lattice HTML figure")
 
     if cfg.lattice.ctxt:
-        lattcxt = md.register_file('lattice.cxt', {'computation': cfg.action,
-                                                   'content': 'figure'})
+        lattcxt = md.get_path('lattice/lattice.cxt')
         log.info(" ".join(["Exporting context to file:", lattcxt]))
         lattice.context.tofile(lattcxt, frmat='cxt')
+        md.register_file('lattice/lattice.cxt',  description="Lattice CXT figure")
 
     log.info("Here is the first level of the hierarchy:")
     log.info("Root:")
