@@ -1099,7 +1099,7 @@ class ParadigmPatterns(dict):
         if not defective:
             table.dropna(axis=0, subset="pattern", inplace=True)
 
-        if overabundant:
+        if overabundant.keep:
             raise NotImplementedError
 
         if (
