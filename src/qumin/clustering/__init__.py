@@ -27,7 +27,8 @@ def find_microclasses(paradigms, patterns, freqs=None):
 
     """
     lexemes = pd.Series(index=paradigms.data.lexeme.unique())
-    grouped = lexemes.groupby([df.set_index('lexeme').pattern.fillna(0).astype(str)
+    grouped = lexemes.groupby([df.groupby('lexeme', observed=False).pattern.apply(
+        lambda x: tuple(sorted([str(p) for p in x if p is not None])))
                                for df in patterns.values()])
     mc = {}
 

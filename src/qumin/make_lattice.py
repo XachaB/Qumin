@@ -53,7 +53,7 @@ def lattice_command(cfg, md, patterns_md):
     patterns.from_file(patterns_md,
                        paradigms.data,
                        defective=defective,
-                       overabundant=overabundant,
+                       overabundant=overabundant.keep,
                        force=cfg.force,
                        )
 

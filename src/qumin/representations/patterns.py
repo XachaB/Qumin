@@ -1099,9 +1099,6 @@ class ParadigmPatterns(dict):
         if not defective:
             table.dropna(axis=0, subset="pattern", inplace=True)
 
-        if overabundant:
-            raise NotImplementedError
-
         if (
                 defective
                 and (paradigms[paradigms.cell.isin(pair)].form == '').any()
