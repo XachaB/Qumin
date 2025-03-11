@@ -54,8 +54,7 @@ class Paradigms(object):
         self.data = pd.read_csv(data_file_name, na_values=["#DEF#"],
                                 dtype=defaultdict(lambda: 'string', {'cell': 'category',
                                                                      'lexeme': 'category'}),
-                                keep_default_na=False,
-                                usecols=["form_id"] + list(self.default_cols))
+                                keep_default_na=False)
         self.frequencies = Frequencies(dataset)
         self.preprocess(**kwargs)
         self.frequencies.drop_unused(self.data)
@@ -122,9 +121,20 @@ class Paradigms(object):
             paradigms.drop(paradigms[paradigms.loc[:, lexemes].isin(defective_lexemes)].index,
                            inplace=True)
 
-        # Remove overabundance
-        if not overabundant:
-            paradigms.drop_duplicates([lexemes, cell_col], inplace=True)
+        # Check for duplicate overabundant phon_forms and sum the frequencies.
+        # This handles cases where the orth_form is different and has two records.
+        # For actual handling of truly overabundant phon_form, see below
+        subset_cols = ["lexeme", "cell", "phon_form"]
+        dup = self.data.duplicated(subset=subset_cols, keep=False)
+        if dup.any():
+            if "frequency" in self.data.columns:
+                self.data.loc[dup, 'frequency'] = (
+                    self.data.loc[dup].groupby(subset_cols).sum("frequency"))
+            self.data.drop_duplicates(subset=subset_cols, inplace=True)
+
+        # Remove overabundance if asked
+        if not overabundant.keep:
+            self._drop_overabundant(paradigms, overabundant)
 
         # Sample lexemes
         if sample_lexemes:
@@ -147,6 +157,8 @@ class Paradigms(object):
                 raise ValueError(alert)
 
         # Create Form() objects from strings representations.
+        keep_cols = ["form_id"] + list(self.default_cols)
+        paradigms.drop([c for c in paradigms.columns if c not in keep_cols], axis=1, inplace=True)
         paradigms[form_col] = paradigms[['form_id', form_col]].apply(
             lambda x: Form(x[form_col], x.form_id), axis=1)
 
@@ -162,6 +174,35 @@ class Paradigms(object):
         memory_check(paradigms, 2, **kwargs)
         self.data = paradigms
         self._update_cell()
+
+    def _drop_overabundant(self, paradigms, overabundant):
+        log.info("Dropping overabundant entries according to policy: {}".format(overabundant))
+        tag_cols = [c for c in paradigms.columns if c.endswith("_tag")]
+
+        def form_sorter(row):
+            tag_sorter = []
+            freq_sorter = []
+            if overabundant.tags:
+                tags = [t for col in tag_cols for t in row[col].split(";")]
+                s = []
+                for i, t in enumerate(overabundant.tags):
+                    if t in tags:
+                        s.append(i)
+                if not s:
+                    s.append(len(overabundant.tags))
+                tag_sorter = [tuple(s)]
+
+            if overabundant.freq and "frequency" in row:
+                freq_sorter = [-int(row["frequency"]) if not pd.isna(row["frequency"]) else 0]
+
+            return tag_sorter + freq_sorter + [row.name]
+
+        lexemes, cell_col, form_col = self.default_cols
+        overab_order = paradigms.apply(form_sorter, axis=1).sort_values()
+        # this is difficult to do in place, hence assigning to self.data
+        paradigms = paradigms.loc[overab_order.index, :]
+        self.data = paradigms
+        paradigms.drop_duplicates([lexemes, cell_col], keep="first", inplace=True)
 
     def _filter_pos(self, paradigms, pos):
         """
