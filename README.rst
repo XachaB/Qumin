@@ -162,6 +162,8 @@ Since Qumin 2.0, results are shipped as long tables. This allows to store severa
     <cell1>,<cell2>,cond_entropy,0.6,500,1,<dataset_name>
     <cell1>,<cell2>,cond_entropy,0.1,500,1,<dataset_name>
 
+When run with probabilities settings, additional columns are added reporting probabilities of cells and their combination.
+
 All results are in the same file, including different number of predictors (indicated in the `n_preds` column), and different measures (indicated in the `measure` column).
 
 To facilitate a quick general glance at the results, we output an entropy heatmap in the wide matrix format. This behaviour can be disabled by passing `entropy.heatmap=False`. It takes advantage of the Paralex `features-values` table to sort the cells in a canonical order on the heatmap. The `heatmap.order` setting is used to specify which feature should have higher priority in the sorting: ::

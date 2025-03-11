@@ -39,7 +39,7 @@ def qumin_command(cfg):
     elif cfg.action == "heatmap":
         heatmap_command(cfg, md, patterns_md)
 
-    if (cfg.action == "H" and cfg.entropy.heatmap) or cfg.action == 'ent_heatmap':
+    if (cfg.action == "H" and cfg.entropy.vis) or cfg.action == 'ent_heatmap':
         ent_heatmap_command(cfg, md)
 
     md.save_metadata()

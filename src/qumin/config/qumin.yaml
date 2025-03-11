@@ -64,9 +64,15 @@ heatmap:
   order: False             # (list) Priority list for sorting features (for entropy heatmap)
                            # ex: [number, case]). If no features-values file available,
                            # it should contain an ordered list of the cells to display.
+  cols: False              # List of features to show in columns (for zones heatmap)
+                           # ex: [Mode, Tense]). All other features will constitute rows.
+  display:                   # Set to True/False to show or hide detailed information on the heatmap
+    n_pairs: True            # Whether to display the number of pairs.
+    debug: False             # Whether to display debug computation results.
+    freq_margins: True       # Whether to display frequency margins on heatmaps.
 
 entropy:
-  heatmap: True       # (bool )Whether to draw a heatmap.
+  vis: True           # (bool) Whether to create a heatmap of the metrics and of interpredictability zones.
   n:                  # (list) Compute entropy for prediction from with n predictors.
     - 1
   features: null      # (str) Feature column in the Lexeme table.
