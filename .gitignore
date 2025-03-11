@@ -49,3 +49,4 @@ doc/
 .hypothesis/
 build/
 TODO
+tests/scripts/test_run*
