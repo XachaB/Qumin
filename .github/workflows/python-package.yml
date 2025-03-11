@@ -59,8 +59,8 @@ jobs:
     - name: Set variables
       run: |
         export HYDRA_FULL_ERROR=1
-        data = data=tests/data/TestPackage/test.package.json
-        patterns = patterns=tests/scripts/test_run_pat/metadata.json
+        data=data=tests/data/TestPackage/test.package.json
+        patterns=patterns=tests/scripts/test_run_pat/metadata.json
     - name: Run patterns
       run: |
         rm -rf tests/scripts/test_run_pat
