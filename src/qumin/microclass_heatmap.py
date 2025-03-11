@@ -52,12 +52,18 @@ def microclass_heatmap(distances, md, labels=None, cmap_name="BuPu", exhaustive_
 
 def distance_matrix(patterns, microclasses, **kwargs):
     """Returns a similarity matrix from a pattern dataframe and microclasses"""
-    poplist = list(microclasses)
-    dists = squareform(pdist(pat_table.loc[poplist, :], metric=lambda x, y: sum((a != b) for a, b in zip(x, y))))
-    distances = pd.DataFrame(dists, columns=poplist, index=poplist)
-    for x in poplist:
+
+    # Long to wide for just the exemplars
+    exemplars = list(microclasses)
+    feature_space = pd.DataFrame(index=exemplars, columns=list(patterns))
+    for pair in patterns:
+        feature_space.loc[exemplars, pair] = patterns[pair].applymap(repr)
+
+    dists = squareform(pdist(feature_space, metric=lambda x, y: sum((a != b) for a, b in zip(x, y))))
+    distances = pd.DataFrame(dists, columns=exemplars, index=exemplars)
+    for x in exemplars:
         distances.at[x, x] = 0
-    distances.columns = [x.split()[0] for x in poplist]
+    distances.columns = [x.split()[0] for x in exemplars]
     distances.index = list(distances.columns)
     return distances
 
