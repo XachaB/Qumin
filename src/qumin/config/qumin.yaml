@@ -27,7 +27,7 @@ hydra:
 
 disable_existing_loggers: false
 
-action: patterns      # (str) Action, one of: patterns, H, lattice, eval, macroclasses, heatmap, ent_heatmap
+action: patterns      # (str) Action, one of: patterns, H, lattice, macroclasses, heatmap, ent_heatmap
 data: null            # (path) Path to paralex.package.json paradigms, segments
 cells: null           # (list) Cells to use (subset)
 pos: null             # (list) Parts of speech to use (subset)
@@ -83,10 +83,6 @@ entropy:
   merged: False       # (bool) Whether identical columns are merged in the input.
   token_freq:         # Whether to use token frequencies for weighting...
     cells: False      # (bool) Cell frequencies
-
-eval:
-  iter: 10            # (int) How many 90/10 train/test folds to do.
-  workers: 1          # (int) Number of threads for multithreading
 
 pats:
   kind: phon              # (str) Options are (see docs): phon, edits

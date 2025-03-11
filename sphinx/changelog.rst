@@ -26,6 +26,7 @@ Version 3.0
     - Support for sound table "Seg." column.
     - Bipartite entropy computations
     - All alternation algorithms except ``phon`` and ``edits`` (former ``patternsPhonsim`` and ``patternsLevenshtein``).
+    - Patterns evaluation with ``action=eval``.
     
 Version 2.0
 ~~~~~~~~~~~
