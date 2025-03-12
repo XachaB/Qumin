@@ -1,10 +1,10 @@
 
-|PyPi|_ |tests| |DocStatus|_
+|PyPi|_ |pipeline| |DocStatus|_
 
 .. |PyPi| image:: https://img.shields.io/pypi/v/qumin
 .. _PyPi: https://pypi.org/project/qumin/
 
-.. |tests| image:: https://github.com/xachab/qumin/actions/workflows/python-package.yml/badge.svg
+.. |pipeline| image:: https://gitlab.example.com/qumin/Qumin/badges/master/pipeline.svg
 
 .. |DocStatus| image:: https://readthedocs.org/projects/qumin/badge/?version=dev
 .. _DocStatus: https://qumin.readthedocs.io/dev/?badge=latest
