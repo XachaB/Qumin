@@ -1,0 +1,115 @@
+image: python:latest
+
+stages:
+  - test
+  - integration
+  - deploy
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  data: "data=tests/data/TestPackage/test.package.json"
+  patterns: "patterns=tests/scripts/test_run_pat/metadata.json"
+  HYDRA_FULL_ERROR: 1
+
+# https://pip.pypa.io/en/stable/topics/caching/
+cache:
+  paths:
+    - .cache/pip
+
+before_script:
+  - python -m pip install --upgrade pip
+  - python --version ; pip --version  # For debugging
+
+lint:
+  stage: test
+  before_script:
+    - python -m pip install flake8 pytest
+  script: # stop the build if there are Python syntax errors or undefined names
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+tests:
+  stage: test
+  needs: [lint]
+  before_script:
+    - pip install -e .[test]
+  script:
+    - pytest  tests/ --doctest-modules src
+
+.integration: # Integration tests run only on MRs and pushes on main
+  stage: integration
+  before_script:
+    - pip install -e .
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+integration-patterns:
+  extends:
+    - .integration
+  script:
+    - qumin hydra.run.dir=tests/scripts/test_run_pat $data action=patterns
+  artifacts:
+    paths:
+      - tests/scripts/test_run_pat/
+
+integration-H:
+  needs: [integration-patterns]
+  extends:
+    - .integration
+  script:
+    - qumin hydra.run.dir=tests/scripts/test_run_ent $data $patterns action=H
+  artifacts:
+    paths:
+      - tests/scripts/test_run_ent
+
+integration-mac:
+  needs: [ integration-patterns ]
+  extends:
+    - .integration
+  script:
+    - qumin hydra.run.dir=tests/scripts/test_run_mac  $data $patterns action=macroclasses
+  artifacts:
+    paths:
+      - tests/scripts/test_run_mac
+
+integration-heatmap:
+  needs: [ integration-patterns ]
+  extends:
+    - .integration
+  script:
+    - qumin hydra.run.dir=tests/scripts/test_run_hmap  $data $patterns action=heatmap
+  artifacts:
+    paths:
+      - tests/scripts/test_run_hmap
+
+integration-patterns-overab:
+  extends:
+    - .integration
+  script:
+    - qumin hydra.run.dir=tests/scripts/test_run_pat pats.overabundant.keep=True pats.defective=True $data action=patterns
+  artifacts:
+    paths:
+      - tests/scripts/test_run_pat
+
+integration-lattice:
+  needs: [ integration-patterns-overab ]
+  extends:
+    - .integration
+  script:
+    - qumin hydra.run.dir=tests/scripts/test_run_lat pats.overabundant.keep=True pats.defective=True $data $patterns action=lattice
+  artifacts:
+    paths:
+      - tests/scripts/test_run_lat
+
+pypi:
+    stage: deploy
+    script:
+        - pip install -U twine
+        - python setup.py bdist_wheel
+        - python setup.py sdist
+        - TWINE_PASSWORD=${PYPI_TOKEN} TWINE_USERNAME=__token__ python -m twine upload dist/*
+    rules:
+      - if: $CI_COMMIT_TAG =~ /^v?[0-9]+\.[0-9]+/
