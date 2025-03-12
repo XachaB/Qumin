@@ -1,13 +1,14 @@
-The phonological segments file
+The sounds file
 ================================
 
 Qumin works from the assumption that your paradigms are written in phonemic notation. The phonological segments file provides a list of phonemes and their decomposition into distinctive features. This file is used to recognize phonological similarity and natural classes when creating and handling alternation patterns.
 
-To create a new segments file, the best is usually to refer to an authoritative description, and adapt it to the needs of the specific dataset. In the absence of such a description, I suggest to make use of `Bruce Hayes’ spreadsheet <https://linguistics.ucla.edu/people/hayes/120a/index.htm#features>`__ as a starting point (he writes ``+``, ``-`` and ``0`` for our ``1``,\ ``0`` and ``-1``).
-
+To create a new sounds file, the best is usually to refer to an authoritative description, and adapt it to the needs of the specific dataset. In the absence of such a description, I suggest to make use of `Bruce Hayes’ spreadsheet <https://linguistics.ucla.edu/people/hayes/120a/index.htm#features>`__ as a starting point (he writes ``+``, ``-`` and ``0`` for our ``1``,\ ``0`` and ``-1``).
 
 Format
 ~~~~~~
+
+The Sounds file must be `a valid Paralex _sounds_ file in csv format <https://paralex-standard.org/standard/#sounds>`_.
 
 Each row of the segments file describes a single phoneme. The first column gives phonemes as they are written in the paradigms file. Each column represents a distinctive feature. Here is an example with just 10 rows of the segments table for French verbs:
 
@@ -31,24 +32,9 @@ Some conventions:
 -  The first column must be called ``sound_id``.
 -  The phonological symbols, in the ``sound_id`` column cannot be one of he reserved character : ``. ^ $ * + ? { } [ ] / | ( ) < > _  ⇌ , ;``.
 
-The file is encoded in utf-8 and can must be a csv table (comma separated):
-
-.. code:: sh
-
-   %%sh
-   head -n 6 "../Data/Vlexique/vlexique_sounds.csv"
-
-::
-
-   sound_id,sonant,syllabique,consonantique,continu,nasal,haut,bas,arrière,arrondi,antérieur,CORONAL,voisé,rel.ret.
-   p,0,0,1,0,0,0,,0,,1,,0,0
-   b,0,0,1,0,0,0,,0,,1,,1,0
-   t,0,0,1,0,0,0,,0,,1,1,0,0
-   d,0,0,1,0,0,0,,0,,1,1,1,0
-
 .. warning::
-    The index header used to be `Seg.` (for segment), and Qumin expected two more columns `ALIAS` and `UNICODE`. This is not supported anymore, and Qumin now expects `sound_id`, per the Paralex standard.
-
+    The index header used to be `Seg.` (for segment), and Qumin expected two more columns `ALIAS` and `UNICODE`.
+    This is not supported anymore, and Qumin now expects `sound_id` as a primary key, per the Paralex standard.
 
 Segmentation
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,17 +60,17 @@ One can provide some extra rows in the table to define shorthand names for some 
 Values of distinctive features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Distinctive features are usually considered to be bivalent: they can be either positive ([+nasal]) or negative ([-nasal]). In the Segments file, positive values are written by the number ``1``, and negative values by the number ``0``. Some features do not apply at all to some phonemes, for example consonants are neither [+round] nor [-round]. This can be written either by ``-1``, or by leaving the cell empty. While the first is more explicit, leaving the cell empty makes the tables more readable at a glance. The same strategy is used for features which are privative, as for example [CORONAL]: there is no class of segments which are [-coronal], so we can write either ``1`` or ``-1`` in the corresponding column, not using ``0``. 
+Distinctive features are usually considered to be bivalent: they can be either positive ([+nasal]) or negative ([-nasal]). In the sounds file, positive values are written by the number ``1``, and negative values by the number ``0``. Some features do not apply at all to some phonemes, for example consonants are neither [+round] nor [-round]. This can be written either by ``-1``, or by leaving the cell empty. While the first is more explicit, leaving the cell empty makes the tables more readable at a glance. The same strategy is used for features which are privative, as for example [CORONAL]: there is no class of sounds which are [-coronal], so we can write either ``1`` or ``-1`` in the corresponding column, not using ``0``.
 
 While ``1``, ``0`` and ``-1`` (or nothing) are the values that make the most sense, any numeric values are technically allowed, for example [-back], [+back] and [++back] could be expressed by writing ``0``, ``1``, and ``2`` in the "back" column. I do not recommend doing this.
 
-When writing segments file, it is important to be careful of the naturality of natural classes, as Qumin will take them at face value. For example, using the same [±high] feature for both vowels and consonants will result in a natural class of all the [+high] segments, and one for all the [-high] segments. Sometimes, it is better to duplicate some columns to avoid generating unfounded classes. 
+When writing sounds file, it is important to be careful of the naturality of natural classes, as Qumin will take them at face value. For example, using the same [±high] feature for both vowels and consonants will result in a natural class of all the [+high] sounds, and one for all the [-high] sounds. Sometimes, it is better to duplicate some columns to avoid generating unfounded classes.
 
 
 Monovalent or bivalent features
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-`Frisch (1996) <http://www.cas.usf.edu/~frisch/publications.html>`__ argues that monovalent features (using only ``-1`` and ``1``) are to be preferred to bivalent features, as the latter implicitly generate natural classes for the complement features ([-coronal]), which is not always desirable. In Qumin, both monovalent and bivalent features are accepted. Internally, the program will expand all ``1`` and ``0``  into + and - values. As an example, take this table which classifies the three vowels /a/, /i/ and /u/:
+`Frisch (1996) <http://www.cas.usf.edu/~frisch/publications.html>`__ argues that monovalent features (using only ``-1`` and ``1``, not ``0``) are to be preferred to bivalent features, as the latter implicitly generate natural classes for the complement features ([-coronal]), which is not always desirable. In Qumin, both monovalent and bivalent features are accepted. Internally, the program will expand all ``1`` and ``0``  into + and - values. As an example, take this table which classifies the three vowels /a/, /i/ and /u/:
 
 .. csv-table::
    :file: segment_examples/V_monovalent.csv
@@ -243,7 +229,7 @@ Diphthongs are not usually decomposed using distinctive features, as they are co
 - Write diphthongs in a non-ambiguous way in the data (either 'aj' or 'aˑi', but not 'ai' when the same sequence can sometimes be two vowels)
 - Copy the features from the initial vowel
 - Add a monovalent feature [DIPHTHONG]
-- Add monovalent features [DIPHTHONG_J],  [DIPHTHONG_W], etc, as needed.
+- Add monovalent features [DIPHTHONG_J],  [DIPHTHONG_W], or [to_high], [to_back], [to_low], [to_front] etc, as needed to encode the second segment.
 
 This is a small example for a few English diphthongs:
 

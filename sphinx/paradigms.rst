@@ -4,11 +4,10 @@ The morphological paradigms file
 This file relates phonological forms to their lexemes and paradigm cells.
 
 .. warning::
-    The `wide format <https://en.wikipedia.org/wiki/Wide_and_narrow_data>`_, or Plat, is no longer supported by qumin.
-    In wide format,  there is one row per lexeme, and forms are given in successive columns. The entire paradigms fits on the row.
+    The `wide format <https://en.wikipedia.org/wiki/Wide_and_narrow_data>`_, or Plat, where paradigms are given in rows, is no longer supported by qumin.
 
-The format is described by the Paralex standard (see `Paralex datasets <https://www.paralex-standard.org>`_).
-The data files are expected in ``csv`` format, meaning that the values are written as plain text, in utf-8 format, separated by commas. This format can be read by spreadsheet programs as well as programmatically.
+The format is that of `the _forms_ table in the Paralex standard <https://paralex-standard.org/standard/#forms>`_ (see `Paralex datasets <https://www.paralex-standard.org>`_).
+
 
 Transcriptions
 ~~~~~~~~~~~~~~

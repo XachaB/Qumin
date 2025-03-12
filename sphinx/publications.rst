@@ -4,8 +4,8 @@ Qumin bibliography
 
 Here are publications which made use of Qumin. If you use Qumin in a publication, send me an email at with the reference at s.<last name>@surrey.ac.uk in order to be cited here !
 
-- Herce, Borja & Bogdan Pricop. 2024. VeLeRo: An inflected verbal lexicon of Standard Romanian and a quantitative analysis of morphological predictability. Language Resources and Evaluation.
-- Herce, Borja. 2024. VeLePa: Central Pame verbal inflection in a quantitative perspective.
+- Herce, Borja & Bogdan Pricop. 2024. VeLeRo: an inflected verbal lexicon of standard Romanian and a quantitative analysis of morphological predictability. Lang Resources & Evaluation (2024). doi: `10.1007/s10579-024-09721-3 <https://doi.org/10.1007/s10579-024-09721-3>`_
+- Herce, Borja. 2024.  VeLePa: Central Pame verbal inflection in a quantitative perspective. Morphology 34, 281–319 (2024). doi: `10.1007/s11525-024-09426-x <https://doi.org/10.1007/s11525-024-09426-x>`_
 - Pellegrini, Matteo (2023). Paradigm Structure and Predictability in Latin Inflection: An Entropy-based Approach, vol. 6. in Studies in Morphology, vol. 6. Springer, 2023. doi: `10.1007/978-3-031-24844-3 <https://doi.org/10.1007/978-3-031-24844-3>`_
 - Pellegrini, Matteo (2023). “Flexemes in theory and in practice: Modelling overabundance in Latin verb paradigms,” Morphology, vol. 33, no. 3, pp. 361–395, 2023, doi: `10.1007/s11525-023-09414-7 <https://doi.org/10.1007/s11525-023-09414-7>`_.
 - Beniamine, Sacha. (2021) "`One lexeme, many classes: inflection class systems as lattices <https://langsci-press.org/catalog/book/262>`_" , In: One-to-Many Relations in Morphology, Syntax and Semantics , Ed. by Berthold Crysmann and Manfred Sailer. Berlin: Language Science Press.

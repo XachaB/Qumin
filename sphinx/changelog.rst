@@ -7,7 +7,7 @@ Version 3.0
 ~~~~~~~~~~~
 
 - Implement parallelisation for finding patterns and finding applicable patterns. See `cpus` config option.
-- Switch patterns management to long format everywhere
+- Switch patterns management to long format everywhere.
 - Add a visualisation of interpredictability zones.
 - Usage of frequencies:
     - Read frequencies from as much sources as possible in the Paralex package (Frequencies class).
@@ -16,6 +16,9 @@ Version 3.0
 - Prevent Matplotlib font manager from spamming the log in debug mode.
 - Change the format of human readable patterns to a more readable markdown export
 - Change management of imports/exports. Outputs from Qumin are now shipped as a `Frictionless DataPackage <https://datapackage.org/>`_. To import them, a path to the computation ``metadata.json`` must be provided.
+- Formats are made further in line with Paralex:
+    - Usage of the `form_id` introduced in Paralex.
+    - Sounds file in conformity with Paralex (`Segs` -> `sound_id`)
 - Change management of sampling:
     - ``most_freq=False`` replaced by ``force_random=True``.
     - Addition of a seed option to determinise sampling.  By default, sample by frequency.
