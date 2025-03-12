@@ -57,7 +57,16 @@ Data
 
 Qumin works from full paradigm data in phonemic transcription.
 
-The package expects `Paralex datasets <http://www.paralex-standard.org>`_, containing at least a `forms` and a `sounds` table. Note that the sounds files may sometimes require edition, as Qumin imposes more constraints on sound definitions than paralex does.
+The package expects `Paralex datasets <http://www.paralex-standard.org>`_, containing at least a `forms` and a `sounds` table. Note that the sounds files may sometimes require edition, as Qumin imposes more constraints on sound definitions than paralex does. Qumin is able to sample the provided dataset in various ways, depending on the options passed in command-line ::
+
+    cells: null           # (list) Cells to use (subset)
+    pos: null             # (list) Parts of speech to use (subset)
+    sample_lexemes: null  # (int) A number of lexemes to sample, for debug purposes.
+    sample_cells: null    # (int) A number of cells to sample, for debug purposes.
+                          # Samples by frequency if possible, otherwise randomly.
+    force_random: False   # (bool) Whether to force random sampling.
+    seed: 1               # (int) Random seed for reproducible random effects.
+
 
 Computation results are provided as a `Frictionless DataPackage <https://datapackage.org/>`_. In addition to the output files, Qumin also writes in the output directory a ``metadata.json`` file, which contains:
 
@@ -120,12 +129,12 @@ The label key is the name of the column in the Paralex `lexemes` table to use as
 
 A few more parameters can be changed: ::
 
+    patterns: null               # (path) Path to pattern computation metadata. If null, will compute patterns.
     heatmap:
-        cmap: null               # colormap name
-        exhaustive_labels: False # by default, seaborn shows only some labels on
-                                # the heatmap for readability.
-                                # This forces seaborn to print all labels.
-
+        cmap: null               # (str) Colormap name
+        exhaustive_labels: False # (bool) by default, seaborn shows only some labels on
+                                 # the heatmap for readability.
+                                 # This forces seaborn to print all labels.
 
 Paradigm entropy
 ^^^^^^^^^^^^^^^^
@@ -154,14 +163,21 @@ Predicting with known lexeme-wise features (such as gender or inflection class) 
 
 The config file contains the following keys, which can be set through the command line: ::
 
-    patterns: null        # pre-computed patterns
+    patterns: null        # (path) Path to pattern computation metadata. If null, will compute patterns.
+    cpus: null            # (int) Number of cpus to use for big computations
+                          # (defaults to the number of available cpus - 2).
     entropy:
-      n:                  # Compute entropy for prediction from with n predictors.
-        - 1
-      features: null      # Feature column in the Lexeme table.
-                          # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
-      importResults: null    # Import entropy file with n-1 predictors (allows for acceleration on nPreds entropy computation).
-      merged: False       # Whether identical columns are merged in the input.
+        vis: True           # (bool) Whether to create a heatmap of the metrics and of interpredictability zones.
+        n:                  # (list) Compute entropy for prediction from with n predictors.
+            - 1
+        features: null      # (str) Feature column in the Lexeme table.
+                            # Features will be considered known in conditional probabilities: P(X~Y|X,f1,f2...)
+        importResults: null # (path) Import previous entropy computation results.
+                            # with any file, use to compute entropy heatmap
+                            # with n-1 predictors, allows for acceleration on nPreds entropy computation.
+        merged: False       # (bool) Whether identical columns are merged in the input.
+        token_freq:         # Whether to use token frequencies for weighting...
+            cells: False    # (bool) Cell frequencies
 
 Visualizing results
 ^^^^^^^^^^^^^^^^^^^
@@ -191,18 +207,27 @@ It is also possible to draw an entropy heatmap without running entropy computati
 The config file contains the following keys, which can be set through the command line: ::
 
     heatmap:
-      cmap: null               # colormap name
-      exhaustive_labels: False # by default, seaborn shows only some labels on
-                               # the heatmap for readability.
-                               # This forces seaborn to print all labels.
-      dense: False             # Use initials instead of full labels (only for entropy heatmap)
-      annotate: False          # Display values on the heatmap. (only for entropy heatmap)
-      order: False             # Priority list for sorting features (for entropy heatmap)
-                               # ex: [number, case]). If no features-values file available,
-                               # it should contain an ordered list of the cells to display.
-    entropy:
-      heatmap: True        # Whether to draw a heatmap.
+        label: null              # (str) Lexeme column to use as label (for microclass heatmap, eg. inflection_class)
+        cmap: null               # (str) Colormap name
+        exhaustive_labels: False # (bool) by default, seaborn shows only some labels on
+                                 # the heatmap for readability.
+                                 # This forces seaborn to print all labels.
+        dense: False             # (bool) Use initials instead of full labels (only for entropy heatmap)
+        annotate: False          # (bool) Display values on the heatmap. (only for entropy heatmap)
+        order: False             # (list) Priority list for sorting features (for entropy heatmap)
+                                 # ex: [number, case]). If no features-values file available,
+                                 # it should contain an ordered list of the cells to display.
+        cols: False              # (list) List of features to show in columns (for zones heatmap)
+                                 # ex: [Mode, Tense]). All other features will constitute rows.
+        display:                 # Set to True/False to show or hide detailed information on the heatmap
+            n_pairs: True        # (bool) Whether to display the number of pairs.
+            freq_margins: True   # (bool) Whether to display frequency margins on heatmaps.
 
+    entropy:
+        vis: True              # (bool) Whether to create a heatmap of the metrics and of interpredictability zones.
+        importResults: null    # (path) Import previous entropy computation results.
+                               # with any file, use to compute entropy heatmap
+                               # with n-1 predictors, allows for acceleration on nPreds entropy computation.Macroclass inference
 
 Macroclass inference
 ^^^^^^^^^^^^^^^^^^^^
@@ -230,15 +255,17 @@ This software was used in `Beniamine (2021) <https://langsci-press.org/catalog/b
 
 **Further config options**: ::
 
+    patterns: null          # (path) Path to pattern computation metadata. If null, will compute patterns.
     lattice:
-      shorten: False      # Drop redundant columns altogether.
-                          #  Useful for big contexts, but loses information.
-                          # The lattice shape and stats will be the same.
-                          # Avoid using with --html
-      aoc: False          # Only attribute and object concepts
-      stat: False         # Output stats about the lattice
-      html: False         # Export to html
-      ctxt: False         # Export as a context
-      pdf: True           # Export as pdf
-      png: False          # Export as png
+        shorten: False      # (bool) Drop redundant columns altogether.
+                            # Useful for big contexts, but loses information.
+                            # The lattice shape and stats will be the same.
+                            # Avoid using with --html
+        aoc: False          # (bool) Only attribute and object concepts
+        html: False         # (bool) Export to html
+        ctxt: False         # (bool) Export as a context
+        stat: False         # (bool) Output stats about the lattice
+        pdf: True           # (bool) Export as pdf
+        png: False          # (bool) Export as png
+
 

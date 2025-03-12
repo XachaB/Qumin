@@ -373,9 +373,6 @@ def ent_heatmap_command(cfg, md):
     entropy_md = Metadata(path=cfg.entropy.importResults) if cfg.entropy.importResults else md
     results = pd.read_csv(entropy_md.get_resource_path('entropies'), index_col=[0, 1])
 
-    if not verbose:  # Remove debug results
-        is_debug = results["measure"].str.endswith("_debug")
-        results = results[~is_debug]
     try:
         features_file_name = md.get_table_path("features-values")
     except FrictionlessException:
@@ -396,7 +393,7 @@ def ent_heatmap_command(cfg, md):
                     dense=cfg.heatmap.dense,
                     annotate=cfg.heatmap.annotate,
                     n_pairs=cfg.heatmap.display.n_pairs,
-                    debug=cfg.heatmap.display.debug,
+                    debug=verbose,
                     freq_margins=cfg.heatmap.display.freq_margins)
 
     log.info("Drawing zones of interpredictibility...")
@@ -420,6 +417,6 @@ def ent_heatmap_command(cfg, md):
                         dense=cfg.heatmap.dense,
                         annotate=cfg.heatmap.annotate,
                         n_pairs=cfg.heatmap.display.n_pairs,
-                        debug=cfg.heatmap.display.debug,
+                        debug=verbose,
                         freq_margins=cfg.heatmap.display.freq_margins,
                         filename="entropyHeatmap_distillation.png")

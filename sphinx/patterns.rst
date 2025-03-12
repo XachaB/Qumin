@@ -5,24 +5,19 @@ This script generates alternation patterns. They can be consumed by further Qumi
 
 The patterns can be further configured, modifying the following keys: ::
 
-    data: null                # path to paralex.package.json paradigms, segments
-    cells: null               # List of cells to use (subset)
-    pos: null                 # List of parts of speech to use (subset)
-    patterns: null            # path to pre-computed patterns. If null, will compute patterns.
-    sample: null              # (int) A number of lexemes to sample, for debug purposes.
-                              # Samples by frequency if possible, otherwise randomly.
-    force_random: False       # Whether to force random sampling.
-    seed: 1                   # Random seed for reproducible random effects.
+    cpus: null                  # (int) Number of cpus to use for big computations
+                                # (defaults to the number of available cpus - 2).
     pats:
-      kind: phon              # Options are (see docs): phon, edits
-      defective: False        # Whether to keep defective entries
-      overabundant:
-        keep: False           # Whether to keep overabundant entries
-        freq: True            # Prioritize by frequency when dropping overabundance. If false: prioritize first in file.
-        tags: null            # Tags to prefer when dropping overabundance. Then fallback on freq.
-      gap_proportion: .4      # Proportion of the median score used to set the gap score
-      optim_mem: False        # Attempt to use a little bit less memory
-      merged: False           # Whether to merge identical columns in the data
+        kind: phon              # (str) Options are (see docs): phon, edits
+        defective: False        # (bool) Whether to keep defective entries
+        overabundant:
+            keep: False         # (bool) Whether to keep overabundant entries
+            freq: True          # (bool) Whether to prioritize overabundant forms by frequency (fallback on file order)
+            tags: null          # (list) Tags to prefer when dropping overabundance (fallback on freq)
+        gap_proportion: .4      # (float) Proportion of the median score used to set the gap score
+        optim_mem: False        # (bool) Attempt to use a little bit less memory
+        merged: False           # (bool) Whether to merge identical columns in the data
+
 
 values for these keys can be given through the command line, eg::
 
